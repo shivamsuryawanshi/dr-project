@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+target/
+dist/
+build/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+*.class
+*.jar
+*.war
+*.ear
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Old folders (can be deleted manually)
+MedExJob-main*/
+

@@ -1,0 +1,78 @@
+# AI assisted development
+server:
+  port: 8081
+
+spring:
+  application:
+    name: medexjob-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/medtech_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:medexjob_user}
+    password: ${DB_PASSWORD:MedExJob@2024!StrongPass}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: false
+    open-in-view: false
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:shivamsuryawanshi51@gmail.com}
+    password: ${MAIL_PASSWORD:shivam123@}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+jwt:
+  secret: ${JWT_SECRET:ThisIsMySuperSecretKeyForMedExJobComBackendApiWhichIsSecureAndLongEnoughForHS512}
+  expiration: 604800000
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:your_razorpay_key_id}
+  key-secret: ${RAZORPAY_KEY_SECRET:your_razorpay_key_secret}
+
+file:
+  upload-dir: /opt/medexjob/uploads
+  max-size: 10485760
+
+cors:
+  allowed-origins: https://medexjob.com,https://www.medexjob.com,http://medexjob.com,http://www.medexjob.com,http://72.62.196.181
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+logging:
+  level:
+    com.medexjob: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /opt/medexjob/backend/logs/medexjob.log
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

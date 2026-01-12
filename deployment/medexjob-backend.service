@@ -1,0 +1,39 @@
+# AI assisted development
+# Systemd service file for MedExJob Backend
+# Place this file at: /etc/systemd/system/medexjob-backend.service
+
+[Unit]
+Description=MedExJob Backend Service
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=medexjob
+Group=medexjob
+WorkingDirectory=/opt/medexjob/backend
+
+# Environment variables (optional - can also use .env file)
+Environment="SPRING_PROFILES_ACTIVE=prod"
+# Environment="JWT_SECRET=your_secret_here"
+# Environment="DB_PASSWORD=your_db_password"
+
+# Java options
+ExecStart=/usr/bin/java -Xms512m -Xmx1024m -jar -Dspring.profiles.active=prod /opt/medexjob/backend/target/medexjob-backend-1.0.0.jar
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=medexjob-backend
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
