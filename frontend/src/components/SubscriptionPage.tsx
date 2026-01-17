@@ -1,216 +1,826 @@
-import { Check, CreditCard, Star, Zap, Crown } from 'lucide-react';
+// AI assisted development
+import { Check, CreditCard, Star, Zap, Crown, Shield, TrendingUp, Users, Mail, Headphones, ArrowRight, Sparkles, Gift, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { subscriptionPlans } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  fetchSubscriptionPlans,
+  initiatePayment,
+  getCurrentSubscription,
+  SubscriptionPlanResponse,
+  SubscriptionResponse
+} from '../api/subscriptions';
 import { SubscriptionPlan } from '../types';
+import { useState, useEffect } from 'react';
 
 interface SubscriptionPageProps {
   onNavigate: (page: string) => void;
 }
 
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+const faqItems: FAQItem[] = [
+  {
+    question: "Can I upgrade or downgrade my plan?",
+    answer: "Yes, you can change your plan at any time. Upgrades take effect immediately, while downgrades take effect at the next billing cycle."
+  },
+  {
+    question: "What happens if I exceed my job posting limit?",
+    answer: "You can purchase additional job posts at ₹999 each, or upgrade to a higher plan for better value."
+  },
+  {
+    question: "Is there a free trial available?",
+    answer: "Yes, new employers get a 7-day free trial with the Monthly Plan to test our platform."
+  },
+  {
+    question: "What payment methods do you accept?",
+    answer: "We accept all major credit cards, debit cards, UPI, and net banking through our secure Razorpay payment gateway."
+  },
+  {
+    question: "Can I cancel my subscription anytime?",
+    answer: "Yes, you can cancel your subscription at any time. Your access will continue until the end of your current billing period."
+  }
+];
+
 export function SubscriptionPage({ onNavigate }: SubscriptionPageProps) {
-  const handleSelectPlan = (plan: SubscriptionPlan) => {
-    // In a real app, this would integrate with Razorpay
-    console.log('Selected plan:', plan);
-    // For demo purposes, we'll just show an alert
-    alert(`Selected ${plan.name} - ₹${plan.price.toLocaleString()}`);
-  };
+  const { token, user } = useAuth();
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlanResponse[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<SubscriptionResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
-  const getPlanIcon = (planId: string) => {
-    switch (planId) {
-      case 'plan-1':
-        return <CreditCard className="w-6 h-6" />;
-      case 'plan-2':
-        return <Zap className="w-6 h-6" />;
-      case 'plan-3':
-        return <Crown className="w-6 h-6" />;
-      default:
-        return <Star className="w-6 h-6" />;
+  // Fetch subscription plans
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const fetchedPlans = await fetchSubscriptionPlans();
+        setPlans(fetchedPlans);
+
+        // Fetch current subscription if user is logged in
+        if (token) {
+          try {
+            const subscription = await getCurrentSubscription(token);
+            setCurrentSubscription(subscription);
+          } catch (err: any) {
+            // Subscription fetch failed - handle different error cases
+            if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+              // Token expired or invalid - user needs to login again
+              console.warn('Authentication failed. User may need to login again.');
+              // Don't show error to user if they're just browsing plans
+              // Only show error if they try to subscribe
+            } else {
+              console.error('Error fetching current subscription:', err);
+            }
+            // Continue without subscription - user can still view plans
+            setCurrentSubscription(null);
+          }
+        }
+      } catch (err: any) {
+        console.error('Error fetching subscription plans:', err);
+        setError(err.message || 'Failed to load subscription plans. Please try again.');
+        setPlans([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, [token]);
+
+  const handleSelectPlan = async (plan: SubscriptionPlanResponse) => {
+    if (!token) {
+      alert('Please login to subscribe to a plan.');
+      onNavigate('login');
+      return;
+    }
+
+    // Check if user already has active subscription
+    if (currentSubscription && currentSubscription.status === 'active') {
+      const confirmUpgrade = confirm(
+        `You already have an active subscription (${currentSubscription.plan.name}). ` +
+        `Do you want to upgrade to ${plan.name}?`
+      );
+      if (!confirmUpgrade) {
+        return;
+      }
+    }
+
+    try {
+      setProcessingPayment(plan.id);
+      setError(null);
+
+      // Verify user is authenticated before proceeding
+      if (!user || !token) {
+        setError('Please login to purchase a subscription.');
+        onNavigate('login');
+        setProcessingPayment(null);
+        return;
+      }
+
+      // Initiate payment (this will also validate token)
+      let paymentData;
+      try {
+        paymentData = await initiatePayment(plan.id, token);
+      } catch (paymentErr: any) {
+        if (paymentErr.message?.includes('401') || paymentErr.message?.includes('Unauthorized')) {
+          setError('Your session has expired. Please login again.');
+          onNavigate('login');
+          setProcessingPayment(null);
+          return;
+        }
+        throw paymentErr; // Re-throw if it's not an auth error
+      }
+      
+      // Check if Razorpay order was created
+      if (paymentData.razorpayOrderId && paymentData.razorpayKeyId) {
+        // Open Razorpay checkout
+        const options = {
+          key: paymentData.razorpayKeyId,
+          amount: paymentData.razorpayAmount || (paymentData.amount * 100), // Amount in paise
+          currency: paymentData.razorpayCurrency || 'INR',
+          name: 'MedExJob.com',
+          description: `Subscription: ${plan.name}`,
+          order_id: paymentData.razorpayOrderId,
+          handler: async (response: any) => {
+            try {
+              console.log('Payment successful, creating subscription...', response);
+              
+              // Payment successful - create subscription
+              const { createSubscription } = await import('../api/subscriptions');
+              
+              try {
+                const subscriptionResult = await createSubscription(plan.id, token);
+                console.log('Subscription created successfully:', subscriptionResult);
+                
+                // Show success message
+                alert(
+                  `Payment successful!\n\n` +
+                  `Plan: ${plan.name}\n` +
+                  `Amount: ₹${plan.price.toLocaleString()}\n` +
+                  `Payment ID: ${response.razorpay_payment_id}\n\n` +
+                  `Subscription activated. Redirecting to dashboard...`
+                );
+
+                // Refresh subscription data
+                const subscription = await getCurrentSubscription(token);
+                setCurrentSubscription(subscription);
+                
+                // Redirect to job posting page after successful subscription
+                setTimeout(() => {
+                  onNavigate('employer-post-job');
+                }, 1000);
+              } catch (createErr: any) {
+                console.error('Subscription creation error details:', createErr);
+                
+                // Try to get detailed error message
+                let errorMessage = 'Subscription creation failed';
+                if (createErr.message) {
+                  errorMessage = createErr.message;
+                } else if (createErr.response) {
+                  try {
+                    const errorData = await createErr.response.json();
+                    errorMessage = errorData.error || errorData.message || errorMessage;
+                  } catch {
+                    errorMessage = `Error ${createErr.response.status}: ${createErr.response.statusText}`;
+                  }
+                }
+                
+                console.error('Error creating subscription after payment:', errorMessage);
+                alert(
+                  `Payment successful but subscription creation failed.\n\n` +
+                  `Error: ${errorMessage}\n\n` +
+                  `Payment ID: ${response.razorpay_payment_id}\n` +
+                  `Please contact support with this Payment ID.`
+                );
+              }
+            } catch (err: any) {
+              console.error('Unexpected error in payment handler:', err);
+              alert(
+                `Payment successful but an error occurred.\n` +
+                `Please contact support with Payment ID: ${response.razorpay_payment_id}`
+              );
+            } finally {
+              setProcessingPayment(null);
+            }
+          },
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || '',
+            contact: user?.phone || ''
+          },
+          theme: {
+            color: '#2563eb'
+          },
+          modal: {
+            ondismiss: () => {
+              setProcessingPayment(null);
+            }
+          }
+        };
+
+        // Load Razorpay script if not already loaded
+        const loadRazorpayScript = () => {
+          return new Promise((resolve, reject) => {
+            if ((window as any).Razorpay) {
+              resolve((window as any).Razorpay);
+              return;
+            }
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve((window as any).Razorpay);
+            script.onerror = () => reject(new Error('Failed to load Razorpay script'));
+            document.body.appendChild(script);
+          });
+        };
+
+        try {
+          const Razorpay = await loadRazorpayScript();
+          const razorpay = new Razorpay(options);
+          razorpay.open();
+        } catch (razorpayErr: any) {
+          console.error('Error opening Razorpay checkout:', razorpayErr);
+          setError('Failed to open payment gateway. Please try again.');
+          setProcessingPayment(null);
+        }
+      } else {
+        // Fallback: Create subscription directly (for testing without Razorpay)
+        try {
+          const { createSubscription } = await import('../api/subscriptions');
+          await createSubscription(plan.id, token);
+          
+          alert(
+            `Subscription activated successfully!\n\n` +
+            `Plan: ${plan.name}\n` +
+            `Amount: ₹${plan.price.toLocaleString()}\n` +
+            `Transaction ID: ${paymentData.transactionId}\n\n` +
+            `You can now post jobs. Redirecting...`
+          );
+
+          const subscription = await getCurrentSubscription(token);
+          setCurrentSubscription(subscription);
+          onNavigate('dashboard/employer');
+        } catch (subscriptionErr: any) {
+          console.error('Error creating subscription:', subscriptionErr);
+          setError(subscriptionErr.message || 'Failed to create subscription. Please try again.');
+        } finally {
+          setProcessingPayment(null);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error initiating payment:', err);
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        setError('Your session has expired. Please login again.');
+        onNavigate('login');
+      } else {
+        setError(err.message || 'Failed to initiate payment. Please try again.');
+      }
+    } finally {
+      setProcessingPayment(null);
     }
   };
 
-  const getPlanColor = (planId: string) => {
-    switch (planId) {
-      case 'plan-1':
-        return 'border-blue-200 hover:border-blue-300';
-      case 'plan-2':
-        return 'border-green-200 hover:border-green-300';
-      case 'plan-3':
-        return 'border-purple-200 hover:border-purple-300';
-      default:
-        return 'border-gray-200 hover:border-gray-300';
-    }
+  const toggleFaq = (index: number) => {
+    setExpandedFaq(expandedFaq === index ? null : index);
   };
 
-  const getPlanBadge = (planId: string) => {
-    switch (planId) {
-      case 'plan-1':
-        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Basic</Badge>;
-      case 'plan-2':
-        return <Badge className="bg-green-100 text-green-700 border-green-200">Popular</Badge>;
-      case 'plan-3':
-        return <Badge className="bg-purple-100 text-purple-700 border-purple-200">Premium</Badge>;
-      default:
-        return null;
-    }
+  const getPlanIcon = (index: number) => {
+    const icons = [<CreditCard className="w-8 h-8" />, <Zap className="w-8 h-8" />, <Crown className="w-8 h-8" />];
+    return icons[index] || <Star className="w-8 h-8" />;
+  };
+
+  const getPlanConfig = (index: number) => {
+    const configs = [
+      {
+        borderColor: 'border-blue-200',
+        hoverBorderColor: 'hover:border-blue-400',
+        iconBg: 'bg-blue-500',
+        iconGradient: 'from-blue-500 to-blue-600',
+        badgeBg: 'bg-blue-100',
+        badgeText: 'text-blue-700',
+        badgeBorder: 'border-blue-200',
+        buttonGradient: 'from-blue-600 to-blue-700',
+        buttonHover: 'hover:from-blue-700 hover:to-blue-800',
+        priceColor: 'text-blue-600',
+        postsBg: 'from-blue-50 to-blue-100',
+        postsBorder: 'border-blue-200',
+        isPopular: false
+      },
+      {
+        borderColor: 'border-green-300',
+        hoverBorderColor: 'hover:border-green-500',
+        iconBg: 'bg-green-500',
+        iconGradient: 'from-green-500 to-emerald-600',
+        badgeBg: 'bg-green-100',
+        badgeText: 'text-green-700',
+        badgeBorder: 'border-green-200',
+        buttonGradient: 'from-green-600 to-emerald-700',
+        buttonHover: 'hover:from-green-700 hover:to-emerald-800',
+        priceColor: 'text-green-600',
+        postsBg: 'from-green-50 to-emerald-100',
+        postsBorder: 'border-green-200',
+        isPopular: true
+      },
+      {
+        borderColor: 'border-purple-200',
+        hoverBorderColor: 'hover:border-purple-400',
+        iconBg: 'bg-purple-500',
+        iconGradient: 'from-purple-500 to-pink-600',
+        badgeBg: 'bg-purple-100',
+        badgeText: 'text-purple-700',
+        badgeBorder: 'border-purple-200',
+        buttonGradient: 'from-purple-600 to-pink-700',
+        buttonHover: 'hover:from-purple-700 hover:to-pink-800',
+        priceColor: 'text-purple-600',
+        postsBg: 'from-purple-50 to-pink-100',
+        postsBorder: 'border-purple-200',
+        isPopular: false
+      }
+    ];
+    return configs[index] || {
+      borderColor: 'border-gray-200',
+      hoverBorderColor: 'hover:border-gray-300',
+      iconBg: 'bg-gray-500',
+      iconGradient: 'from-gray-500 to-gray-600',
+      badgeBg: 'bg-gray-100',
+      badgeText: 'text-gray-700',
+      badgeBorder: 'border-gray-200',
+      buttonGradient: 'from-gray-600 to-gray-700',
+      buttonHover: 'hover:from-gray-700 hover:to-gray-800',
+      priceColor: 'text-gray-600',
+      postsBg: 'from-gray-50 to-gray-100',
+      postsBorder: 'border-gray-200',
+      isPopular: false
+    };
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl text-gray-900 mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Select the perfect subscription plan for your hiring needs. All plans include verified candidate access and basic analytics.
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24">
+        {/* Header Section */}
+        <header className="text-center mb-12 sm:mb-16 lg:mb-20">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-6 shadow-lg">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
+            Choose Your Plan
+          </h1>
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
+            Select the perfect subscription plan for your hiring needs. All plans include verified candidate access and comprehensive analytics.
           </p>
-        </div>
+        </header>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {subscriptionPlans.map((plan, index) => (
-            <Card 
-              key={plan.id} 
-              className={`relative p-8 transition-all duration-300 hover:shadow-xl ${getPlanColor(plan.id)} ${
-                plan.id === 'plan-2' ? 'ring-2 ring-green-500 scale-105' : ''
-              }`}
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setError(null)}
+              className="ml-auto"
             >
-              {/* Popular Badge */}
-              {plan.id === 'plan-2' && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-green-500 text-white px-4 py-1">
-                    Most Popular
-                  </Badge>
-                </div>
-              )}
+              Dismiss
+            </Button>
+          </div>
+        )}
 
-              {/* Plan Header */}
-              <div className="text-center mb-6">
-                <div className="flex items-center justify-center mb-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    plan.id === 'plan-1' ? 'bg-blue-100 text-blue-600' :
-                    plan.id === 'plan-2' ? 'bg-green-100 text-green-600' :
-                    'bg-purple-100 text-purple-600'
-                  }`}>
-                    {getPlanIcon(plan.id)}
-                  </div>
-                </div>
-                <h3 className="text-2xl text-gray-900 mb-2">{plan.name}</h3>
-                {getPlanBadge(plan.id)}
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
-                  <span className="text-gray-600 ml-2">/{plan.duration}</span>
-                </div>
+        {/* Current Subscription Info */}
+        {currentSubscription && currentSubscription.status === 'active' && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-green-900">Active Subscription: {currentSubscription.plan.name}</p>
+                <p className="text-sm text-green-700">
+                  Valid until: {new Date(currentSubscription.endDate).toLocaleDateString('en-IN')} • 
+                  Posts used: {currentSubscription.jobPostsUsed} / {currentSubscription.jobPostsAllowed}
+                </p>
               </div>
+            </div>
+          </div>
+        )}
 
-              {/* Features */}
-              <div className="space-y-4 mb-8">
-                {plan.features.map((feature, featureIndex) => (
-                  <div key={featureIndex} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">{feature}</span>
+        {/* Pricing Cards Section */}
+        <section className="mb-12 sm:mb-16 lg:mb-20">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <span className="ml-3 text-gray-600">Loading subscription plans...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 lg:gap-5 w-full px-2 sm:px-4 lg:px-6">
+              {plans.length > 0 ? (
+                plans.map((plan, index) => {
+              const config = getPlanConfig(index);
+              const isPopular = config.isPopular || false;
+              
+              return (
+                <article
+                  key={plan.id}
+                  className={`relative bg-white rounded-xl border-2 transition-all duration-300 flex flex-col ${
+                    config.borderColor
+                  } ${config.hoverBorderColor} ${
+                    isPopular 
+                      ? 'ring-2 ring-green-100 shadow-lg lg:scale-105' 
+                      : 'shadow-sm hover:shadow-md hover:-translate-y-0.5'
+                  }`}
+                >
+                  {/* Popular Badge */}
+                  {isPopular && (
+                    <div className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-10">
+                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2.5 py-0.5 text-xs font-semibold shadow-md flex items-center gap-1 rounded-full">
+                        <Gift className="w-3 h-3" />
+                        Most Popular
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Premium Badge */}
+                  {index === plans.length - 1 && plans.length > 2 && (
+                    <div className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-10">
+                      <Badge className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-2.5 py-0.5 text-xs font-semibold shadow-md flex items-center gap-1 rounded-full">
+                        <Crown className="w-3 h-3" />
+                        Premium
+                      </Badge>
+                    </div>
+                  )}
+
+                  <div className="p-5 sm:p-6 lg:p-6 pt-9 sm:pt-10 lg:pt-11 flex flex-col h-full">
+                    {/* Plan Header */}
+                    <div className="text-center mb-6">
+                      {/* Icon */}
+                      <div className="flex items-center justify-center mb-5">
+                        <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 hover:scale-110 bg-gradient-to-br ${config.iconGradient}`}>
+                          <div className="text-white flex items-center justify-center">
+                            {getPlanIcon(index)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Plan Name */}
+                      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 leading-tight">
+                        {plan.name}
+                      </h2>
+                      
+                      {/* Badge - Always reserve space for consistency */}
+                      <div className="h-6 mb-4 flex items-center justify-center">
+                        {!isPopular && (
+                          <Badge className={`${config.badgeBg} ${config.badgeText} ${config.badgeBorder} border text-xs px-3 py-1`}>
+                            {index === 0 ? 'Basic' : 'Premium'}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="mt-4">
+                        <div className="flex items-baseline justify-center gap-1.5">
+                          <span className={`text-3xl sm:text-4xl font-extrabold ${config.priceColor} leading-none`}>
+                            ₹{plan.price.toLocaleString()}
+                          </span>
+                          <span className="text-sm text-gray-500 font-medium leading-none">
+                            /{plan.duration}
+                          </span>
+                        </div>
+                        {index === plans.length - 1 && plan.duration === 'yearly' && (
+                          <p className="text-xs text-gray-500 mt-2 font-medium text-center">
+                            Best Value
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Features List */}
+                    <ul className="space-y-3 mb-6 flex-grow min-h-[180px]">
+                      {plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start gap-3">
+                          <div className="mt-0.5 flex-shrink-0">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            index === 0 ? 'bg-blue-100' :
+                            index === 1 ? 'bg-green-100' :
+                            'bg-purple-100'
+                          }`}>
+                            <Check className={`w-3.5 h-3.5 ${
+                              index === 0 ? 'text-blue-600' :
+                              index === 1 ? 'text-green-600' :
+                              'text-purple-600'
+                            }`} />
+                            </div>
+                          </div>
+                          <span className="text-gray-700 font-medium leading-relaxed text-sm flex-1">
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* Job Posts Info */}
+                    <div className={`rounded-xl p-4 mb-6 transition-all duration-300 bg-gradient-to-br ${config.postsBg} border ${config.postsBorder}`}>
+                      <div className="text-center">
+                        <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                          Job Posts Included
+                        </p>
+                        <p className={`text-4xl font-extrabold mb-1 ${config.priceColor} leading-none`}>
+                          {plan.jobPostsAllowed}
+                        </p>
+                        <p className="text-xs font-medium text-gray-600">
+                          {plan.jobPostsAllowed === 1 ? 'Single post' : 
+                           plan.jobPostsAllowed === 10 ? 'Per month' : 'Per year'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <Button
+                      className={`w-full py-3.5 text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg rounded-lg bg-gradient-to-r ${config.buttonGradient} ${config.buttonHover} text-white mt-auto flex items-center justify-center gap-1.5`}
+                      onClick={() => handleSelectPlan(plan)}
+                      disabled={processingPayment === plan.id}
+                    >
+                      {processingPayment === plan.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Choose {plan.name}</span>
+                          <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                        </>
+                      )}
+                    </Button>
                   </div>
+                </article>
+              );
+            })) : (
+              <Card className="p-12 text-center col-span-full">
+                <p className="text-gray-500">No subscription plans available at the moment.</p>
+              </Card>
+            )}
+            </div>
+          )}
+        </section>
+
+        {/* Additional Info Section */}
+        <section className="w-full mb-10 sm:mb-12 lg:mb-16 px-2 sm:px-4 lg:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 lg:gap-6 max-w-6xl mx-auto">
+            {/* What's Included */}
+            <Card className="p-4 sm:p-5 lg:p-6 bg-white border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  What's Included in All Plans
+                </h3>
+              </div>
+              <ul className="space-y-2.5">
+                {[
+                  { icon: Users, text: 'Access to verified medical professionals' },
+                  { icon: TrendingUp, text: 'Basic application management' },
+                  { icon: Mail, text: 'Email notifications for new applications' },
+                  { icon: Headphones, text: '24/7 customer support' }
+                ].map((item, index) => (
+                  <li key={index} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <item.icon className="w-4 h-4 text-green-600" />
+                    </div>
+                    <span className="text-gray-700 font-medium text-xs sm:text-sm">
+                      {item.text}
+                    </span>
+                  </li>
                 ))}
-              </div>
-
-              {/* Job Posts Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-1">Job Posts Included</p>
-                  <p className="text-2xl font-bold text-gray-900">{plan.jobPostsAllowed}</p>
-                  <p className="text-xs text-gray-500">
-                    {plan.jobPostsAllowed === 1 ? 'Single post' : 
-                     plan.jobPostsAllowed === 10 ? 'Per month' : 'Per year'}
-                  </p>
-                </div>
-              </div>
-
-              {/* CTA Button */}
-              <Button 
-                className={`w-full ${
-                  plan.id === 'plan-1' ? 'bg-blue-600 hover:bg-blue-700' :
-                  plan.id === 'plan-2' ? 'bg-green-600 hover:bg-green-700' :
-                  'bg-purple-600 hover:bg-purple-700'
-                }`}
-                onClick={() => handleSelectPlan(plan)}
-              >
-                Choose {plan.name}
-              </Button>
-            </Card>
-          ))}
-        </div>
-
-        {/* Additional Info */}
-        <div className="max-w-4xl mx-auto mt-16">
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-4">What's Included in All Plans</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">Access to verified medical professionals</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">Basic application management</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">Email notifications for new applications</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">24/7 customer support</span>
-                </div>
-              </div>
+              </ul>
             </Card>
 
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-4">Payment & Billing</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5 text-blue-500" />
-                  <span className="text-gray-700">Secure payment via Razorpay</span>
+            {/* Payment & Billing */}
+            <Card className="p-4 sm:p-5 lg:p-6 bg-white border-2 border-gray-200 hover:border-green-300 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                  <CreditCard className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">Instant activation after payment</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">Auto-renewal available</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700">Cancel anytime</span>
-                </div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  Payment & Billing
+                </h3>
               </div>
+              <ul className="space-y-2.5">
+                {[
+                  { icon: Shield, text: 'Secure payment via Razorpay', color: 'blue' },
+                  { icon: Check, text: 'Instant activation after payment', color: 'green' },
+                  { icon: Check, text: 'Auto-renewal available', color: 'green' },
+                  { icon: Check, text: 'Cancel anytime', color: 'green' }
+                ].map((item, index) => (
+                  <li key={index} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-green-50 transition-colors">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      item.color === 'blue' ? 'bg-blue-100' : 'bg-green-100'
+                    }`}>
+                      <item.icon className={`w-4 h-4 ${
+                        item.color === 'blue' ? 'text-blue-600' : 'text-green-600'
+                      }`} />
+                    </div>
+                    <span className="text-gray-700 font-medium text-xs sm:text-sm">
+                      {item.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </Card>
           </div>
-        </div>
+        </section>
+
+        {/* Comparison Table Section */}
+        <section className="w-full mb-10 sm:mb-12 lg:mb-16 px-2 sm:px-4 lg:px-6">
+          <header className="text-center mb-5 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              Compare Plans
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600">
+              See how our plans stack up against each other
+            </p>
+          </header>
+          <Card className="p-4 sm:p-5 lg:p-6 overflow-hidden rounded-xl border-2 border-gray-200 shadow-sm max-w-6xl mx-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left p-3 font-semibold text-gray-900 text-xs sm:text-sm">
+                      Features
+                    </th>
+                    {plans.map((plan) => (
+                      <th key={plan.id} className="text-center p-3 font-semibold text-gray-900 text-xs sm:text-sm">
+                        {plan.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-700 text-xs sm:text-sm">Job Posts</td>
+                    {plans.map((plan) => (
+                      <td key={plan.id} className="text-center p-3">
+                        <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                          {plan.jobPostsAllowed}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-700 text-xs sm:text-sm">Price</td>
+                    {plans.map((plan) => (
+                      <td key={plan.id} className="text-center p-3">
+                        <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                          ₹{plan.price.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-1">
+                          /{plan.duration}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-700 text-xs sm:text-sm">Priority Approval</td>
+                    {plans.map((plan, index) => (
+                      <td key={plan.id} className="text-center p-3">
+                        {index === 0 ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <Check className="w-4 h-4 text-green-500 mx-auto" />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-700 text-xs sm:text-sm">Advanced Analytics</td>
+                    {plans.map((plan, index) => (
+                      <td key={plan.id} className="text-center p-3">
+                        {index === 0 ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <Check className="w-4 h-4 text-green-500 mx-auto" />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-700 text-xs sm:text-sm">Featured Jobs</td>
+                    {plans.map((plan, index) => (
+                      <td key={plan.id} className="text-center p-3">
+                        {index === plans.length - 1 ? (
+                          <Check className="w-4 h-4 text-green-500 mx-auto" />
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-700 text-xs sm:text-sm">Dedicated Support</td>
+                    {plans.map((plan, index) => (
+                      <td key={plan.id} className="text-center p-3">
+                        {index === plans.length - 1 ? (
+                          <Check className="w-4 h-4 text-green-500 mx-auto" />
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </section>
+
+        {/* Trust Section */}
+        <section className="w-full mb-10 sm:mb-12 lg:mb-16 px-2 sm:px-4 lg:px-6">
+          <Card className="p-5 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 via-white to-purple-50 border-2 border-blue-200 rounded-xl shadow-sm max-w-6xl mx-auto">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl mb-4 shadow-md">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                Trusted by 500+ Medical Employers
+              </h2>
+              <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto mb-6 sm:mb-8">
+                Join leading hospitals, clinics, and healthcare organizations who trust MedExJob.com for their hiring needs.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-6">
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1.5">
+                    500+
+                  </div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm">
+                    Active Employers
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1.5">
+                    10K+
+                  </div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm">
+                    Job Postings
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1.5">
+                    50K+
+                  </div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm">
+                    Medical Professionals
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </section>
 
         {/* FAQ Section */}
-        <div className="max-w-4xl mx-auto mt-16">
-          <h2 className="text-2xl text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-2">Can I upgrade or downgrade my plan?</h3>
-              <p className="text-gray-600">Yes, you can change your plan at any time. Upgrades take effect immediately, while downgrades take effect at the next billing cycle.</p>
-            </Card>
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-2">What happens if I exceed my job posting limit?</h3>
-              <p className="text-gray-600">You can purchase additional job posts at ₹999 each, or upgrade to a higher plan for better value.</p>
-            </Card>
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-2">Is there a free trial available?</h3>
-              <p className="text-gray-600">Yes, new employers get a 7-day free trial with the Monthly Plan to test our platform.</p>
-            </Card>
+        <section className="w-full px-2 sm:px-4 lg:px-6">
+          <header className="text-center mb-5 sm:mb-6 max-w-5xl mx-auto">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600">
+              Everything you need to know about our subscription plans
+            </p>
+          </header>
+          <div className="space-y-3 sm:space-y-4 max-w-5xl mx-auto">
+            {faqItems.map((faq, index) => (
+              <Card
+                key={index}
+                className={`p-4 sm:p-5 cursor-pointer transition-all duration-300 rounded-xl border-2 ${
+                  expandedFaq === index
+                    ? 'border-blue-300 bg-blue-50 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white'
+                }`}
+                onClick={() => toggleFaq(index)}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm sm:text-base font-semibold text-gray-900 pr-3 flex-1">
+                    {faq.question}
+                  </h3>
+                  <ChevronDown
+                    className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-300 ${
+                      expandedFaq === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+                {expandedFaq === index && (
+                  <p className="text-gray-600 mt-3 leading-relaxed text-xs sm:text-sm animate-in slide-in-from-top-2">
+                    {faq.answer}
+                  </p>
+                )}
+              </Card>
+            ))}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 }
-
-

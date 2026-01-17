@@ -44,29 +44,40 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             try {
                 // Get the email/subject from the token
                 email = jwtTokenProvider.getEmailFromToken(jwtToken);
+                logger.debug("Successfully extracted email from JWT token: {}", email);
             } catch (IllegalArgumentException e) {
-                logger.error("Unable to get JWT Token");
+                logger.error("Unable to get JWT Token: {}", e.getMessage());
             } catch (io.jsonwebtoken.ExpiredJwtException e) {
-                logger.warn("JWT Token has expired");
+                logger.warn("JWT Token has expired for request: {}", request.getRequestURI());
             } catch (io.jsonwebtoken.JwtException e) {
-                logger.error("JWT Token processing error: {}", e.getMessage());
+                logger.error("JWT Token processing error for request {}: {}", request.getRequestURI(), e.getMessage());
             }
         } else {
-            logger.warn("JWT Token does not begin with Bearer String for request: {}", request.getRequestURI());
+            logger.warn("JWT Token does not begin with Bearer String for request: {}. Header: {}", 
+                request.getRequestURI(), requestTokenHeader != null ? "Present but invalid format" : "Missing");
         }
         
         // Once we get the token, validate it.
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(email);
+            try {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(email);
+                logger.debug("Loaded user details for email: {}", email);
 
-            // If we were able to get the email, the token is valid.
-            // Now, we configure Spring Security to manually set authentication.
-            UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
-                new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
-            usernamePasswordAuthenticationToken
-                .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+                // If we were able to get the email, the token is valid.
+                // Now, we configure Spring Security to manually set authentication.
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
+                    new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                usernamePasswordAuthenticationToken
+                    .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+                logger.debug("Authentication set for user: {}", email);
+            } catch (Exception e) {
+                logger.error("Error loading user details for email {}: {}", email, e.getMessage());
+            }
+        } else if (email == null && request.getRequestURI().startsWith("/api/jobs") && 
+                   request.getMethod().equals("POST")) {
+            logger.warn("POST /api/jobs request without valid JWT token. URI: {}", request.getRequestURI());
         }
         
         chain.doFilter(request, response);

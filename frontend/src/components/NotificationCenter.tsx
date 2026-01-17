@@ -1,5 +1,6 @@
+// AI assisted development
 import { useState, useEffect } from 'react';
-import { Bell, Mail, MessageSquare, Check, X, Trash2, Settings, Filter } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Check, X, Trash2, Settings, Filter, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -7,8 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
-import { mockNotifications } from '../data/mockData';
-import { Notification } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  fetchNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  NotificationResponse,
+  NotificationPreferencesResponse
+} from '../api/notifications';
 
 interface NotificationCenterProps {
   userId: string;
@@ -16,19 +27,85 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ userId, userRole }: NotificationCenterProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { token } = useAuth();
+  const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'job_alert' | 'application_update' | 'interview_scheduled'>('all');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
+  const [jobAlertEnabled, setJobAlertEnabled] = useState(true);
+  const [applicationUpdateEnabled, setApplicationUpdateEnabled] = useState(true);
+  const [interviewScheduledEnabled, setInterviewScheduledEnabled] = useState(true);
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [preferencesLoading, setPreferencesLoading] = useState(false);
 
+  // Fetch notifications
   useEffect(() => {
-    // If admin, show all notifications. Otherwise, filter for the current user.
-    const userNotifications = userRole === 'admin'
-      ? mockNotifications
-      : mockNotifications.filter(n => n.userId === userId);
-    setNotifications(userNotifications);
-  }, [userId]);
+    const loadNotifications = async () => {
+      if (!token) {
+        setError('Authentication required. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const params: any = {
+          page: 0,
+          size: 100
+        };
+
+        if (filter === 'unread') {
+          params.unreadOnly = true;
+        } else if (filter !== 'all') {
+          params.type = filter;
+        }
+
+        const response = await fetchNotifications(params, token);
+        setNotifications(response.content || []);
+
+        // Fetch unread count
+        const count = await getUnreadCount(token);
+        setUnreadCount(count);
+      } catch (err: any) {
+        console.error('Error fetching notifications:', err);
+        setError(err.message || 'Failed to load notifications. Please try again.');
+        setNotifications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
+  }, [token, filter]);
+
+  // Fetch preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      if (!token) return;
+
+      try {
+        const preferences = await getNotificationPreferences(token);
+        setEmailNotifications(preferences.emailEnabled);
+        setSmsNotifications(preferences.smsEnabled);
+        setPushNotifications(preferences.pushEnabled);
+        setJobAlertEnabled(preferences.jobAlertEnabled);
+        setApplicationUpdateEnabled(preferences.applicationUpdateEnabled);
+        setInterviewScheduledEnabled(preferences.interviewScheduledEnabled);
+        setSubscriptionEnabled(preferences.subscriptionEnabled);
+      } catch (err: any) {
+        console.error('Error fetching preferences:', err);
+        // Use defaults if fetch fails
+      }
+    };
+
+    loadPreferences();
+  }, [token]);
 
   const filteredNotifications = notifications.filter(notification => {
     if (filter === 'all') return true;
@@ -36,24 +113,89 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
     return notification.type === filter;
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const handleMarkAsRead = async (notificationId: string) => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
+    try {
+      await markAsRead(notificationId, token);
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err: any) {
+      console.error('Error marking notification as read:', err);
+      setError(err.message || 'Failed to mark notification as read.');
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
+  const handleMarkAllAsRead = async () => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await markAllAsRead(token);
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (err: any) {
+      console.error('Error marking all notifications as read:', err);
+      setError(err.message || 'Failed to mark all notifications as read.');
+    }
   };
 
-  const deleteNotification = (notificationId: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+  const handleDeleteNotification = async (notificationId: string) => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await deleteNotification(notificationId, token);
+      const notification = notifications.find(n => n.id === notificationId);
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      if (notification && !notification.read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (err: any) {
+      console.error('Error deleting notification:', err);
+      setError(err.message || 'Failed to delete notification.');
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      setPreferencesLoading(true);
+      await updateNotificationPreferences({
+        emailEnabled: emailNotifications,
+        smsEnabled: smsNotifications,
+        pushEnabled: pushNotifications,
+        jobAlertEnabled: jobAlertEnabled,
+        applicationUpdateEnabled: applicationUpdateEnabled,
+        interviewScheduledEnabled: interviewScheduledEnabled,
+        subscriptionEnabled: subscriptionEnabled,
+      }, token);
+      
+      // Show success message (you can add a toast notification here)
+      setError(null);
+    } catch (err: any) {
+      console.error('Error saving preferences:', err);
+      setError(err.message || 'Failed to save preferences.');
+    } finally {
+      setPreferencesLoading(false);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -112,12 +254,28 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                 {unreadCount} unread
               </Badge>
             )}
-            <Button variant="outline" onClick={markAllAsRead} disabled={unreadCount === 0}>
+            <Button variant="outline" onClick={handleMarkAllAsRead} disabled={unreadCount === 0}>
               <Check className="w-4 h-4 mr-2" />
               Mark All Read
             </Button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setError(null)}
+              className="ml-auto"
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-4 gap-6">
           {/* Main Content */}
@@ -148,9 +306,16 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                   </div>
                 </div>
 
-                {/* Notifications List */}
-                <div className="space-y-4">
-                  {filteredNotifications.length > 0 ? (
+                {/* Loading State */}
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <span className="ml-3 text-gray-600">Loading notifications...</span>
+                  </div>
+                ) : (
+                  /* Notifications List */
+                  <div className="space-y-4">
+                    {filteredNotifications.length > 0 ? (
                     filteredNotifications.map((notification) => (
                       <Card 
                         key={notification.id} 
@@ -179,7 +344,7 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => markAsRead(notification.id)}
+                                    onClick={() => handleMarkAsRead(notification.id)}
                                     className="h-8 w-8 p-0"
                                   >
                                     <Check className="w-4 h-4" />
@@ -188,7 +353,7 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => deleteNotification(notification.id)}
+                                  onClick={() => handleDeleteNotification(notification.id)}
                                   className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -211,7 +376,8 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                       </p>
                     </Card>
                   )}
-                </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="settings" className="mt-6">
@@ -280,36 +446,49 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                           <p className="text-sm font-medium">Job Alerts</p>
                           <p className="text-xs text-gray-600">New jobs matching your criteria</p>
                         </div>
-                        <Switch defaultChecked />
+                        <Switch checked={jobAlertEnabled} onCheckedChange={setJobAlertEnabled} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">Application Updates</p>
                           <p className="text-xs text-gray-600">Status changes on your applications</p>
                         </div>
-                        <Switch defaultChecked />
+                        <Switch checked={applicationUpdateEnabled} onCheckedChange={setApplicationUpdateEnabled} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">Interview Scheduling</p>
                           <p className="text-xs text-gray-600">Interview invitations and updates</p>
                         </div>
-                        <Switch defaultChecked />
+                        <Switch checked={interviewScheduledEnabled} onCheckedChange={setInterviewScheduledEnabled} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">Subscription Updates</p>
                           <p className="text-xs text-gray-600">Billing and subscription notifications</p>
                         </div>
-                        <Switch defaultChecked />
+                        <Switch checked={subscriptionEnabled} onCheckedChange={setSubscriptionEnabled} />
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-8 pt-6 border-t">
-                    <Button className="w-full">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Save Preferences
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSavePreferences}
+                      disabled={preferencesLoading}
+                    >
+                      {preferencesLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Settings className="w-4 h-4 mr-2" />
+                          Save Preferences
+                        </>
+                      )}
                     </Button>
                   </div>
                 </Card>

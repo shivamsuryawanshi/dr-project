@@ -72,24 +72,49 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // Allow OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Public endpoints
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/jobs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
-                        // Admin-only endpoints
-                        .requestMatchers(HttpMethod.POST, "/api/jobs").permitAll()
+                        // Allow error endpoint for Spring Boot error handling
+                        .requestMatchers("/error").permitAll()
+                                // Public endpoints
+                                .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/jobs/employer/**").authenticated() // Employer jobs require auth
+                                .requestMatchers(HttpMethod.GET, "/api/jobs/**").permitAll() // Public job listings
+                                .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
+                                // Job posting requires authentication (controller validates subscription)
+                                .requestMatchers(HttpMethod.POST, "/api/jobs").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/jobs/**").hasRole("ADMIN")
                         // Application endpoints
                         .requestMatchers(HttpMethod.POST, "/api/applications").authenticated() // Any logged-in user can
                                                                                                // apply
-                        .requestMatchers(HttpMethod.GET, "/api/applications").hasRole("ADMIN") // Only admin can list
-                                                                                               // all
-                        .requestMatchers(HttpMethod.PUT, "/api/applications/**/status").hasRole("ADMIN") // Only admin
+                        .requestMatchers(HttpMethod.GET, "/api/applications").authenticated() // Authenticated users can
+                                                                                              // fetch applications (controller validates access)
+                        .requestMatchers(HttpMethod.PUT, "/api/applications/*/status").hasRole("ADMIN") // Only admin
                                                                                                          // can update
                                                                                                          // status
                         .requestMatchers(HttpMethod.DELETE, "/api/applications/**").hasRole("ADMIN") // Only admin can
                                                                                                      // delete
+                        // Notification endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/notifications/send").hasRole("ADMIN") // Only admin can send
+                        // Job Alert endpoints
+                        .requestMatchers("/api/job-alerts/**").authenticated()
+                        // Fraud Report endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/fraud-reports").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/fraud-reports/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/fraud-reports/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/fraud-reports/**").hasRole("ADMIN")
+                        // Subscription endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/subscriptions/plans").permitAll()
+                        .requestMatchers("/api/subscriptions/**").authenticated()
+                        .requestMatchers("/api/payments/**").authenticated()
+                        // Employer endpoints - bypass Spring Security pattern matching, let controller handle authorization
+                        // Use regex or custom matcher to avoid pattern parsing issues
+                        .requestMatchers(request -> {
+                            String path = request.getRequestURI();
+                            return path.startsWith("/api/employers");
+                        }).authenticated()
                         .requestMatchers("/api/analytics/**").permitAll()
                         .requestMatchers("/api/actuator/**").permitAll()
                         .requestMatchers("/api/health").permitAll()

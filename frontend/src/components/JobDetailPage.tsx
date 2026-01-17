@@ -7,12 +7,14 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
-import { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { useEffect, useState, useRef } from 'react';
 import { fetchJob } from '../api/jobs';
 import { useParams } from 'react-router-dom';
 import { applyForJob } from '../api/applications';
 import { useAuth } from '../contexts/AuthContext';
+import { saveJob, unsaveJob, checkIfJobIsSaved } from '../api/savedJobs';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
 
 interface JobDetailPageProps {
   onNavigate: (page: string) => void;
@@ -25,6 +27,9 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(initialShowApplyDialog);
+  const [isDialogOpening, setIsDialogOpening] = useState(false);
+  const buttonClickTimeRef = useRef<number>(0);
+  const dialogJustOpenedRef = useRef<boolean>(false);
   const [applicationForm, setApplicationForm] = useState({
     candidateName: '',
     candidateEmail: '',
@@ -33,8 +38,15 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
     notes: ''
   });
   const [applying, setApplying] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const locationText = job?.location || [job?.city, job?.state].filter(Boolean).join(', ');
   const { jobId } = useParams<{ jobId: string }>();
+
+  // Debug: Track dialog state changes
+  useEffect(() => {
+    console.log('📊 showApplyDialog state changed:', showApplyDialog);
+  }, [showApplyDialog]);
 
   useEffect(() => {
     (async () => {
@@ -63,6 +75,22 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
     }
   }, [user, showApplyDialog]);
 
+  // Check if job is saved when job loads
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      if (jobId && isAuthenticated && token && user?.role === 'candidate') {
+        try {
+          const saved = await checkIfJobIsSaved(jobId, token);
+          setIsSaved(saved);
+        } catch (error) {
+          console.error('Error checking saved status:', error);
+          setIsSaved(false);
+        }
+      }
+    };
+    checkSavedStatus();
+  }, [jobId, isAuthenticated, token, user]);
+
 
   if (loading) {
     return (
@@ -88,11 +116,21 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
   const daysLeft = job.lastDate ? Math.ceil((new Date(job.lastDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
   const handleApplicationSubmit = async () => {
-    if (!job || !token) return;
+    if (!job || !token) {
+      alert('Please login to apply for this job.');
+      return;
+    }
+
+    // Validate required fields
+    if (!applicationForm.candidateName || !applicationForm.candidateEmail || !applicationForm.candidatePhone) {
+      alert('Please fill in all required fields (Name, Email, Phone).');
+      return;
+    }
 
     setApplying(true);
     try {
-      await applyForJob({
+      console.log('📝 Submitting application for job:', job.id);
+      const response = await applyForJob({
         jobId: job.id,
         candidateName: applicationForm.candidateName,
         candidateEmail: applicationForm.candidateEmail,
@@ -102,7 +140,11 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
         token: token
       });
 
-      alert('Application submitted successfully!');
+      console.log('✅ Application submitted successfully:', response);
+      console.log('📋 Application ID:', response.id);
+      console.log('👤 Candidate ID:', response.candidateId);
+
+      // Close dialog and reset form
       setShowApplyDialog(false);
       setApplicationForm({
         candidateName: '',
@@ -111,11 +153,57 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
         resume: null,
         notes: ''
       });
-    } catch (error) {
-      alert('Failed to submit application. Please try again.');
-      console.error('Application error:', error);
+      
+      // Show success message and redirect to dashboard
+      alert('Application submitted successfully! Redirecting to dashboard...');
+      
+      // Increased delay to ensure backend has saved the application and database is updated
+      setTimeout(() => {
+        console.log('🔄 Redirecting to dashboard...');
+        // Redirect to dashboard where the applied job will be visible
+        // Use window.location to force a full page reload and ensure fresh data
+        if (user?.role === 'candidate') {
+          window.location.href = '/dashboard/candidate';
+        } else {
+          onNavigate('dashboard');
+        }
+      }, 1000); // Increased delay to 1 second to ensure backend processing
+    } catch (error: any) {
+      console.error('❌ Application submission error:', error);
+      const errorMessage = error?.message || 'Failed to submit application. Please try again.';
+      alert(errorMessage);
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleSaveJob = async () => {
+    if (!job || !token || !isAuthenticated) {
+      alert('Please login as a candidate to save jobs');
+      return;
+    }
+
+    if (user?.role !== 'candidate') {
+      alert('Only candidates can save jobs');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (isSaved) {
+        await unsaveJob(job.id, token);
+        setIsSaved(false);
+        alert('Job removed from saved jobs');
+      } else {
+        await saveJob(job.id, token);
+        setIsSaved(true);
+        alert('Job saved successfully!');
+      }
+    } catch (error: any) {
+      console.error('Save job error:', error);
+      alert(error.message || 'Failed to save job. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -309,13 +397,155 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                       Apply directly through our platform or visit the official website.
                     </p>
                     {isAuthenticated ? (
-                      <Dialog open={showApplyDialog} onOpenChange={setShowApplyDialog}>
-                        <DialogTrigger asChild>
-                          <Button className="w-full bg-green-600 hover:bg-green-700">
+                      <>
+                        <Button 
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔘 Apply Now button clicked (Government)');
+                            // Record button click time IMMEDIATELY
+                            const clickTime = Date.now();
+                            buttonClickTimeRef.current = clickTime;
+                            
+                            // Set opening flag SYNCHRONOUSLY before opening dialog
+                            setIsDialogOpening(true);
+                            dialogJustOpenedRef.current = true;
+                            
+                            // Open dialog immediately
+                            setShowApplyDialog(true);
+                            console.log('✅ Dialog state set to true at', clickTime);
+                            
+                            // Reset opening flag after dialog animation completes (increased to 3000ms)
+                            // Store timeout ID to prevent multiple resets
+                            setTimeout(() => {
+                              // Double check that enough time has passed
+                              const timeSinceClick = Date.now() - buttonClickTimeRef.current;
+                              if (timeSinceClick >= 3000) {
+                                setIsDialogOpening(false);
+                                dialogJustOpenedRef.current = false;
+                                console.log('✅ Dialog opening flag reset after', timeSinceClick, 'ms');
+                              } else {
+                                console.log('⚠️ Skipping flag reset - only', timeSinceClick, 'ms passed');
+                              }
+                            }, 3000);
+                          }}
+                        >
                             Apply Now
                           </Button>
-                        </DialogTrigger>
-                      <DialogContent className="sm:max-w-[500px]">
+                        <Dialog 
+                          open={showApplyDialog}
+                          modal={true}
+                          onOpenChange={(open) => {
+                            console.log('🔄 Dialog onOpenChange (Government):', open, 'applying:', applying, 'isDialogOpening:', isDialogOpening, 'dialogJustOpened:', dialogJustOpenedRef.current);
+                            
+                            // If trying to close, check all conditions
+                            if (!open) {
+                              // Check if dialog was just opened
+                              if (dialogJustOpenedRef.current) {
+                                console.log('🚫 Prevented close - dialog just opened');
+                                // Force dialog to stay open
+                                setShowApplyDialog(true);
+                                return;
+                              }
+                              
+                              // Check timestamp - if button was clicked recently, prevent close (increased to 3000ms)
+                              const timeSinceButtonClick = Date.now() - buttonClickTimeRef.current;
+                              if (timeSinceButtonClick < 3000) {
+                                console.log('🚫 Prevented close - button clicked recently (', timeSinceButtonClick, 'ms ago)');
+                                // Force dialog to stay open
+                                setShowApplyDialog(true);
+                                return;
+                              }
+                              
+                              // Check flags
+                              if (applying || isDialogOpening) {
+                                console.log('🚫 Prevented close - dialog opening or applying');
+                                // Force dialog to stay open
+                                setShowApplyDialog(true);
+                                return;
+                              }
+                              
+                              // All checks passed, allow closing
+                              console.log('✅ Allowing dialog to close');
+                            }
+                            
+                            // Allow state change (for opening or when all checks pass)
+                            setShowApplyDialog(open);
+                          }}
+                        >
+                            <DialogContent 
+                              className="sm:max-w-[500px]"
+                              onInteractOutside={(e) => {
+                                const target = e.target as HTMLElement;
+                                // Check if click is on the button that opened the dialog
+                                if (target.closest('button[class*="bg-green-600"]')) {
+                                  console.log('🖱️ Click detected on Apply Now button, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if dialog was just opened
+                                if (dialogJustOpenedRef.current) {
+                                  console.log('🖱️ Click detected - dialog just opened, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if this event happened shortly after button click (increased window to 3000ms)
+                                const timeSinceButtonClick = Date.now() - buttonClickTimeRef.current;
+                                if (timeSinceButtonClick < 3000) {
+                                  console.log('🖱️ Click detected shortly after button click (', timeSinceButtonClick, 'ms), preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                console.log('🖱️ onInteractOutside triggered (Government), applying:', applying, 'isDialogOpening:', isDialogOpening, 'dialogJustOpened:', dialogJustOpenedRef.current);
+                                if (applying || isDialogOpening) {
+                                  e.preventDefault();
+                                  console.log('🚫 Prevented close during application or opening');
+                                  return;
+                                }
+                              }}
+                              onPointerDownOutside={(e) => {
+                                const target = e.target as HTMLElement;
+                                // Check if click is on the button that opened the dialog
+                                if (target.closest('button[class*="bg-green-600"]')) {
+                                  console.log('🖱️ PointerDown detected on Apply Now button, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if dialog was just opened
+                                if (dialogJustOpenedRef.current) {
+                                  console.log('🖱️ PointerDown detected - dialog just opened, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if this event happened shortly after button click (increased window to 3000ms)
+                                const timeSinceButtonClick = Date.now() - buttonClickTimeRef.current;
+                                if (timeSinceButtonClick < 3000) {
+                                  console.log('🖱️ PointerDown detected shortly after button click (', timeSinceButtonClick, 'ms), preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                console.log('🖱️ onPointerDownOutside triggered (Government), applying:', applying, 'isDialogOpening:', isDialogOpening, 'dialogJustOpened:', dialogJustOpenedRef.current);
+                                if (applying || isDialogOpening) {
+                                  e.preventDefault();
+                                  console.log('🚫 Prevented close during application or opening');
+                                  return;
+                                }
+                              }}
+                              onEscapeKeyDown={(e) => {
+                                console.log('⌨️ onEscapeKeyDown triggered (Government)');
+                                if (applying || isDialogOpening) {
+                                  e.preventDefault();
+                                  console.log('🚫 Prevented close during application or opening');
+                                }
+                              }}
+                            >
                         <DialogHeader>
                           <DialogTitle>Apply for {job.title}</DialogTitle>
                           <DialogDescription>
@@ -324,57 +554,71 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="candidateName">Full Name *</Label>
+                            <Label htmlFor="candidateName" className="text-sm font-medium text-gray-700 mb-1 block">Full Name *</Label>
                             <Input
                               id="candidateName"
+                              type="text"
+                              required
                               value={applicationForm.candidateName}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, candidateName: e.target.value }))}
                               placeholder="Enter your full name"
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="candidateEmail">Email Address *</Label>
+                            <Label htmlFor="candidateEmail" className="text-sm font-medium text-gray-700 mb-1 block">Email Address *</Label>
                             <Input
                               id="candidateEmail"
                               type="email"
+                              required
                               value={applicationForm.candidateEmail}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, candidateEmail: e.target.value }))}
                               placeholder="Enter your email"
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="candidatePhone">Phone Number *</Label>
+                            <Label htmlFor="candidatePhone" className="text-sm font-medium text-gray-700 mb-1 block">Phone Number *</Label>
                             <Input
                               id="candidatePhone"
+                              type="tel"
+                              required
                               value={applicationForm.candidatePhone}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, candidatePhone: e.target.value }))}
                               placeholder="Enter your phone number"
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="resume">Resume/CV</Label>
+                            <Label htmlFor="resume" className="text-sm font-medium text-gray-700 mb-1 block">Resume/CV</Label>
                             <Input
                               id="resume"
                               type="file"
                               accept=".pdf,.doc,.docx"
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, resume: e.target.files?.[0] || null }))}
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all cursor-pointer"
                             />
                             <p className="text-xs text-gray-500 mt-1">Upload PDF, DOC, or DOCX (max 10MB)</p>
                           </div>
                           <div>
-                            <Label htmlFor="notes">Additional Notes</Label>
+                            <Label htmlFor="notes" className="text-sm font-medium text-gray-700 mb-1 block">Additional Notes</Label>
                             <Textarea
                               id="notes"
                               value={applicationForm.notes}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, notes: e.target.value }))}
                               placeholder="Any additional information you'd like to share..."
                               rows={3}
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-y"
                             />
                           </div>
                           <div className="flex gap-3 pt-4">
                             <Button
                               variant="outline"
-                              onClick={() => setShowApplyDialog(false)}
+                              onClick={() => {
+                                console.log('❌ Cancel button clicked');
+                                dialogJustOpenedRef.current = false;
+                                setShowApplyDialog(false);
+                              }}
                               className="flex-1"
                             >
                               Cancel
@@ -390,6 +634,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                         </div>
                       </DialogContent>
                       </Dialog>
+                      </>
                     ) : (
                       <div className="space-y-3">
                         <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => onNavigate('login')}>
@@ -422,13 +667,143 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                       Apply directly through our platform. Your profile and resume will be shared with the employer.
                     </p>
                     {isAuthenticated ? (
-                      <Dialog open={showApplyDialog} onOpenChange={setShowApplyDialog}>
-                        <DialogTrigger asChild>
-                          <Button className="w-full bg-green-600 hover:bg-green-700">
+                      <>
+                        <Button 
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔘 Apply Now button clicked (Private)');
+                            // Record button click time IMMEDIATELY
+                            buttonClickTimeRef.current = Date.now();
+                            // Set opening flag SYNCHRONOUSLY before opening dialog
+                            setIsDialogOpening(true);
+                            dialogJustOpenedRef.current = true;
+                            // Open dialog
+                            setShowApplyDialog(true);
+                            // Reset opening flag after dialog animation completes (increased to 2000ms)
+                            setTimeout(() => {
+                              setIsDialogOpening(false);
+                              dialogJustOpenedRef.current = false;
+                              console.log('✅ Dialog opening flag reset');
+                            }, 2000);
+                          }}
+                        >
                             Apply Now
                           </Button>
-                        </DialogTrigger>
-                      <DialogContent className="sm:max-w-[500px]">
+                        <Dialog 
+                          open={showApplyDialog}
+                          modal={true}
+                          onOpenChange={(open) => {
+                            console.log('🔄 Dialog onOpenChange (Private):', open, 'applying:', applying, 'isDialogOpening:', isDialogOpening, 'dialogJustOpened:', dialogJustOpenedRef.current);
+                            
+                            // If trying to close, check all conditions
+                            if (!open) {
+                              // Check if dialog was just opened
+                              if (dialogJustOpenedRef.current) {
+                                console.log('🚫 Prevented close - dialog just opened');
+                                // Force dialog to stay open
+                                setShowApplyDialog(true);
+                                return;
+                              }
+                              
+                              // Check timestamp - if button was clicked recently, prevent close (increased to 3000ms)
+                              const timeSinceButtonClick = Date.now() - buttonClickTimeRef.current;
+                              if (timeSinceButtonClick < 3000) {
+                                console.log('🚫 Prevented close - button clicked recently (', timeSinceButtonClick, 'ms ago)');
+                                // Force dialog to stay open
+                                setShowApplyDialog(true);
+                                return;
+                              }
+                              
+                              // Check flags
+                              if (applying || isDialogOpening) {
+                                console.log('🚫 Prevented close - dialog opening or applying');
+                                // Force dialog to stay open
+                                setShowApplyDialog(true);
+                                return;
+                              }
+                              
+                              // All checks passed, allow closing
+                              console.log('✅ Allowing dialog to close');
+                            }
+                            
+                            // Allow state change (for opening or when all checks pass)
+                            setShowApplyDialog(open);
+                          }}
+                        >
+                            <DialogContent 
+                              className="sm:max-w-[500px]"
+                              onInteractOutside={(e) => {
+                                const target = e.target as HTMLElement;
+                                // Check if click is on the button that opened the dialog
+                                if (target.closest('button[class*="bg-green-600"]')) {
+                                  console.log('🖱️ Click detected on Apply Now button, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if dialog was just opened
+                                if (dialogJustOpenedRef.current) {
+                                  console.log('🖱️ Click detected - dialog just opened, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if this event happened shortly after button click (increased window to 3000ms)
+                                const timeSinceButtonClick = Date.now() - buttonClickTimeRef.current;
+                                if (timeSinceButtonClick < 3000) {
+                                  console.log('🖱️ Click detected shortly after button click (', timeSinceButtonClick, 'ms), preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                console.log('🖱️ onInteractOutside triggered, applying:', applying, 'isDialogOpening:', isDialogOpening, 'dialogJustOpened:', dialogJustOpenedRef.current);
+                                if (applying || isDialogOpening) {
+                                  e.preventDefault();
+                                  console.log('🚫 Prevented close during application or opening');
+                                  return;
+                                }
+                              }}
+                              onPointerDownOutside={(e) => {
+                                const target = e.target as HTMLElement;
+                                // Check if click is on the button that opened the dialog
+                                if (target.closest('button[class*="bg-green-600"]')) {
+                                  console.log('🖱️ PointerDown detected on Apply Now button, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if dialog was just opened
+                                if (dialogJustOpenedRef.current) {
+                                  console.log('🖱️ PointerDown detected - dialog just opened, preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                // Check if this event happened shortly after button click (increased window to 3000ms)
+                                const timeSinceButtonClick = Date.now() - buttonClickTimeRef.current;
+                                if (timeSinceButtonClick < 3000) {
+                                  console.log('🖱️ PointerDown detected shortly after button click (', timeSinceButtonClick, 'ms), preventing close');
+                                  e.preventDefault();
+                                  return;
+                                }
+                                
+                                console.log('🖱️ onPointerDownOutside triggered, applying:', applying, 'isDialogOpening:', isDialogOpening, 'dialogJustOpened:', dialogJustOpenedRef.current);
+                                if (applying || isDialogOpening) {
+                                  e.preventDefault();
+                                  console.log('🚫 Prevented close during application or opening');
+                                  return;
+                                }
+                              }}
+                              onEscapeKeyDown={(e) => {
+                                console.log('⌨️ onEscapeKeyDown triggered');
+                                if (applying || isDialogOpening) {
+                                  e.preventDefault();
+                                  console.log('🚫 Prevented close during application or opening');
+                                }
+                              }}
+                            >
                         <DialogHeader>
                           <DialogTitle>Apply for {job.title}</DialogTitle>
                           <DialogDescription>
@@ -437,57 +812,71 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="candidateName">Full Name *</Label>
+                            <Label htmlFor="candidateName" className="text-sm font-medium text-gray-700 mb-1 block">Full Name *</Label>
                             <Input
                               id="candidateName"
+                              type="text"
+                              required
                               value={applicationForm.candidateName}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, candidateName: e.target.value }))}
                               placeholder="Enter your full name"
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="candidateEmail">Email Address *</Label>
+                            <Label htmlFor="candidateEmail" className="text-sm font-medium text-gray-700 mb-1 block">Email Address *</Label>
                             <Input
                               id="candidateEmail"
                               type="email"
+                              required
                               value={applicationForm.candidateEmail}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, candidateEmail: e.target.value }))}
                               placeholder="Enter your email"
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="candidatePhone">Phone Number *</Label>
+                            <Label htmlFor="candidatePhone" className="text-sm font-medium text-gray-700 mb-1 block">Phone Number *</Label>
                             <Input
                               id="candidatePhone"
+                              type="tel"
+                              required
                               value={applicationForm.candidatePhone}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, candidatePhone: e.target.value }))}
                               placeholder="Enter your phone number"
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="resume">Resume/CV</Label>
+                            <Label htmlFor="resume" className="text-sm font-medium text-gray-700 mb-1 block">Resume/CV</Label>
                             <Input
                               id="resume"
                               type="file"
                               accept=".pdf,.doc,.docx"
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, resume: e.target.files?.[0] || null }))}
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all cursor-pointer"
                             />
                             <p className="text-xs text-gray-500 mt-1">Upload PDF, DOC, or DOCX (max 10MB)</p>
                           </div>
                           <div>
-                            <Label htmlFor="notes">Additional Notes</Label>
+                            <Label htmlFor="notes" className="text-sm font-medium text-gray-700 mb-1 block">Additional Notes</Label>
                             <Textarea
                               id="notes"
                               value={applicationForm.notes}
                               onChange={(e) => setApplicationForm(prev => ({ ...prev, notes: e.target.value }))}
                               placeholder="Any additional information you'd like to share..."
                               rows={3}
+                              className="w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-y"
                             />
                           </div>
                           <div className="flex gap-3 pt-4">
                             <Button
                               variant="outline"
-                              onClick={() => setShowApplyDialog(false)}
+                              onClick={() => {
+                                console.log('❌ Cancel button clicked');
+                                dialogJustOpenedRef.current = false;
+                                setShowApplyDialog(false);
+                              }}
                               className="flex-1"
                             >
                               Cancel
@@ -503,6 +892,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                         </div>
                       </DialogContent>
                       </Dialog>
+                      </>
                     ) : (
                       <div className="space-y-3">
                         <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => onNavigate('login')}>
@@ -516,9 +906,37 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
 
                 <Separator />
 
-                <Button variant="outline" className="w-full">
-                  Save Job
-                </Button>
+                {isAuthenticated && user?.role === 'candidate' ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleSaveJob}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      'Saving...'
+                    ) : isSaved ? (
+                      <>
+                        <BookmarkCheck className="w-4 h-4 mr-2" />
+                        Saved
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-4 h-4 mr-2" />
+                        Save Job
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => onNavigate('login')}
+                  >
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Login to Save
+                  </Button>
+                )}
               </div>
             </Card>
 

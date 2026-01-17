@@ -59,7 +59,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-The API will be available at: `http://localhost:8080/api`
+The API will be available at: `http://localhost:8081/api`
 
 ## 📚 API Endpoints
 
@@ -129,11 +129,11 @@ The application will automatically create the following tables:
 ## 🔧 Configuration
 
 ### Application Properties
-- **Server Port**: 8080
+- **Server Port**: 8081
 - **Database**: MySQL (medtech_db)
 - **JWT Expiration**: 7 days
 - **File Upload**: 10MB max
-- **CORS**: Enabled for localhost:3000
+- **CORS**: Enabled for localhost:5173 and localhost:3000
 
 ### Environment Variables
 You can override configuration using environment variables:
@@ -161,8 +161,8 @@ java -jar target/medexjob-backend-1.0.0.jar
 ```
 
 ## 🔍 Monitoring
-- **Health Check**: `http://localhost:8080/api/actuator/health`
-- **Metrics**: `http://localhost:8080/api/actuator/metrics`
+- **Health Check**: `http://localhost:8081/api/actuator/health`
+- **Metrics**: `http://localhost:8081/api/actuator/metrics`
 - **Logs**: Check `logs/medexjob.log`
 
 ## 🚀 Next Steps

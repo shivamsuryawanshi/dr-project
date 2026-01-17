@@ -26,13 +26,14 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: ${MAIL_USERNAME:shivamsuryawanshi51@gmail.com}
-    password: ${MAIL_PASSWORD:shivam123@}
+    password: ${MAIL_PASSWORD:tcthwrjeaeyuizoa}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+            required: true
 
   servlet:
     multipart:

@@ -2,9 +2,11 @@ package com.medexjob.config;
 
 import com.medexjob.entity.Employer;
 import com.medexjob.entity.Job;
+import com.medexjob.entity.SubscriptionPlan;
 import com.medexjob.entity.User;
 import com.medexjob.repository.EmployerRepository;
 import com.medexjob.repository.JobRepository;
+import com.medexjob.repository.SubscriptionPlanRepository;
 import com.medexjob.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,10 +102,14 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired private UserRepository userRepository;
     @Autowired private EmployerRepository employerRepository;
     @Autowired private JobRepository jobRepository;
+    @Autowired private SubscriptionPlanRepository subscriptionPlanRepository;
     @Autowired private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
+        // Always seed subscription plans
+        seedSubscriptionPlans();
+        
         if (!seedJobs) return; // only run when explicitly enabled
 
         // Create Employer User if not exists
@@ -217,5 +223,45 @@ public class DataSeeder implements CommandLineRunner {
 
     private String blankToNull(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    private void seedSubscriptionPlans() {
+        // Check if plans already exist
+        if (subscriptionPlanRepository.count() > 0) {
+            return; // Plans already seeded
+        }
+
+        // Plan 1: Basic - Per Post
+        SubscriptionPlan plan1 = new SubscriptionPlan();
+        plan1.setName("Basic Plan");
+        plan1.setPrice(new java.math.BigDecimal("999.00"));
+        plan1.setDuration("per post");
+        plan1.setJobPostsAllowed(1);
+        plan1.setFeatures("Access to verified medical professionals,Basic application management,Email notifications for new applications,24/7 customer support");
+        plan1.setIsActive(true);
+        plan1.setDisplayOrder(1);
+        subscriptionPlanRepository.save(plan1);
+
+        // Plan 2: Monthly Plan
+        SubscriptionPlan plan2 = new SubscriptionPlan();
+        plan2.setName("Monthly Plan");
+        plan2.setPrice(new java.math.BigDecimal("4999.00"));
+        plan2.setDuration("monthly");
+        plan2.setJobPostsAllowed(10);
+        plan2.setFeatures("Access to verified medical professionals,Basic application management,Email notifications for new applications,24/7 customer support,Priority approval,Advanced analytics");
+        plan2.setIsActive(true);
+        plan2.setDisplayOrder(2);
+        subscriptionPlanRepository.save(plan2);
+
+        // Plan 3: Yearly Plan
+        SubscriptionPlan plan3 = new SubscriptionPlan();
+        plan3.setName("Yearly Plan");
+        plan3.setPrice(new java.math.BigDecimal("49999.00"));
+        plan3.setDuration("yearly");
+        plan3.setJobPostsAllowed(120);
+        plan3.setFeatures("Access to verified medical professionals,Basic application management,Email notifications for new applications,24/7 customer support,Priority approval,Advanced analytics,Featured jobs,Dedicated support");
+        plan3.setIsActive(true);
+        plan3.setDisplayOrder(3);
+        subscriptionPlanRepository.save(plan3);
     }
 }

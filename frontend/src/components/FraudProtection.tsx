@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Flag, Shield, AlertTriangle, CheckCircle, XCircle, Eye, User, Building2, FileText, Mail, Phone } from 'lucide-react';
+// AI assisted development
+import { useState, useEffect } from 'react';
+import { Flag, Shield, AlertTriangle, CheckCircle, XCircle, Eye, User, Building2, FileText, Mail, Phone, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -9,81 +10,97 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  fetchFraudReports,
+  createFraudReport,
+  updateReportStatus,
+  getFraudReportStats,
+  FraudReportResponse,
+  FraudReportPayload,
+  FraudReportStats
+} from '../api/fraudReports';
 
-interface FraudReport {
-  id: string;
-  type: 'fake_job' | 'spam' | 'misleading_info' | 'fraudulent_employer' | 'other';
-  jobId?: string;
-  employerId?: string;
-  reporterId: string;
-  reporterName: string;
-  reporterEmail: string;
-  reason: string;
-  description: string;
-  status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  createdAt: string;
-  resolvedAt?: string;
-  adminNotes?: string;
-  evidence?: string[];
-}
+interface FraudReport extends FraudReportResponse {}
 
 interface FraudProtectionProps {
   userRole: 'admin' | 'candidate' | 'employer';
   userId: string;
 }
 
-const mockFraudReports: FraudReport[] = [
-  {
-    id: 'report-1',
-    type: 'fake_job',
-    jobId: 'job-123',
-    reporterId: 'user-456',
-    reporterName: 'Dr. Priya Sharma',
-    reporterEmail: 'priya@email.com',
-    reason: 'Job posting appears to be fake',
-    description: 'The job posting for Senior Cardiologist at XYZ Hospital seems suspicious. The salary mentioned is unrealistic and the contact information provided is not working.',
-    status: 'under_review',
-    priority: 'high',
-    createdAt: '2025-10-14T10:30:00',
-    evidence: ['screenshot-1.png', 'email-thread.pdf']
-  },
-  {
-    id: 'report-2',
-    type: 'fraudulent_employer',
-    employerId: 'emp-789',
-    reporterId: 'user-123',
-    reporterName: 'Dr. Amit Kumar',
-    reporterEmail: 'amit@email.com',
-    reason: 'Suspicious employer behavior',
-    description: 'This employer is asking for money upfront before the interview process. They also provided fake company documents.',
-    status: 'pending',
-    priority: 'critical',
-    createdAt: '2025-10-13T15:45:00'
-  },
-  {
-    id: 'report-3',
-    type: 'misleading_info',
-    jobId: 'job-456',
-    reporterId: 'user-789',
-    reporterName: 'Dr. Sneha Patel',
-    reporterEmail: 'sneha@email.com',
-    reason: 'Misleading job information',
-    description: 'The job description mentions different qualifications than what was discussed during the interview. The location is also different.',
-    status: 'resolved',
-    priority: 'medium',
-    createdAt: '2025-10-12T09:15:00',
-    resolvedAt: '2025-10-13T14:20:00',
-    adminNotes: 'Verified with employer. Job description has been updated to reflect accurate information.'
-  }
-];
-
 export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
-  const [reports, setReports] = useState<FraudReport[]>(mockFraudReports);
+  const { token, user } = useAuth();
+  const [reports, setReports] = useState<FraudReport[]>([]);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<FraudReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<FraudReportStats | null>(null);
 
   const isAdmin = userRole === 'admin';
+
+  // Fetch fraud reports
+  useEffect(() => {
+    const loadReports = async () => {
+      if (!token) {
+        setError('Authentication required. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetchFraudReports({ page: 0, size: 100 }, token);
+        setReports(response.content || []);
+
+        // Fetch stats for admin
+        if (isAdmin) {
+          try {
+            const statsData = await getFraudReportStats(token);
+            setStats(statsData);
+          } catch (err) {
+            // Stats fetch failed, continue without stats
+            console.error('Error fetching stats:', err);
+          }
+        }
+      } catch (err: any) {
+        console.error('Error fetching fraud reports:', err);
+        setError(err.message || 'Failed to load fraud reports. Please try again.');
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReports();
+  }, [token, isAdmin]);
+
+  const handleUpdateStatus = async (reportId: string, newStatus: string, adminNotes?: string) => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      const updatedReport = await updateReportStatus(reportId, newStatus, token, adminNotes);
+      setReports(prev => 
+        prev.map(report => 
+          report.id === reportId ? updatedReport : report
+        )
+      );
+      
+      // Refresh stats if admin
+      if (isAdmin && stats) {
+        const statsData = await getFraudReportStats(token);
+        setStats(statsData);
+      }
+    } catch (err: any) {
+      console.error('Error updating report status:', err);
+      setError(err.message || 'Failed to update report status.');
+      throw err;
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -147,21 +164,6 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
     }
   };
 
-  const updateReportStatus = (reportId: string, newStatus: string, adminNotes?: string) => {
-    setReports(prev => 
-      prev.map(report => 
-        report.id === reportId 
-          ? { 
-              ...report, 
-              status: newStatus as any,
-              adminNotes: adminNotes || report.adminNotes,
-              resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : report.resolvedAt
-            }
-          : report
-      )
-    );
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -172,10 +174,10 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
     });
   };
 
-  const pendingReports = reports.filter(r => r.status === 'pending').length;
-  const underReviewReports = reports.filter(r => r.status === 'under_review').length;
-  const resolvedReports = reports.filter(r => r.status === 'resolved').length;
-  const criticalReports = reports.filter(r => r.priority === 'critical').length;
+  const pendingReports = stats?.pending ?? reports.filter(r => r.status === 'pending').length;
+  const underReviewReports = stats?.underReview ?? reports.filter(r => r.status === 'under_review').length;
+  const resolvedReports = stats?.resolved ?? reports.filter(r => r.status === 'resolved').length;
+  const criticalReports = stats?.critical ?? reports.filter(r => r.priority === 'critical').length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -204,9 +206,29 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
                   <DialogTitle>Report Suspicious Activity</DialogTitle>
                 </DialogHeader>
                 <FraudReportForm 
-                  onSubmit={(report) => {
-                    setReports(prev => [...prev, { ...report, id: `report-${Date.now()}`, createdAt: new Date().toISOString() }]);
-                    setIsReportDialogOpen(false);
+                  onSubmit={async (report) => {
+                    if (!token) {
+                      setError('Authentication required. Please login again.');
+                      return;
+                    }
+
+                    try {
+                      const payload: FraudReportPayload = {
+                        type: report.type,
+                        jobId: report.jobId,
+                        employerId: report.employerId,
+                        reason: report.reason,
+                        description: report.description,
+                        priority: report.priority,
+                        evidence: report.evidence
+                      };
+                      const newReport = await createFraudReport(payload, token);
+                      setReports(prev => [...prev, newReport]);
+                      setIsReportDialogOpen(false);
+                    } catch (err: any) {
+                      console.error('Error creating fraud report:', err);
+                      setError(err.message || 'Failed to create fraud report.');
+                    }
                   }}
                   onCancel={() => setIsReportDialogOpen(false)}
                 />
@@ -214,6 +236,22 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
             </Dialog>
           )}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setError(null)}
+              className="ml-auto"
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         {isAdmin && (
@@ -270,8 +308,14 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
           </TabsList>
 
           <TabsContent value="reports" className="mt-6">
-            <div className="space-y-6">
-              {reports.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <span className="ml-3 text-gray-600">Loading fraud reports...</span>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {reports.length > 0 ? (
                 reports.map((report) => (
                   <Card key={report.id} className="p-6">
                     <div className="flex items-start justify-between mb-4">
@@ -352,7 +396,13 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
                           <Button
                             size="sm"
                             className="bg-green-600 hover:bg-green-700"
-                            onClick={() => updateReportStatus(report.id, 'resolved')}
+                            onClick={async () => {
+                              try {
+                                await handleUpdateStatus(report.id, 'resolved');
+                              } catch (err) {
+                                // Error already handled
+                              }
+                            }}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
                             Resolve
@@ -360,7 +410,13 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateReportStatus(report.id, 'under_review')}
+                            onClick={async () => {
+                              try {
+                                await handleUpdateStatus(report.id, 'under_review');
+                              } catch (err) {
+                                // Error already handled
+                              }
+                            }}
                           >
                             <Eye className="w-4 h-4 mr-1" />
                             Review
@@ -368,7 +424,13 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => updateReportStatus(report.id, 'dismissed')}
+                            onClick={async () => {
+                              try {
+                                await handleUpdateStatus(report.id, 'dismissed');
+                              } catch (err) {
+                                // Error already handled
+                              }
+                            }}
                           >
                             <XCircle className="w-4 h-4 mr-1" />
                             Dismiss
@@ -390,7 +452,8 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
                   </p>
                 </Card>
               )}
-            </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="guidelines" className="mt-6">
@@ -494,7 +557,7 @@ export function FraudProtection({ userRole, userId }: FraudProtectionProps) {
 }
 
 interface FraudReportFormProps {
-  onSubmit: (report: Omit<FraudReport, 'id' | 'createdAt'>) => void;
+  onSubmit: (report: Omit<FraudReport, 'id' | 'createdAt' | 'updatedAt' | 'reporterId' | 'reporterName' | 'reporterEmail' | 'status' | 'resolvedAt'>) => void;
   onCancel: () => void;
 }
 
@@ -505,7 +568,8 @@ function FraudReportForm({ onSubmit, onCancel }: FraudReportFormProps) {
     employerId: '',
     reason: '',
     description: '',
-    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical'
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    evidence: [] as string[]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -515,13 +579,10 @@ function FraudReportForm({ onSubmit, onCancel }: FraudReportFormProps) {
       type: formData.type as any,
       jobId: formData.jobId || undefined,
       employerId: formData.employerId || undefined,
-      reporterId: 'current-user',
-      reporterName: 'Current User',
-      reporterEmail: 'user@example.com',
       reason: formData.reason,
       description: formData.description,
-      status: 'pending' as const,
-      priority: formData.priority
+      priority: formData.priority,
+      evidence: formData.evidence.length > 0 ? formData.evidence : undefined
     };
     
     onSubmit(report);

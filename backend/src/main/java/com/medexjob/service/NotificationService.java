@@ -1,0 +1,395 @@
+// AI assisted development
+package com.medexjob.service;
+
+import com.medexjob.entity.Notification;
+import com.medexjob.entity.NotificationPreferences;
+import com.medexjob.repository.NotificationRepository;
+import com.medexjob.repository.NotificationPreferencesRepository;
+import com.medexjob.repository.UserRepository;
+import com.medexjob.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@Transactional
+public class NotificationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private NotificationPreferencesRepository preferencesRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    /**
+     * Check if user has enabled this type of notification
+     */
+    private boolean shouldNotify(UUID userId, String notificationType) {
+        Optional<NotificationPreferences> prefsOpt = preferencesRepository.findByUserId(userId);
+
+        if (prefsOpt.isEmpty()) {
+            // Default: allow all notifications if preferences not set
+            return true;
+        }
+
+        NotificationPreferences prefs = prefsOpt.get();
+
+        switch (notificationType) {
+            case "application_update":
+                return prefs.getApplicationUpdateEnabled();
+            case "interview_scheduled":
+                return prefs.getInterviewScheduledEnabled();
+            case "job_alert":
+                return prefs.getJobAlertEnabled();
+            case "subscription":
+                return prefs.getSubscriptionEnabled();
+            case "application_received":
+                // Employer notifications - always enabled by default
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Notify candidate about application status update
+     */
+    public void notifyCandidateApplicationStatus(UUID candidateId, String jobTitle,
+            String status, UUID jobId, UUID applicationId) {
+        if (candidateId == null) {
+            logger.warn("⚠️ Cannot notify: candidateId is null");
+            return;
+        }
+
+        if (!shouldNotify(candidateId, "application_update")) {
+            logger.debug("Notification disabled for candidate: {}", candidateId);
+            return;
+        }
+
+        try {
+            String message = "";
+            String notificationType = "application_update";
+
+            switch (status.toUpperCase()) {
+                case "SHORTLISTED":
+                    message = String.format(
+                            "🎉 Congratulations! Your application for '%s' has been shortlisted.",
+                            jobTitle);
+                    break;
+                case "SELECTED":
+                    message = String.format(
+                            "🎉 Congratulations! You have been selected for the job '%s'",
+                            jobTitle);
+                    break;
+                case "REJECTED":
+                    message = String.format(
+                            "Your application for '%s' has been reviewed. Unfortunately, we cannot proceed at this time.",
+                            jobTitle);
+                    break;
+                case "APPLIED":
+                    message = String.format(
+                            "Your application for '%s' has been submitted successfully.",
+                            jobTitle);
+                    break;
+                default:
+                    message = String.format(
+                            "Your application status for '%s' has been updated to %s",
+                            jobTitle,
+                            status);
+            }
+
+            Notification notification = new Notification(candidateId, notificationType, message);
+            if (jobId != null)
+                notification.setRelatedJobId(jobId);
+            if (applicationId != null)
+                notification.setRelatedApplicationId(applicationId);
+
+            notificationRepository.save(notification);
+            logger.info("🔔 Notification sent to candidate: {} for application status: {}", candidateId, status);
+        } catch (Exception e) {
+            logger.error("❌ Error creating notification for candidate: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify candidate about interview scheduled
+     */
+    public void notifyCandidateInterviewScheduled(UUID candidateId, String jobTitle,
+            String interviewDate, UUID jobId, UUID applicationId) {
+        if (candidateId == null) {
+            logger.warn("⚠️ Cannot notify: candidateId is null");
+            return;
+        }
+
+        if (!shouldNotify(candidateId, "interview_scheduled")) {
+            logger.debug("Interview notification disabled for candidate: {}", candidateId);
+            return;
+        }
+
+        try {
+            String message = String.format(
+                    "📅 Interview scheduled for job '%s' on %s",
+                    jobTitle,
+                    interviewDate != null ? interviewDate : "TBD");
+
+            Notification notification = new Notification(candidateId, "interview_scheduled", message);
+            if (jobId != null)
+                notification.setRelatedJobId(jobId);
+            if (applicationId != null)
+                notification.setRelatedApplicationId(applicationId);
+
+            notificationRepository.save(notification);
+            logger.info("🔔 Interview notification sent to candidate: {}", candidateId);
+        } catch (Exception e) {
+            logger.error("❌ Error creating interview notification: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify employer about job approval/rejection
+     */
+    public void notifyEmployerJobStatus(UUID employerUserId, String jobTitle,
+            String status, UUID jobId) {
+        if (employerUserId == null) {
+            logger.warn("⚠️ Cannot notify: employerUserId is null");
+            return;
+        }
+
+        try {
+            String message = "";
+            String notificationType = "job_alert";
+
+            switch (status.toUpperCase()) {
+                case "ACTIVE":
+                    message = String.format(
+                            "✅ Your job '%s' has been approved and is now live!",
+                            jobTitle);
+                    break;
+                case "REJECTED":
+                case "CLOSED":
+                    message = String.format(
+                            "Your job '%s' status has been updated to %s",
+                            jobTitle,
+                            status);
+                    break;
+                case "PENDING":
+                    message = String.format(
+                            "Your job '%s' is pending admin approval",
+                            jobTitle);
+                    break;
+                default:
+                    message = String.format(
+                            "Your job '%s' status has been updated",
+                            jobTitle);
+            }
+
+            Notification notification = new Notification(employerUserId, notificationType, message);
+            if (jobId != null)
+                notification.setRelatedJobId(jobId);
+
+            notificationRepository.save(notification);
+            logger.info("🔔 Job status notification sent to employer: {}", employerUserId);
+        } catch (Exception e) {
+            logger.error("❌ Error creating job status notification: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify employer about subscription
+     */
+    public void notifyEmployerSubscription(UUID employerUserId, String planName,
+            String event, UUID subscriptionId) {
+        if (employerUserId == null) {
+            logger.warn("⚠️ Cannot notify: employerUserId is null");
+            return;
+        }
+
+        if (!shouldNotify(employerUserId, "subscription")) {
+            logger.debug("Subscription notification disabled for employer: {}", employerUserId);
+            return;
+        }
+
+        try {
+            String message = "";
+            String notificationType = "subscription";
+
+            switch (event.toLowerCase()) {
+                case "activated":
+                case "purchased":
+                    message = String.format(
+                            "✅ Your subscription plan '%s' has been activated!",
+                            planName);
+                    break;
+                case "expiring":
+                    message = String.format(
+                            "⚠️ Your subscription plan '%s' is expiring soon. Please renew to continue posting jobs.",
+                            planName);
+                    break;
+                case "expired":
+                    message = String.format(
+                            "❌ Your subscription plan '%s' has expired. Please renew to continue posting jobs.",
+                            planName);
+                    break;
+                case "cancelled":
+                    message = String.format(
+                            "Your subscription plan '%s' has been cancelled.",
+                            planName);
+                    break;
+                default:
+                    message = String.format(
+                            "Subscription update for plan '%s'",
+                            planName);
+            }
+
+            Notification notification = new Notification(employerUserId, notificationType, message);
+            notificationRepository.save(notification);
+            logger.info("🔔 Subscription notification sent to employer: {}", employerUserId);
+        } catch (Exception e) {
+            logger.error("❌ Error creating subscription notification: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify admin about pending approvals
+     */
+    public void notifyAdminPendingApproval(String type, String message, UUID relatedId) {
+        try {
+            List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+
+            for (User admin : admins) {
+                Notification notification = new Notification(admin.getId(), type, message);
+                if (relatedId != null) {
+                    if (type.contains("job")) {
+                        notification.setRelatedJobId(relatedId);
+                    } else if (type.contains("employer")) {
+                        // For employer verification, we can use a custom field or just message
+                    }
+                }
+                notificationRepository.save(notification);
+            }
+
+            logger.info("🔔 Admin notifications sent to {} admins", admins.size());
+        } catch (Exception e) {
+            logger.error("❌ Error creating admin notifications: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify employer about new application (existing - kept for reference)
+     */
+    public void notifyEmployerApplicationReceived(UUID employerUserId, String jobTitle,
+            String candidateName, String candidateEmail,
+            UUID jobId, UUID applicationId) {
+        if (employerUserId == null) {
+            logger.warn("⚠️ Cannot notify: employerUserId is null");
+            return;
+        }
+
+        try {
+            String message = String.format(
+                    "New application received for job: %s from %s (%s)",
+                    jobTitle,
+                    candidateName,
+                    candidateEmail);
+
+            Notification notification = new Notification(
+                    employerUserId,
+                    "application_received",
+                    message);
+            notification.setRelatedJobId(jobId);
+            notification.setRelatedApplicationId(applicationId);
+
+            notificationRepository.save(notification);
+            logger.info("🔔 Application notification sent to employer: {}", employerUserId);
+        } catch (Exception e) {
+            logger.error("❌ Error creating application notification: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify candidate about application submission confirmation
+     */
+    public void notifyCandidateApplicationSubmitted(UUID candidateId, String jobTitle,
+            UUID jobId, UUID applicationId) {
+        if (candidateId == null) {
+            return;
+        }
+
+        if (!shouldNotify(candidateId, "application_update")) {
+            return;
+        }
+
+        try {
+            String message = String.format(
+                    "✅ Your application for '%s' has been submitted successfully!",
+                    jobTitle);
+
+            Notification notification = new Notification(
+                    candidateId,
+                    "application_update",
+                    message);
+            notification.setRelatedJobId(jobId);
+            notification.setRelatedApplicationId(applicationId);
+
+            notificationRepository.save(notification);
+            logger.info("🔔 Application submission confirmation sent to candidate: {}", candidateId);
+        } catch (Exception e) {
+            logger.error("❌ Error creating application submission notification: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Notify employer about verification status change
+     */
+    public void notifyEmployerVerification(UUID employerUserId, String companyName,
+            String status, UUID employerId) {
+        if (employerUserId == null) {
+            logger.warn("⚠️ Cannot notify: employerUserId is null");
+            return;
+        }
+
+        try {
+            String message = "";
+            String notificationType = "employer_verification";
+
+            switch (status.toUpperCase()) {
+                case "APPROVED":
+                    message = String.format(
+                            "✅ Your employer account for '%s' has been verified and approved!",
+                            companyName);
+                    break;
+                case "REJECTED":
+                    message = String.format(
+                            "Your employer account for '%s' verification has been rejected. Please contact support.",
+                            companyName);
+                    break;
+                case "PENDING":
+                    message = String.format(
+                            "Your employer account for '%s' verification is pending review.",
+                            companyName);
+                    break;
+                default:
+                    message = String.format(
+                            "Your employer account for '%s' verification status has been updated.",
+                            companyName);
+            }
+
+            Notification notification = new Notification(employerUserId, notificationType, message);
+            notificationRepository.save(notification);
+            logger.info("🔔 Verification notification sent to employer: {}", employerUserId);
+        } catch (Exception e) {
+            logger.error("❌ Error creating verification notification: {}", e.getMessage(), e);
+        }
+    }
+}

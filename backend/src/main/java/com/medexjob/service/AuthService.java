@@ -35,11 +35,19 @@ public class AuthService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private EmailService emailService;
+
     // ---------------- Register ----------------
     public void register(RegisterRequest registerRequest) {
         // Validate role
         if (registerRequest.getRole() == null) {
             throw new AuthException("User role must be specified.");
+        }
+
+        // Block ADMIN registration - admins can only be created by other admins
+        if (registerRequest.getRole() == User.UserRole.ADMIN) {
+            throw new AuthException("Admin registration is not allowed. Please contact system administrator.");
         }
 
         // Check if email already exists
@@ -71,11 +79,9 @@ public class AuthService {
     public AuthResponse login(LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
-            );
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -116,21 +122,75 @@ public class AuthService {
         return true;
     }
 
-    // ---------------- Forgot Password ----------------
+    // ---------------- Forgot Password (OTP-based) ----------------
     public void requestPasswordReset(String email) {
         User user = userRepository.findByEmailAndIsActiveTrue(email)
                 .orElseThrow(() -> new AuthException("User not found"));
 
-        String resetToken = UUID.randomUUID().toString();
-        user.setPasswordResetToken(resetToken);
-        user.setPasswordResetExpires(java.time.LocalDateTime.now().plusHours(1));
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", (int) (Math.random() * 1000000));
+
+        // Set OTP and expiration (10 minutes)
+        user.setOtp(otp);
+        user.setOtpExpires(java.time.LocalDateTime.now().plusMinutes(10));
 
         userRepository.save(user);
 
-        // TODO: Send password reset email
+        // Send OTP email - try to send, but don't fail if email service is down
+        // OTP is already saved in database, so user can still use it
+        try {
+            emailService.sendOtpEmail(email, otp);
+            System.out.println("✅ OTP email sent successfully to: " + email);
+        } catch (Exception e) {
+            // Log error but don't throw - OTP is already saved in database
+            System.err.println("❌ WARNING: Failed to send OTP email, but OTP is saved in database");
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            // For development/testing: print OTP to console and logs
+            System.out.println("═══════════════════════════════════════════════════════");
+            System.out.println("📧 OTP for " + email + ": " + otp);
+            System.out.println("⏰ OTP expires in 10 minutes");
+            System.out.println("═══════════════════════════════════════════════════════");
+            // Don't throw exception - allow user to proceed with OTP from database
+        }
     }
 
-    // ---------------- Reset Password ----------------
+    // ---------------- Verify OTP ----------------
+    public boolean verifyOtp(String email, String otp) {
+        User user = userRepository.findByEmailAndIsActiveTrue(email)
+                .orElseThrow(() -> new AuthException("User not found"));
+
+        if (user.getOtp() == null || !user.getOtp().equals(otp)) {
+            throw new AuthException("Invalid OTP");
+        }
+
+        if (user.getOtpExpires() == null || user.getOtpExpires().isBefore(java.time.LocalDateTime.now())) {
+            throw new AuthException("OTP has expired. Please request a new one.");
+        }
+
+        // OTP is valid, keep it for password reset step
+        return true;
+    }
+
+    // ---------------- Reset Password with OTP ----------------
+    public boolean resetPasswordWithOtp(String email, String otp, String newPassword) {
+        User user = userRepository.findByEmailAndOtp(email, otp)
+                .orElseThrow(() -> new AuthException("Invalid email or OTP"));
+
+        if (user.getOtpExpires() == null || user.getOtpExpires().isBefore(java.time.LocalDateTime.now())) {
+            throw new AuthException("OTP has expired. Please request a new one.");
+        }
+
+        // Reset password
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setOtp(null);
+        user.setOtpExpires(null);
+
+        userRepository.save(user);
+        return true;
+    }
+
+    // ---------------- Reset Password (Legacy - token-based) ----------------
     public boolean resetPassword(String token, String newPassword) {
         User user = userRepository.findByPasswordResetToken(token)
                 .orElseThrow(() -> new AuthException("Invalid reset token"));
@@ -147,9 +207,3 @@ public class AuthService {
         return true;
     }
 }
-
-
-
-
-
-

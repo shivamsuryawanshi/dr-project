@@ -14,7 +14,11 @@ import java.util.UUID;
 @Repository
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
 
-    // Find applications by job
+    // Find applications by job with eager loading
+    @Query("SELECT DISTINCT a FROM Application a JOIN FETCH a.job j LEFT JOIN FETCH j.employer e WHERE a.job.id = :jobId")
+    List<Application> findByJobIdWithDetails(@Param("jobId") UUID jobId);
+    
+    // Find applications by job (for pagination - use above method for full details)
     Page<Application> findByJobId(UUID jobId, Pageable pageable);
 
     // Find applications by candidate
@@ -23,7 +27,11 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     // Find applications by status
     Page<Application> findByStatus(Application.ApplicationStatus status, Pageable pageable);
 
-    // Find applications by job and status
+    // Find applications by job and status with eager loading
+    @Query("SELECT DISTINCT a FROM Application a JOIN FETCH a.job j LEFT JOIN FETCH j.employer e WHERE a.job.id = :jobId AND a.status = :status")
+    List<Application> findByJobIdAndStatusWithDetails(@Param("jobId") UUID jobId, @Param("status") Application.ApplicationStatus status);
+    
+    // Find applications by job and status (for pagination)
     Page<Application> findByJobIdAndStatus(UUID jobId, Application.ApplicationStatus status, Pageable pageable);
 
     // Find applications by candidate and status

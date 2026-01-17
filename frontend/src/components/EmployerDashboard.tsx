@@ -1,5 +1,5 @@
 // AI assisted development
-import { Plus, Briefcase, Users, Eye, CheckCircle, XCircle, Calendar, ArrowLeft, Edit, Trash2, AlertTriangle, LogOut } from 'lucide-react';
+import { Plus, Briefcase, Users, Eye, CheckCircle, XCircle, Calendar, ArrowLeft, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -19,6 +19,7 @@ import { EmployerResponse } from '../api/employers';
 import { Alert, AlertDescription } from './ui/alert';
 import { fetchJobs } from '../api/jobs';
 import { fetchApplications, ApplicationResponse } from '../api/applications';
+import { getCurrentSubscription, SubscriptionResponse } from '../api/subscriptions';
 
 interface EmployerDashboardProps {
   onNavigate: (page: string) => void;
@@ -35,9 +36,28 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
   const [myApplications, setMyApplications] = useState<ApplicationResponse[]>([]);
   const [employer, setEmployer] = useState<EmployerResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentSubscription, setCurrentSubscription] = useState<SubscriptionResponse | null>(null);
 
   const totalViews = myJobs.reduce((sum, job) => sum + (job.views || 0), 0);
-  const totalApplications = myApplications.length;
+  // Calculate total applications from both myApplications and job applications count
+  const totalApplicationsFromList = myApplications.length;
+  const totalApplicationsFromJobs = myJobs.reduce((sum, job) => sum + (job.applications || 0), 0);
+  // Use the maximum of both to ensure we show the correct count
+  const totalApplications = Math.max(totalApplicationsFromList, totalApplicationsFromJobs);
+  
+  // Debug logging
+  useEffect(() => {
+    if (myJobs.length > 0 || myApplications.length > 0) {
+      console.log('📊 Application Count Debug:', {
+        applicationsFromList: totalApplicationsFromList,
+        applicationsFromJobs: totalApplicationsFromJobs,
+        totalApplications,
+        jobsCount: myJobs.length,
+        applicationsCount: myApplications.length,
+        jobs: myJobs.map(j => ({ id: j.id, title: j.title, applications: j.applications }))
+      });
+    }
+  }, [myJobs, myApplications, totalApplicationsFromList, totalApplicationsFromJobs, totalApplications]);
 
   // Fetch employer data and jobs on mount
   useEffect(() => {
@@ -46,7 +66,18 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
 
       try {
         // Fetch employer data
-        const employerData = await fetchEmployer(user.id, token);
+        let employerData;
+        try {
+          employerData = await fetchEmployer(user.id, token);
+        } catch (err: any) {
+          // If employer not found, create one
+          if (err.message?.includes('404')) {
+            const { createEmployer } = await import('../api/employers');
+            employerData = await createEmployer({}, token);
+          } else {
+            throw err;
+          }
+        }
         setEmployer(employerData);
 
         // If verification is pending, redirect to verification page
@@ -55,45 +86,70 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           return;
         }
 
-        // Fetch all jobs and filter by employer
-        const jobsResponse = await fetchJobs({ page: 0, size: 1000 });
-        const allJobs = jobsResponse.content || [];
-        
-        // Filter jobs by employer ID
-        const employerJobs = allJobs.filter((job: any) => {
-          // Check if job's organization matches employer's company name
-          // Or if there's an employerId field
-          return job.organization === employerData.companyName || 
-                 (job.employerId && job.employerId === employerData.id);
+        // Fetch jobs directly by employer ID using the new endpoint
+        const { fetchJobsByEmployer } = await import('../api/jobs');
+        const jobsResponse = await fetchJobsByEmployer(employerData.id, { 
+          status: 'all', 
+          page: 0, 
+          size: 1000 
         });
+        const employerJobs = jobsResponse.content || [];
         
+        console.log('Fetched employer jobs:', employerJobs.length, 'for employer:', employerData.id);
         setMyJobs(employerJobs);
 
         // Fetch applications for employer's jobs
         if (employerJobs.length > 0) {
           try {
             const jobIds = employerJobs.map((job: any) => job.id);
+            console.log('📋 Fetching applications for jobs:', jobIds);
             const allApplications: ApplicationResponse[] = [];
             
-            // Fetch applications for each job
+            // Fetch applications for each job - use large size to get all applications
             for (const jobId of jobIds) {
               try {
-                const appsResponse = await fetchApplications({ jobId }, token);
-                if (appsResponse.content && Array.isArray(appsResponse.content)) {
+                console.log(`🔍 Fetching applications for job: ${jobId}`);
+                const appsResponse = await fetchApplications({ 
+                  jobId, 
+                  page: 0, 
+                  size: 1000  // Fetch all applications at once
+                }, token);
+                console.log(`✅ Applications response for job ${jobId}:`, appsResponse);
+                
+                if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
+                  console.log(`📝 Found ${appsResponse.content.length} applications for job ${jobId}`);
                   allApplications.push(...appsResponse.content);
+                } else if (Array.isArray(appsResponse)) {
+                  // Sometimes API returns array directly
+                  console.log(`📝 Found ${appsResponse.length} applications (direct array) for job ${jobId}`);
+                  allApplications.push(...appsResponse);
+                } else {
+                  console.warn(`⚠️ No applications found for job ${jobId}, response:`, appsResponse);
                 }
               } catch (err) {
-                console.error(`Failed to fetch applications for job ${jobId}:`, err);
+                console.error(`❌ Failed to fetch applications for job ${jobId}:`, err);
               }
             }
             
+            console.log(`📊 Total applications fetched: ${allApplications.length}`);
             setMyApplications(allApplications);
           } catch (error) {
-            console.error('Failed to fetch applications:', error);
+            console.error('❌ Failed to fetch applications:', error);
             setMyApplications([]);
           }
         } else {
+          console.log('⚠️ No jobs found, setting applications to empty');
           setMyApplications([]);
+        }
+
+        // Fetch current subscription
+        try {
+          const subscription = await getCurrentSubscription(token);
+          setCurrentSubscription(subscription);
+        } catch (err) {
+          // Subscription not found or error - continue without it
+          console.warn('Could not fetch subscription:', err);
+          setCurrentSubscription(null);
         }
       } catch (error) {
         console.error('Failed to fetch employer data:', error);
@@ -104,6 +160,60 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
 
     fetchData();
   }, [user, token, onNavigate]);
+
+  // Refresh data when component becomes visible (e.g., when user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && token) {
+        // Refresh data when page becomes visible
+        const fetchData = async () => {
+          try {
+            const employerData = await fetchEmployer(user.id, token);
+            setEmployer(employerData);
+            
+            const { fetchJobsByEmployer } = await import('../api/jobs');
+            const jobsResponse = await fetchJobsByEmployer(employerData.id, { 
+              status: 'all', 
+              page: 0, 
+              size: 1000 
+            });
+            const employerJobs = jobsResponse.content || [];
+            setMyJobs(employerJobs);
+            
+            // Refresh applications
+            if (employerJobs.length > 0) {
+              const jobIds = employerJobs.map((job: any) => job.id);
+              const allApplications: ApplicationResponse[] = [];
+              for (const jobId of jobIds) {
+                try {
+                  const appsResponse = await fetchApplications({ 
+                    jobId, 
+                    page: 0, 
+                    size: 1000  // Fetch all applications
+                  }, token);
+                  if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
+                    allApplications.push(...appsResponse.content);
+                  } else if (Array.isArray(appsResponse)) {
+                    allApplications.push(...appsResponse);
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch applications for job ${jobId}:`, err);
+                }
+              }
+              console.log(`🔄 Refreshed applications: ${allApplications.length} total`);
+              setMyApplications(allApplications);
+            }
+          } catch (error) {
+            console.error('Failed to refresh data:', error);
+          }
+        };
+        fetchData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user, token]);
 
   const handleEditJob = (jobId: string) => {
     // In a real app, this would open an edit modal or navigate to edit page
@@ -169,15 +279,6 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               <ArrowLeft className="w-4 h-4" />
               Go Back
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -185,11 +286,22 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               <p className="text-gray-600">Manage your job postings and applications</p>
             </div>
             <Button
-              className="bg-gray-600 hover:bg-gray-700 cursor-not-allowed"
-              disabled
+              className={currentSubscription && currentSubscription.status === 'active' 
+                ? "bg-blue-600 hover:bg-blue-700" 
+                : "bg-gray-600 hover:bg-gray-700 cursor-not-allowed"}
+              disabled={!currentSubscription || currentSubscription.status !== 'active'}
+              onClick={() => {
+                if (currentSubscription && currentSubscription.status === 'active') {
+                  onNavigate('employer-post-job');
+                } else {
+                  onNavigate('subscription');
+                }
+              }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Post New Job (Subscription Required)
+              {currentSubscription && currentSubscription.status === 'active' 
+                ? 'Post New Job' 
+                : 'Post New Job (Subscription Required)'}
             </Button>
           </div>
         </div>
@@ -205,20 +317,31 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
         )}
 
         {/* Subscription Alert */}
-        <Alert className="mb-8 border-blue-200 bg-blue-50">
-          <AlertTriangle className="w-4 h-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            To start posting jobs, you need to subscribe to a plan. Choose a subscription plan that fits your needs.
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-4"
-              onClick={() => onNavigate('subscription')}
-            >
-              View Plans
-            </Button>
-          </AlertDescription>
-        </Alert>
+        {currentSubscription && currentSubscription.status === 'active' ? (
+          <Alert className="mb-8 border-green-200 bg-green-50">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>Active Subscription:</strong> {currentSubscription.plan.name} - 
+              Posts used: {currentSubscription.jobPostsUsed} / {currentSubscription.jobPostsAllowed}
+              {currentSubscription.endDate && ` (Valid until ${new Date(currentSubscription.endDate).toLocaleDateString('en-IN')})`}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="mb-8 border-blue-200 bg-blue-50">
+            <AlertTriangle className="w-4 h-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              To start posting jobs, you need to subscribe to a plan. Choose a subscription plan that fits your needs.
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-4"
+                onClick={() => onNavigate('subscription')}
+              >
+                View Plans
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
@@ -352,7 +475,68 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           <TabsContent value="applications" className="mt-6">
             <Card>
               <div className="p-6">
-                <h3 className="text-lg text-gray-900 mb-4">Recent Applications</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg text-gray-900">Recent Applications</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={async () => {
+                      if (!user || !token || !employer) return;
+                      try {
+                        console.log('🔄 Manually refreshing applications...');
+                        const { fetchJobsByEmployer } = await import('../api/jobs');
+                        const jobsResponse = await fetchJobsByEmployer(employer.id, { 
+                          status: 'all', 
+                          page: 0, 
+                          size: 1000 
+                        });
+                        const employerJobs = jobsResponse.content || [];
+                        
+                        if (employerJobs.length > 0) {
+                          const jobIds = employerJobs.map((job: any) => job.id);
+                          const allApplications: ApplicationResponse[] = [];
+                          
+                          for (const jobId of jobIds) {
+                            try {
+                              const appsResponse = await fetchApplications({ 
+                                jobId, 
+                                page: 0, 
+                                size: 1000
+                              }, token);
+                              
+                              if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
+                                allApplications.push(...appsResponse.content);
+                              } else if (Array.isArray(appsResponse)) {
+                                allApplications.push(...appsResponse);
+                              }
+                            } catch (err) {
+                              console.error(`Failed to fetch applications for job ${jobId}:`, err);
+                            }
+                          }
+                          
+                          console.log(`✅ Refreshed: ${allApplications.length} applications`);
+                          setMyApplications(allApplications);
+                          alert(`Applications refreshed! Found ${allApplications.length} applications.`);
+                        } else {
+                          setMyApplications([]);
+                        }
+                      } catch (error) {
+                        console.error('Failed to refresh applications:', error);
+                        alert('Failed to refresh applications. Please check console for details.');
+                      }
+                    }}
+                  >
+                    🔄 Refresh
+                  </Button>
+                </div>
+                <div className="mb-4 text-sm text-gray-600">
+                  Total Applications: <strong>{myApplications.length}</strong>
+                  {myJobs.length > 0 && (
+                    <span className="ml-4">
+                      (From {myJobs.length} job{myJobs.length > 1 ? 's' : ''})
+                    </span>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -364,10 +548,29 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {myApplications.length === 0 ? (
+                    {loading ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                          No applications found
+                          Loading applications...
+                        </TableCell>
+                      </TableRow>
+                    ) : myApplications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                          <div>
+                            <p>No applications found</p>
+                            {myJobs.length > 0 && (
+                              <p className="text-xs mt-2 text-gray-400">
+                                You have {myJobs.length} job{myJobs.length > 1 ? 's' : ''} posted. 
+                                Applications will appear here when candidates apply.
+                              </p>
+                            )}
+                            {myJobs.length === 0 && (
+                              <p className="text-xs mt-2 text-gray-400">
+                                Post a job to start receiving applications.
+                              </p>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (

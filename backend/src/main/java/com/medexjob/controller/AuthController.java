@@ -5,6 +5,8 @@ import com.medexjob.dto.ResetPasswordRequest;
 import com.medexjob.dto.ForgotPasswordRequest;
 import com.medexjob.dto.RegisterRequest;
 import com.medexjob.dto.AuthResponse;
+import com.medexjob.dto.VerifyOtpRequest;
+import com.medexjob.dto.ResetPasswordWithOtpRequest;
 import com.medexjob.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +60,23 @@ public class AuthController {
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.requestPasswordReset(request.getEmail());
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Password reset link sent to your email");
+        response.put("message", "OTP has been sent to your email");
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request.getEmail(), request.getOtp());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "OTP verified successfully");
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/reset-password-with-otp")
+    public ResponseEntity<?> resetPasswordWithOtp(@Valid @RequestBody ResetPasswordWithOtpRequest request) {
+        authService.resetPasswordWithOtp(request.getEmail(), request.getOtp(), request.getNewPassword());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Password reset successfully");
         return ResponseEntity.ok(response);
     }
     

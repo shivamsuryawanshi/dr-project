@@ -13,6 +13,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User>;
   register: (userData: any) => Promise<void>;
   logout: () => void;
+  forgotPassword: (email: string) => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
+  resetPasswordWithOtp: (email: string, otp: string, newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -159,12 +162,105 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  const forgotPassword = async (email: string): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      if (!response.ok) {
+        let message = 'Failed to send OTP';
+        try {
+          const errorData = await response.json();
+          if (errorData.message) message = errorData.message;
+          else if (errorData.error) message = errorData.error;
+          else if (errorData.detail) message = errorData.detail;
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
+        }
+        throw new Error(message);
+      }
+
+      // Success - the backend will send the OTP email
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const verifyOtp = async (email: string, otp: string): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim(), otp: otp.trim() }),
+      });
+
+      if (!response.ok) {
+        let message = 'Failed to verify OTP';
+        try {
+          const errorData = await response.json();
+          if (errorData.message) message = errorData.message;
+          else if (errorData.error) message = errorData.error;
+          else if (errorData.detail) message = errorData.detail;
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
+        }
+        throw new Error(message);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const resetPasswordWithOtp = async (email: string, otp: string, newPassword: string): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/reset-password-with-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: email.trim(), 
+          otp: otp.trim(), 
+          newPassword: newPassword.trim() 
+        }),
+      });
+
+      if (!response.ok) {
+        let message = 'Failed to reset password';
+        try {
+          const errorData = await response.json();
+          if (errorData.message) message = errorData.message;
+          else if (errorData.error) message = errorData.error;
+          else if (errorData.detail) message = errorData.detail;
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
+        }
+        throw new Error(message);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
     login,
     register,
     logout,
+    forgotPassword,
+    verifyOtp,
+    resetPasswordWithOtp,
     isAuthenticated: !!user,
   };
 

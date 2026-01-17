@@ -2,33 +2,47 @@ package com.medexjob.controller;
 
 import com.medexjob.entity.Employer;
 import com.medexjob.entity.User;
+import com.medexjob.entity.Subscription;
 import com.medexjob.repository.UserRepository;
 import com.medexjob.entity.Job;
 import com.medexjob.repository.JobRepository;
 import com.medexjob.repository.EmployerRepository;
+import com.medexjob.repository.SubscriptionRepository;
+import com.medexjob.service.NotificationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*; // Contains @CrossOrigin
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/jobs")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"}) // Allow both ports
 public class JobController {
 
+    private static final Logger logger = LoggerFactory.getLogger(JobController.class);
+    
     private final JobRepository jobRepository;
     private final EmployerRepository employerRepository;
     private final UserRepository userRepository; // Inject UserRepository
+    private final SubscriptionRepository subscriptionRepository;
+    private final NotificationService notificationService;
 
-    public JobController(JobRepository jobRepository, EmployerRepository employerRepository, UserRepository userRepository) {
+    public JobController(JobRepository jobRepository, EmployerRepository employerRepository, UserRepository userRepository, SubscriptionRepository subscriptionRepository, NotificationService notificationService) {
         this.jobRepository = jobRepository;
         this.employerRepository = employerRepository;
         this.userRepository = userRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.notificationService = notificationService;
     }
 
     @GetMapping
@@ -52,8 +66,17 @@ public class JobController {
 
         Page<Job> result;
 
-        // Parse status filter: if status is 'all' or null, don't filter by status
-        Job.JobStatus statusFilter = (status != null && !status.equalsIgnoreCase("all")) ? parseStatus(status) : null;
+        // Parse status filter: 
+        // - If status is 'all', set statusFilter to null to return all jobs
+        // - If status is null (not provided), default to ACTIVE for public listing
+        // - Otherwise, use the provided status
+        Job.JobStatus statusFilter = null;
+        if (status != null && !status.equalsIgnoreCase("all")) {
+            statusFilter = parseStatus(status);
+        } else if (status == null) {
+            // Default to ACTIVE when status is not provided (for public job listing)
+            statusFilter = Job.JobStatus.ACTIVE;
+        }
 
         Job.ExperienceLevel expLevel = (experienceLevel != null && !experienceLevel.isBlank()) ? parseExperienceLevel(experienceLevel) : null;
         Job.DutyType duty = (dutyType != null && !dutyType.isBlank()) ? parseDutyType(dutyType) : null;
@@ -67,7 +90,8 @@ public class JobController {
             Job.JobCategory c = (category != null && !category.isBlank()) ? mapCategoryFromLabel(category) : null;
             result = jobRepository.findJobsByCriteria(s, c, location, expLevel, speciality, duty, statusFilter, pageable);
         } else {
-            result = statusFilter != null ? jobRepository.findByStatus(statusFilter, pageable) : jobRepository.findByStatus(Job.JobStatus.ACTIVE, pageable);
+            // If status filter is provided, use it; otherwise return all jobs (for employer dashboard)
+            result = statusFilter != null ? jobRepository.findByStatus(statusFilter, pageable) : jobRepository.findAll(pageable);
         }
 
         Map<String, Object> body = new HashMap<>();
@@ -77,6 +101,48 @@ public class JobController {
         body.put("totalElements", result.getTotalElements());
         body.put("totalPages", result.getTotalPages());
         return ResponseEntity.ok(body);
+    }
+
+    // Get jobs by employer ID
+    @GetMapping("/employer/{employerId}")
+    public ResponseEntity<Map<String, Object>> getJobsByEmployer(
+            @PathVariable UUID employerId,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "1000") int size
+    ) {
+        try {
+            // Parse status filter if provided - make it final for lambda
+            final Job.JobStatus statusFilter = (status != null && !status.equalsIgnoreCase("all")) 
+                ? parseStatus(status) : null;
+            
+            List<Job> allJobs = jobRepository.findByEmployerId(employerId);
+            
+            // Filter by status if provided
+            List<Job> filteredJobs = statusFilter != null 
+                ? allJobs.stream()
+                    .filter(job -> job.getStatus() == statusFilter)
+                    .collect(Collectors.toList())
+                : allJobs;
+            
+            // Manual pagination
+            int totalElements = filteredJobs.size();
+            int totalPages = (int) Math.ceil((double) totalElements / size);
+            int start = page * size;
+            int end = Math.min(start + size, totalElements);
+            List<Job> paginatedJobs = start < totalElements ? filteredJobs.subList(start, end) : new ArrayList<>();
+            
+            Map<String, Object> body = new HashMap<>();
+            body.put("content", paginatedJobs.stream().map(this::toResponse).collect(Collectors.toList()));
+            body.put("page", page);
+            body.put("size", size);
+            body.put("totalElements", totalElements);
+            body.put("totalPages", totalPages);
+            return ResponseEntity.ok(body);
+        } catch (Exception e) {
+            logger.error("Error fetching jobs for employer: {}", employerId, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch jobs: " + e.getMessage()));
+        }
     }
 
     // Diagnostics: quick check for DB connectivity and basic listing
@@ -131,17 +197,213 @@ public class JobController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Admin: Create Job
+    // Employer: Create Job (with subscription validation)
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@RequestBody JobRequest req) {
-        Job job = new Job();
-        applyRequestToJob(req, job);
-        job.setStatus(parseStatus(req.status()));
-        job.setIsFeatured(Boolean.TRUE.equals(req.featured()));
-        job.setViews(Optional.ofNullable(req.views()).orElse(0));
-        job.setApplicationsCount(Optional.ofNullable(req.applications()).orElse(0));
-        Job saved = jobRepository.save(job);
-        return ResponseEntity.ok(toResponse(saved));
+        try {
+            logger.info("Job creation request received. Title: {}", req.title());
+            
+            // Get authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("Unauthenticated job creation attempt");
+                return ResponseEntity.status(401).body(Map.of("error", "Unauthorized. Please login to post jobs."));
+            }
+
+            String email = authentication.getName();
+            logger.info("Authenticated user email: {}", email);
+            
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                logger.warn("User not found for email: {}", email);
+                return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+            }
+
+            User user = userOpt.get();
+            logger.info("User found: {} with role: {}", user.getEmail(), user.getRole());
+
+            // Admin can bypass subscription check
+            if (user.getRole() != User.UserRole.ADMIN) {
+                // Check if user is EMPLOYER
+                if (user.getRole() != User.UserRole.EMPLOYER) {
+                    logger.warn("Non-employer user {} attempted to post job", user.getEmail());
+                    return ResponseEntity.status(403).body(Map.of("error", "Only employers can post jobs. Please register as an employer."));
+                }
+
+                // Find employer for this user
+                Optional<Employer> employerOpt = employerRepository.findByUserId(user.getId());
+                Employer employer;
+                
+                if (employerOpt.isEmpty()) {
+                    // Check if user has active subscription - if yes, auto-create and verify employer
+                    Optional<Subscription> subscriptionCheck = subscriptionRepository.findActiveSubscriptionByUser(user.getId(), LocalDate.now());
+                    if (subscriptionCheck.isPresent() && subscriptionCheck.get().getStatus() == Subscription.SubscriptionStatus.ACTIVE) {
+                        // Auto-create and verify employer since they have active subscription
+                        logger.info("Auto-creating employer for user {} with active subscription", user.getEmail());
+                        employer = new Employer();
+                        employer.setUser(user);
+                        employer.setCompanyName(user.getName() + " Company");
+                        employer.setCompanyType(Employer.CompanyType.HOSPITAL);
+                        employer.setIsVerified(true);
+                        employer.setVerificationStatus(Employer.VerificationStatus.APPROVED);
+                        employer.setVerifiedAt(LocalDateTime.now());
+                        employer.setVerificationNotes("Auto-created and verified - has active subscription");
+                        employer = employerRepository.save(employer);
+                        logger.info("Auto-created and verified employer {} for user {}", employer.getId(), user.getEmail());
+                    } else {
+                        logger.warn("Employer profile not found for user: {} and no active subscription", user.getEmail());
+                        return ResponseEntity.status(404).body(Map.of("error", "Employer profile not found. Please complete employer verification first."));
+                    }
+                } else {
+                    employer = employerOpt.get();
+                    logger.info("Employer found: {} - Verified: {}, Status: {}", 
+                        employer.getCompanyName(), employer.getIsVerified(), employer.getVerificationStatus());
+
+                    // Check if employer is verified - if not, check if they have active subscription
+                    if (!employer.getIsVerified() || employer.getVerificationStatus() != Employer.VerificationStatus.APPROVED) {
+                        // Check if user has active subscription - if yes, auto-verify
+                        Optional<Subscription> subscriptionCheck = subscriptionRepository.findActiveSubscriptionByUser(user.getId(), LocalDate.now());
+                        if (subscriptionCheck.isPresent() && subscriptionCheck.get().getStatus() == Subscription.SubscriptionStatus.ACTIVE) {
+                            logger.info("Auto-verifying employer {} for user {} with active subscription", employer.getId(), user.getEmail());
+                            employer.setIsVerified(true);
+                            employer.setVerificationStatus(Employer.VerificationStatus.APPROVED);
+                            employer.setVerifiedAt(LocalDateTime.now());
+                            employer.setVerificationNotes("Auto-verified - has active subscription");
+                            employer = employerRepository.save(employer);
+                            logger.info("Auto-verified employer {} for user {}", employer.getId(), user.getEmail());
+                        } else {
+                            logger.warn("Employer {} is not verified and no active subscription. isVerified: {}, status: {}", 
+                                employer.getId(), employer.getIsVerified(), employer.getVerificationStatus());
+                            return ResponseEntity.status(403).body(Map.of("error", "Your employer account is not verified. Please complete verification first."));
+                        }
+                    }
+                }
+
+                // Check for active subscription
+                Optional<Subscription> subscriptionOpt = subscriptionRepository.findActiveSubscriptionByUser(user.getId(), LocalDate.now());
+                if (subscriptionOpt.isEmpty()) {
+                    logger.warn("No active subscription found for user: {}", user.getEmail());
+                    return ResponseEntity.status(403).body(Map.of(
+                        "error", "No active subscription found. Please purchase a subscription plan to post jobs.",
+                        "redirectTo", "/subscription"
+                    ));
+                }
+
+                Subscription subscription = subscriptionOpt.get();
+                logger.info("Subscription found: {} - Status: {}, Used: {}/{}, Plan: {}", 
+                    subscription.getId(), subscription.getStatus(), 
+                    subscription.getJobPostsUsed(), subscription.getPlan().getJobPostsAllowed(),
+                    subscription.getPlan().getName());
+
+                // Check if subscription is active
+                if (subscription.getStatus() != Subscription.SubscriptionStatus.ACTIVE) {
+                    logger.warn("Subscription {} is not active. Status: {}", subscription.getId(), subscription.getStatus());
+                    return ResponseEntity.status(403).body(Map.of(
+                        "error", "Your subscription is not active. Please renew your subscription.",
+                        "redirectTo", "/subscription"
+                    ));
+                }
+
+                // Check job posting limit
+                Integer jobPostsUsed = subscription.getJobPostsUsed();
+                Integer jobPostsAllowed = subscription.getPlan().getJobPostsAllowed();
+                logger.info("Job posting check: Used={}, Allowed={}", jobPostsUsed, jobPostsAllowed);
+
+                if (jobPostsUsed >= jobPostsAllowed) {
+                    logger.warn("Job posting limit reached for user: {}. Used: {}/{}", 
+                        user.getEmail(), jobPostsUsed, jobPostsAllowed);
+                    return ResponseEntity.status(403).body(Map.of(
+                        "error", String.format("You have reached your job posting limit (%d/%d). Please upgrade your plan to post more jobs.", jobPostsUsed, jobPostsAllowed),
+                        "redirectTo", "/subscription",
+                        "used", jobPostsUsed,
+                        "allowed", jobPostsAllowed
+                    ));
+                }
+
+                // Create job and associate with employer
+                logger.info("All checks passed. Creating job for employer: {}", employer.getCompanyName());
+                Job job = new Job();
+                job.setEmployer(employer);
+                applyRequestToJob(req, job, employer);
+                
+                // If employer is verified, automatically approve the job (set status to ACTIVE)
+                // Otherwise, set to PENDING for admin approval
+                Job.JobStatus initialStatus;
+                if (employer.getIsVerified() && employer.getVerificationStatus() == Employer.VerificationStatus.APPROVED) {
+                    job.setStatus(Job.JobStatus.ACTIVE);
+                    job.setApprovedAt(LocalDateTime.now());
+                    // Set approved by as the employer user (self-approved for verified employers)
+                    job.setApprovedBy(user);
+                    initialStatus = Job.JobStatus.ACTIVE;
+                    logger.info("Job automatically approved (ACTIVE) for verified employer: {}", employer.getCompanyName());
+                } else {
+                    // This should not happen as we check verification above, but keeping as fallback
+                    initialStatus = parseStatus(req.status() != null ? req.status() : "pending");
+                    job.setStatus(initialStatus);
+                    logger.warn("Job set to PENDING for unverified employer: {}", employer.getCompanyName());
+                }
+                
+                job.setIsFeatured(Boolean.TRUE.equals(req.featured()));
+                job.setViews(Optional.ofNullable(req.views()).orElse(0));
+                job.setApplicationsCount(Optional.ofNullable(req.applications()).orElse(0));
+                Job saved = jobRepository.save(job);
+                logger.info("Job created successfully: {} for employer: {} with status: {}", 
+                    saved.getId(), employer.getCompanyName(), saved.getStatus());
+
+                // Notify employer about job status
+                try {
+                    if (employer.getUser() != null) {
+                        notificationService.notifyEmployerJobStatus(
+                            employer.getUser().getId(),
+                            saved.getTitle(),
+                            saved.getStatus().name(),
+                            saved.getId()
+                        );
+                    }
+                } catch (Exception e) {
+                    logger.error("❌ Error creating job status notification: {}", e.getMessage(), e);
+                }
+
+                // Notify admin if job is pending approval
+                if (initialStatus == Job.JobStatus.PENDING) {
+                    try {
+                        notificationService.notifyAdminPendingApproval(
+                            "job_pending",
+                            String.format("New job '%s' from %s is pending approval", saved.getTitle(), employer.getCompanyName()),
+                            saved.getId()
+                        );
+                    } catch (Exception e) {
+                        logger.error("❌ Error creating admin notification: {}", e.getMessage(), e);
+                    }
+                }
+
+                // Increment job posts used
+                subscription.setJobPostsUsed(jobPostsUsed + 1);
+                subscriptionRepository.save(subscription);
+                logger.info("Updated job posts used: {}/{}", jobPostsUsed + 1, jobPostsAllowed);
+
+                return ResponseEntity.ok(toResponse(saved));
+            } else {
+                // Admin can post jobs without subscription (for admin-posted jobs)
+                Job job = new Job();
+                applyRequestToJob(req, job, null);
+                job.setStatus(parseStatus(req.status()));
+                job.setIsFeatured(Boolean.TRUE.equals(req.featured()));
+                job.setViews(Optional.ofNullable(req.views()).orElse(0));
+                job.setApplicationsCount(Optional.ofNullable(req.applications()).orElse(0));
+                Job saved = jobRepository.save(job);
+                return ResponseEntity.ok(toResponse(saved));
+            }
+        } catch (Exception e) {
+            logger.error("Error creating job", e);
+            logger.error("Exception type: {}, Message: {}", e.getClass().getName(), e.getMessage());
+            if (e.getCause() != null) {
+                logger.error("Cause: {}", e.getCause().getMessage());
+            }
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to create job: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 
     // Admin: Update Job
@@ -149,12 +411,45 @@ public class JobController {
     public ResponseEntity<Map<String, Object>> update(@PathVariable("id") UUID id, @RequestBody JobRequest req) {
         return jobRepository.findById(id)
                 .map(existing -> {
-                    applyRequestToJob(req, existing);
+                    Job.JobStatus oldStatus = existing.getStatus();
+                    
+                    // Get existing employer or resolve/create new one
+                    Employer employer = existing.getEmployer();
+                    if (employer == null) {
+                        employer = resolveOrCreateEmployer(req.organization(), req.type());
+                    }
+                    applyRequestToJob(req, existing, employer);
                     if (req.status() != null) existing.setStatus(parseStatus(req.status()));
                     if (req.featured() != null) existing.setIsFeatured(req.featured());
                     if (req.views() != null) existing.setViews(req.views());
                     if (req.applications() != null) existing.setApplicationsCount(req.applications());
+                    
+                    // If status changed to ACTIVE, set approval info
+                    if (req.status() != null && parseStatus(req.status()) == Job.JobStatus.ACTIVE && oldStatus != Job.JobStatus.ACTIVE) {
+                        existing.setApprovedAt(LocalDateTime.now());
+                        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                        if (auth != null) {
+                            Optional<User> adminUser = userRepository.findByEmail(auth.getName());
+                            adminUser.ifPresent(existing::setApprovedBy);
+                        }
+                    }
+                    
                     Job saved = jobRepository.save(existing);
+                    
+                    // Notify employer if status changed
+                    if (req.status() != null && saved.getStatus() != oldStatus && employer.getUser() != null) {
+                        try {
+                            notificationService.notifyEmployerJobStatus(
+                                employer.getUser().getId(),
+                                saved.getTitle(),
+                                saved.getStatus().name(),
+                                saved.getId()
+                            );
+                        } catch (Exception e) {
+                            logger.error("❌ Error creating job status notification: {}", e.getMessage(), e);
+                        }
+                    }
+                    
                     return ResponseEntity.ok(toResponse(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -169,10 +464,15 @@ public class JobController {
     }
 
     // Helper: map request onto entity
-    private void applyRequestToJob(JobRequest req, Job job) {
-        // Employer from organization + type
-        Employer employer = resolveOrCreateEmployer(req.organization(), req.type());
-        job.setEmployer(employer);
+    private void applyRequestToJob(JobRequest req, Job job, Employer employer) {
+        // If employer is provided (from authenticated user), use it; otherwise resolve/create
+        if (employer != null) {
+            job.setEmployer(employer);
+        } else {
+            // For admin-posted jobs, resolve or create employer
+            Employer resolvedEmployer = resolveOrCreateEmployer(req.organization(), req.type());
+            job.setEmployer(resolvedEmployer);
+        }
 
         job.setTitle(req.title());
         job.setDescription(Optional.ofNullable(req.description()).orElse(""));
@@ -337,11 +637,16 @@ public class JobController {
         m.put("id", j.getId().toString());
         m.put("title", j.getTitle());
         String organization = "";
+        UUID employerId = null;
         try {
             Employer emp = j.getEmployer();
-            if (emp != null) organization = Optional.ofNullable(emp.getCompanyName()).orElse("");
+            if (emp != null) {
+                organization = Optional.ofNullable(emp.getCompanyName()).orElse("");
+                employerId = emp.getId();
+            }
         } catch (Exception ignored) {}
         m.put("organization", organization);
+        m.put("employerId", employerId != null ? employerId.toString() : null);
         m.put("sector", j.getSector() == Job.JobSector.GOVERNMENT ? "government" : "private");
         m.put("category", mapCategoryToLabel(j.getCategory()));
         m.put("location", j.getLocation());

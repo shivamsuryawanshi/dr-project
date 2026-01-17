@@ -1,14 +1,16 @@
 // AI assisted development
-import { Briefcase, BookmarkIcon, Bell, User, FileText, TrendingUp, ArrowLeft, Trash2, Heart, LogOut } from 'lucide-react';
+import { Briefcase, BookmarkIcon, Bell, User, FileText, TrendingUp, ArrowLeft, Trash2, Heart } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Progress } from './ui/progress';
 import { useAuth } from '../contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { fetchApplications, ApplicationResponse } from '../api/applications';
-import { fetchJobs } from '../api/jobs';
+import { fetchJobs, fetchJob } from '../api/jobs';
+import { getSavedJobs, unsaveJob } from '../api/savedJobs';
 
 interface CandidateDashboardProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -16,6 +18,7 @@ interface CandidateDashboardProps {
 
 export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
   const { user, logout, token } = useAuth();
+  const location = useLocation();
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
   const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
   const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
@@ -28,11 +31,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
     onNavigate('logout');
   };
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [user, token]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!user || !token) {
       setLoading(false);
       return;
@@ -40,13 +39,16 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
 
     setLoading(true);
     try {
+      console.log('📥 Loading dashboard data for user:', user.id);
       // Fetch user's applications - handle errors gracefully
       let applications: ApplicationResponse[] = [];
       try {
+        console.log('📋 Fetching applications for candidate:', user.id);
         const applicationsData = await fetchApplications({ candidateId: user.id }, token);
         applications = applicationsData?.content || [];
+        console.log('✅ Applications fetched:', applications.length, 'applications found');
       } catch (error: any) {
-        console.error('Error fetching applications:', error);
+        console.error('❌ Error fetching applications:', error);
         // If 500 error or any error, just set empty array
         applications = [];
       }
@@ -56,13 +58,13 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
         const appliedJobsWithDetails = await Promise.all(
           applications.map(async (app: ApplicationResponse) => {
             try {
-              // Try to fetch job details by ID first
+              // Try to fetch job details by ID
               let job = null;
               try {
-                const jobData = await fetchJobs({ search: app.jobTitle, size: 1 });
-                job = Array.isArray(jobData?.content) ? jobData.content[0] : null;
-              } catch {
-                // If search fails, use fallback
+                job = await fetchJob(app.jobId);
+              } catch (error) {
+                console.error(`Error fetching job ${app.jobId}:`, error);
+                // If fetch fails, use fallback
               }
               
               if (job) {
@@ -106,9 +108,28 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
         setAppliedJobs([]);
       }
 
-      // For now, saved jobs and recommended jobs are empty for new users
-      // In future, these can be fetched from backend
-      setSavedJobs([]);
+      // Fetch saved jobs from backend
+      try {
+        console.log('📥 Fetching saved jobs for user:', user.id);
+        const savedJobsData = await getSavedJobs(token, 0, 100);
+        console.log('✅ Saved jobs response:', savedJobsData);
+        console.log('📋 Saved jobs content:', savedJobsData?.content);
+        
+        if (savedJobsData && Array.isArray(savedJobsData.content)) {
+          console.log(`✅ Found ${savedJobsData.content.length} saved jobs`);
+          setSavedJobs(savedJobsData.content);
+        } else {
+          console.log('⚠️ No saved jobs found or invalid response format');
+          setSavedJobs([]);
+        }
+      } catch (error: any) {
+        console.error('❌ Error fetching saved jobs:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack
+        });
+        setSavedJobs([]);
+      }
       
       // Fetch recommended jobs (featured or recent jobs)
       try {
@@ -131,10 +152,37 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, token]);
 
-  const handleRemoveSavedJob = (jobId: string) => {
-    setSavedJobs(prev => prev.filter(job => job.id !== jobId));
+  useEffect(() => {
+    console.log('🔄 Dashboard useEffect triggered - pathname:', location.pathname, 'user:', user?.id);
+    loadDashboardData();
+  }, [user, token, location.pathname, loadDashboardData]); // Reload when location changes (e.g., after applying to a job)
+  
+  // Also reload when component mounts or becomes visible
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('🔄 Window focused, reloading dashboard data...');
+      loadDashboardData();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadDashboardData]);
+
+  const handleRemoveSavedJob = async (jobId: string) => {
+    if (!token) {
+      alert('Please login to remove saved jobs');
+      return;
+    }
+
+    try {
+      await unsaveJob(jobId, token);
+      setSavedJobs(prev => prev.filter(job => job.id !== jobId));
+      alert('Job removed from saved jobs');
+    } catch (error: any) {
+      console.error('Error removing saved job:', error);
+      alert(error.message || 'Failed to remove saved job. Please try again.');
+    }
   };
 
   const handleSaveForLater = (job: any) => {
@@ -160,15 +208,6 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
             >
               <ArrowLeft className="w-4 h-4" />
               Go Back
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
             </Button>
           </div>
           <h1 className="text-3xl text-gray-900 mb-2">Welcome, {user?.name || 'User'}</h1>
@@ -327,40 +366,50 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
                     </Button>
                   </div>
                 ) : (
-                  savedJobs.map((job) => (
-                  <Card key={job.id} className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <Badge 
-                            className={job.sector === 'government' 
-                              ? 'bg-blue-100 text-blue-700 border-blue-200' 
-                              : 'bg-green-100 text-green-700 border-green-200'}
-                            variant="outline"
-                          >
-                            {job.sector === 'government' ? 'Government' : 'Private'}
-                          </Badge>
-                          <h3 
-                            className="text-lg text-gray-900 mt-2 mb-1 cursor-pointer hover:text-blue-600"
-                            onClick={() => onNavigate('job-detail', job.id)}
-                          >
-                            {job.title}
-                          </h3>
-                          <p className="text-sm text-gray-600">{job.organization} • {job.location}</p>
+                  savedJobs.map((job) => {
+                    console.log('📋 Rendering saved job:', job);
+                    return (
+                      <Card key={job.id || `job-${Math.random()}`} className="p-6">
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <Badge 
+                                className={job.sector === 'government' 
+                                  ? 'bg-blue-100 text-blue-700 border-blue-200' 
+                                  : 'bg-green-100 text-green-700 border-green-200'}
+                                variant="outline"
+                              >
+                                {job.sector === 'government' ? 'Government' : 'Private'}
+                              </Badge>
+                              <h3 
+                                className="text-lg text-gray-900 mt-2 mb-1 cursor-pointer hover:text-blue-600"
+                                onClick={() => onNavigate('job-detail', job.id)}
+                              >
+                                {job.title || 'Untitled Job'}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                {job.organization || 'Organization not specified'} • {job.location || 'Location not specified'}
+                              </p>
+                              {job.savedAt && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Saved on: {new Date(job.savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => onNavigate('job-detail', job.id)}>
+                              Apply Now
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleRemoveSavedJob(job.id)}>
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Remove
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => onNavigate('job-detail', job.id)}>
-                          Apply Now
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleRemoveSavedJob(job.id)}>
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                  ))
+                      </Card>
+                    );
+                  })
                 )}
               </TabsContent>
 

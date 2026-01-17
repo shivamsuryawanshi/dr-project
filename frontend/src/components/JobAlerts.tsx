@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Plus, Bell, MapPin, Search, Filter, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+// AI assisted development
+import { useState, useEffect } from 'react';
+import { Plus, Bell, MapPin, Search, Filter, Edit, Trash2, ToggleLeft, ToggleRight, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,78 +9,63 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  fetchJobAlerts,
+  createJobAlert,
+  updateJobAlert,
+  deleteJobAlert,
+  JobAlertResponse,
+  JobAlertPayload
+} from '../api/jobAlerts';
 import { JobCategory, JobSector } from '../types';
 
-interface JobAlert {
-  id: string;
-  name: string;
-  keywords: string[];
-  locations: string[];
+interface JobAlert extends JobAlertResponse {
   categories: JobCategory[];
   sectors: JobSector[];
-  salaryRange: {
-    min: number;
-    max: number;
-  };
-  experience: string;
-  frequency: 'daily' | 'weekly' | 'instant';
-  active: boolean;
-  createdAt: string;
-  lastSent?: string;
-  matches: number;
 }
 
-const mockJobAlerts: JobAlert[] = [
-  {
-    id: 'alert-1',
-    name: 'Cardiology Jobs in Delhi',
-    keywords: ['cardiologist', 'cardiology', 'heart'],
-    locations: ['New Delhi', 'Gurgaon', 'Noida'],
-    categories: ['Specialist', 'Senior Resident'],
-    sectors: ['private', 'government'],
-    salaryRange: { min: 100000, max: 500000 },
-    experience: '2-5 years',
-    frequency: 'daily',
-    active: true,
-    createdAt: '2025-10-01',
-    lastSent: '2025-10-14',
-    matches: 12
-  },
-  {
-    id: 'alert-2',
-    name: 'Government Medical Officer',
-    keywords: ['medical officer', 'government', 'health'],
-    locations: ['Rajasthan', 'Uttar Pradesh', 'Madhya Pradesh'],
-    categories: ['Medical Officer'],
-    sectors: ['government'],
-    salaryRange: { min: 50000, max: 200000 },
-    experience: '0-3 years',
-    frequency: 'weekly',
-    active: true,
-    createdAt: '2025-09-15',
-    lastSent: '2025-10-10',
-    matches: 8
-  },
-  {
-    id: 'alert-3',
-    name: 'Nursing Jobs Mumbai',
-    keywords: ['nurse', 'nursing', 'staff nurse'],
-    locations: ['Mumbai', 'Thane', 'Navi Mumbai'],
-    categories: ['Paramedical / Nursing'],
-    sectors: ['private'],
-    salaryRange: { min: 30000, max: 100000 },
-    experience: '1-3 years',
-    frequency: 'instant',
-    active: false,
-    createdAt: '2025-10-05',
-    matches: 5
-  }
-];
-
 export function JobAlerts() {
-  const [alerts, setAlerts] = useState<JobAlert[]>(mockJobAlerts);
+  const { token } = useAuth();
+  const [alerts, setAlerts] = useState<JobAlert[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAlert, setEditingAlert] = useState<JobAlert | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch job alerts
+  useEffect(() => {
+    const loadAlerts = async () => {
+      if (!token) {
+        setError('Authentication required. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetchJobAlerts({ page: 0, size: 100 }, token);
+        
+        // Convert categories and sectors to proper types
+        const convertedAlerts: JobAlert[] = (response.content || []).map(alert => ({
+          ...alert,
+          categories: (alert.categories || []) as JobCategory[],
+          sectors: (alert.sectors || []) as JobSector[]
+        }));
+        
+        setAlerts(convertedAlerts);
+      } catch (err: any) {
+        console.error('Error fetching job alerts:', err);
+        setError(err.message || 'Failed to load job alerts. Please try again.');
+        setAlerts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAlerts();
+  }, [token]);
 
   const jobCategories: JobCategory[] = [
     'Junior Resident',
@@ -97,16 +83,45 @@ export function JobAlerts() {
     'Rajasthan', 'Uttar Pradesh', 'Madhya Pradesh', 'Gujarat', 'Karnataka', 'Tamil Nadu'
   ];
 
-  const toggleAlert = (alertId: string) => {
-    setAlerts(prev => 
-      prev.map(alert => 
-        alert.id === alertId ? { ...alert, active: !alert.active } : alert
-      )
-    );
+  const handleToggleAlert = async (alertId: string) => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
+
+    const alert = alerts.find(a => a.id === alertId);
+    if (!alert) return;
+
+    try {
+      await updateJobAlert(alertId, { active: !alert.active }, token);
+      setAlerts(prev => 
+        prev.map(a => 
+          a.id === alertId ? { ...a, active: !a.active } : a
+        )
+      );
+    } catch (err: any) {
+      console.error('Error toggling alert:', err);
+      setError(err.message || 'Failed to update alert status.');
+    }
   };
 
-  const deleteAlert = (alertId: string) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+  const handleDeleteAlert = async (alertId: string) => {
+    if (!token) {
+      setError('Authentication required. Please login again.');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this job alert?')) {
+      return;
+    }
+
+    try {
+      await deleteJobAlert(alertId, token);
+      setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+    } catch (err: any) {
+      console.error('Error deleting alert:', err);
+      setError(err.message || 'Failed to delete alert.');
+    }
   };
 
   const getFrequencyColor = (frequency: string) => {
@@ -150,15 +165,57 @@ export function JobAlerts() {
                 <DialogTitle>Create Job Alert</DialogTitle>
               </DialogHeader>
               <CreateAlertForm 
-                onSave={(alert) => {
-                  setAlerts(prev => [...prev, { ...alert, id: `alert-${Date.now()}`, matches: 0 }]);
-                  setIsCreateDialogOpen(false);
+                onSave={async (alert) => {
+                  if (!token) {
+                    setError('Authentication required. Please login again.');
+                    return;
+                  }
+
+                  try {
+                    const payload: JobAlertPayload = {
+                      name: alert.name,
+                      keywords: alert.keywords,
+                      locations: alert.locations,
+                      categories: alert.categories,
+                      sectors: alert.sectors,
+                      salaryRange: alert.salaryRange,
+                      experience: alert.experience,
+                      frequency: alert.frequency,
+                      active: alert.active
+                    };
+                    const newAlert = await createJobAlert(payload, token);
+                    setAlerts(prev => [...prev, {
+                      ...newAlert,
+                      categories: (newAlert.categories || []) as JobCategory[],
+                      sectors: (newAlert.sectors || []) as JobSector[]
+                    }]);
+                    setIsCreateDialogOpen(false);
+                  } catch (err: any) {
+                    console.error('Error creating alert:', err);
+                    setError(err.message || 'Failed to create alert.');
+                  }
                 }}
                 onCancel={() => setIsCreateDialogOpen(false)}
               />
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setError(null)}
+              className="ml-auto"
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
@@ -200,9 +257,16 @@ export function JobAlerts() {
           </Card>
         </div>
 
-        {/* Alerts List */}
-        <div className="space-y-6">
-          {alerts.length > 0 ? (
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <span className="ml-3 text-gray-600">Loading job alerts...</span>
+          </div>
+        ) : (
+          /* Alerts List */
+          <div className="space-y-6">
+            {alerts.length > 0 ? (
             alerts.map((alert) => (
               <Card key={alert.id} className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -273,7 +337,7 @@ export function JobAlerts() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleAlert(alert.id)}
+                      onClick={() => handleToggleAlert(alert.id)}
                       className="h-8 w-8 p-0"
                     >
                       {alert.active ? (
@@ -293,7 +357,7 @@ export function JobAlerts() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteAlert(alert.id)}
+                      onClick={() => handleDeleteAlert(alert.id)}
                       className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -330,28 +394,80 @@ export function JobAlerts() {
               </Button>
             </Card>
           )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Edit Dialog */}
+      {editingAlert && (
+        <Dialog open={!!editingAlert} onOpenChange={(open) => !open && setEditingAlert(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Job Alert</DialogTitle>
+            </DialogHeader>
+            <CreateAlertForm 
+              initialData={editingAlert}
+              onSave={async (alert) => {
+                if (!token || !editingAlert) {
+                  setError('Authentication required. Please login again.');
+                  return;
+                }
+
+                try {
+                  const payload: JobAlertPayload = {
+                    name: alert.name,
+                    keywords: alert.keywords,
+                    locations: alert.locations,
+                    categories: alert.categories,
+                    sectors: alert.sectors,
+                    salaryRange: alert.salaryRange,
+                    experience: alert.experience,
+                    frequency: alert.frequency,
+                    active: alert.active
+                  };
+                  const updatedAlert = await updateJobAlert(editingAlert.id, payload, token);
+                  setAlerts(prev => prev.map(a => 
+                    a.id === editingAlert.id 
+                      ? {
+                          ...updatedAlert,
+                          categories: (updatedAlert.categories || []) as JobCategory[],
+                          sectors: (updatedAlert.sectors || []) as JobSector[]
+                        }
+                      : a
+                  ));
+                  setEditingAlert(null);
+                } catch (err: any) {
+                  console.error('Error updating alert:', err);
+                  setError(err.message || 'Failed to update alert.');
+                }
+              }}
+              onCancel={() => setEditingAlert(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
 
 interface CreateAlertFormProps {
-  onSave: (alert: Omit<JobAlert, 'id' | 'matches'>) => void;
+  initialData?: JobAlert;
+  onSave: (alert: Omit<JobAlert, 'id' | 'matches' | 'createdAt' | 'updatedAt' | 'lastSent'>) => void;
   onCancel: () => void;
 }
 
-function CreateAlertForm({ onSave, onCancel }: CreateAlertFormProps) {
+function CreateAlertForm({ initialData, onSave, onCancel }: CreateAlertFormProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    keywords: '',
-    locations: [] as string[],
-    categories: [] as JobCategory[],
-    sectors: [] as JobSector[],
-    salaryMin: '',
-    salaryMax: '',
-    experience: '',
-    frequency: 'daily' as 'daily' | 'weekly' | 'instant'
+    name: initialData?.name || '',
+    keywords: initialData?.keywords?.join(', ') || '',
+    locations: initialData?.locations || [],
+    categories: initialData?.categories || [],
+    sectors: initialData?.sectors || [],
+    salaryMin: initialData?.salaryRange?.min?.toString() || '',
+    salaryMax: initialData?.salaryRange?.max?.toString() || '',
+    experience: initialData?.experience || '',
+    frequency: (initialData?.frequency || 'daily') as 'daily' | 'weekly' | 'instant',
+    active: initialData?.active ?? true
   });
 
   const jobCategories: JobCategory[] = [
@@ -385,8 +501,7 @@ function CreateAlertForm({ onSave, onCancel }: CreateAlertFormProps) {
       },
       experience: formData.experience,
       frequency: formData.frequency,
-      active: true,
-      createdAt: new Date().toISOString().split('T')[0]
+      active: formData.active
     };
     
     onSave(alert);

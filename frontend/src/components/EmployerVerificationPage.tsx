@@ -44,47 +44,35 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
   }, []);
 
   const loadEmployers = async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       const response = await fetchEmployers({}, token);
-      setEmployers(response.employers || []);
-    } catch (error) {
+      // Map backend response to frontend format
+      const mappedEmployers = (response.employers || []).map((emp: any) => ({
+        id: emp.id,
+        companyName: emp.companyName || 'N/A',
+        userName: emp.userName || 'N/A',
+        userEmail: emp.userEmail || 'N/A',
+        companyType: emp.companyType || 'hospital',
+        verificationStatus: emp.verificationStatus || 'pending',
+        createdAt: emp.createdAt || new Date().toISOString(),
+        verificationNotes: emp.verificationNotes || '',
+        website: emp.website || '',
+        address: emp.address || '',
+        city: emp.city || '',
+        state: emp.state || ''
+      }));
+      setEmployers(mappedEmployers);
+    } catch (error: any) {
       console.error('Failed to load employers:', error);
-      // Fallback to mock data if API fails
-      setEmployers([
-        {
-          id: '1',
-          companyName: 'TechCorp Solutions',
-          userName: 'Sarah Johnson',
-          userEmail: 'sarah.johnson@techcorp.com',
-          companyType: 'hospital',
-          verificationStatus: 'pending',
-          createdAt: '2024-10-20T10:00:00',
-          verificationNotes: 'New tech company seeking to post software engineering positions.'
-        },
-        {
-          id: '2',
-          companyName: 'Green Energy Ltd',
-          userName: 'Mike Chen',
-          userEmail: 'mike.chen@greenenergy.com',
-          companyType: 'consultancy',
-          verificationStatus: 'pending',
-          createdAt: '2024-10-18T14:30:00',
-          verificationNotes: 'Renewable energy company expanding their team.'
-        },
-        {
-          id: '3',
-          companyName: 'City Hospital',
-          userName: 'Dr. Emily Davis',
-          userEmail: 'emily.davis@cityhospital.gov',
-          companyType: 'hospital',
-          verificationStatus: 'approved',
-          createdAt: '2024-09-15T09:15:00',
-          verificationNotes: 'Government hospital verified for medical positions.'
-        }
-      ]);
+      // Show error but don't use mock data
+      setEmployers([]);
+      alert('Failed to load employers. Please refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -114,12 +102,11 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
       setIsReviewDialogOpen(false);
       setSelectedEmployer(null);
       setReviewNotes('');
-    } catch (error) {
+      alert(`Employer verification ${reviewAction} successfully!`);
+    } catch (error: any) {
       console.error('Failed to update verification status:', error);
-      // For now, just close the dialog
-      setIsReviewDialogOpen(false);
-      setSelectedEmployer(null);
-      setReviewNotes('');
+      alert(`Failed to ${reviewAction} employer: ${error.message || 'Unknown error'}`);
+      // Keep dialog open so user can try again
     }
   };
 

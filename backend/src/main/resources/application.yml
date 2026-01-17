@@ -13,7 +13,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # updates existing tables without dropping data
+      ddl-auto: update # updates existing tables without dropping data
     show-sql: true
     properties:
       hibernate:
@@ -23,14 +23,18 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: your_email@gmail.com
-    password: your_app_password
+    username: shivamsuryawanshi51@gmail.com
+    password: dtyihmrrunpqdydw
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
   servlet:
     multipart:
@@ -42,13 +46,13 @@ spring:
 
 # JWT Configuration
 jwt:
-  secret: ThisIsMySuperSecretKeyForMedExJobComBackendApiWhichIsSecureAndLongEnoughForHS512
+  secret: "ThisIsMySuperSecretKeyForMedExJobComBackendApiWhichIsSecureAndLongEnoughForHS512"
   expiration: 604800000 # 7 days in milliseconds
 
 # Razorpay Configuration
 razorpay:
-  key-id: your_razorpay_key_id
-  key-secret: your_razorpay_key_secret
+  key-id: rzp_test_S4URMphJWIwUfN
+  key-secret: ZFejLMSKd0kBegzvEQZWrsBX
 
 # File Upload Configuration
 file:

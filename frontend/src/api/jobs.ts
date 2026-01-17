@@ -52,6 +52,42 @@ export async function fetchJobs(params: JobsQuery = {}) {
   }
 }
 
+export async function fetchJobsByEmployer(employerId: string, params: { status?: string; page?: number; size?: number } = {}) {
+  try {
+    const res = await apiClient.get(`/jobs/employer/${employerId}`, {
+      params: {
+        status: params.status || 'all',
+        page: params.page ?? 0,
+        size: params.size ?? 1000,
+      },
+    });
+    const data = res.data;
+
+    // Return empty array if no content
+    if (!Array.isArray(data?.content) || data.content.length === 0) {
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        number: params.page ?? 0,
+        size: params.size ?? 1000,
+      };
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Error fetching jobs by employer:', err);
+    // Return empty data on error
+    return {
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: params.page ?? 0,
+      size: params.size ?? 1000,
+    };
+  }
+}
+
 export async function fetchJob(id: string) {
   try {
     const res = await apiClient.get(`/jobs/${id}`);

@@ -21,6 +21,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     
     Optional<User> findByPasswordResetToken(String token);
     
+    Optional<User> findByEmailAndOtp(String email, String otp);
+    
     boolean existsByEmail(String email);
     
     @Query("SELECT u FROM User u WHERE u.email = :email AND u.isActive = true")

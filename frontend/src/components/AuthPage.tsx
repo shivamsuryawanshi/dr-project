@@ -8,6 +8,7 @@ import { Label } from './ui/label';
 import { Card } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AuthPageProps {
@@ -17,11 +18,24 @@ interface AuthPageProps {
 
 export function AuthPage({ mode, onNavigate }: AuthPageProps) {
   const navigate = useNavigate();
-  const { login, register } = useAuth();
-  const [userRole, setUserRole] = useState<'candidate' | 'employer' | 'admin'>('candidate');
+  const { login, register, forgotPassword, verifyOtp, resetPasswordWithOtp } = useAuth();
+  const [userRole, setUserRole] = useState<'candidate' | 'employer'>('candidate');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('forgotPasswordOpen state changed:', forgotPasswordOpen);
+  }, [forgotPasswordOpen]);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'email' | 'otp' | 'password'>('email');
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordOtp, setForgotPasswordOtp] = useState('');
+  const [forgotPasswordNewPassword, setForgotPasswordNewPassword] = useState('');
+  const [forgotPasswordConfirmPassword, setForgotPasswordConfirmPassword] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordError, setForgotPasswordError] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
   const lastSubmitTimeRef = useRef<number>(0);
 
@@ -178,6 +192,86 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
     }
   };
 
+  const handleForgotPasswordStep1 = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setForgotPasswordError(null);
+
+    if (!forgotPasswordEmail.trim()) {
+      setForgotPasswordError('Please enter your email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      await forgotPassword(forgotPasswordEmail);
+      setForgotPasswordStep('otp');
+    } catch (err: any) {
+      setForgotPasswordError(err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleForgotPasswordStep2 = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setForgotPasswordError(null);
+
+    if (!forgotPasswordOtp.trim() || forgotPasswordOtp.length !== 6) {
+      setForgotPasswordError('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      await verifyOtp(forgotPasswordEmail, forgotPasswordOtp);
+      setForgotPasswordStep('password');
+    } catch (err: any) {
+      setForgotPasswordError(err.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleForgotPasswordStep3 = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setForgotPasswordError(null);
+
+    if (!forgotPasswordNewPassword.trim() || forgotPasswordNewPassword.length < 8) {
+      setForgotPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (forgotPasswordNewPassword !== forgotPasswordConfirmPassword) {
+      setForgotPasswordError('Passwords do not match');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      await resetPasswordWithOtp(forgotPasswordEmail, forgotPasswordOtp, forgotPasswordNewPassword);
+      // Success - close dialog and show success message
+      setSuccessMessage('Password reset successfully! Please login with your new password.');
+      handleCloseForgotPassword(false);
+    } catch (err: any) {
+      setForgotPasswordError(err.message || 'Failed to reset password. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleCloseForgotPassword = (open: boolean) => {
+    setForgotPasswordOpen(open);
+    if (!open) {
+      // Reset all states when dialog closes
+      setForgotPasswordStep('email');
+      setForgotPasswordEmail('');
+      setForgotPasswordOtp('');
+      setForgotPasswordNewPassword('');
+      setForgotPasswordConfirmPassword('');
+      setForgotPasswordError(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8">
@@ -259,7 +353,15 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
               </Button>
 
               <div className="text-center">
-                <button type="button" className="text-sm text-blue-600 hover:underline">
+                <button 
+                  type="button" 
+                  className="text-sm text-blue-600 hover:underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate('/forgot-password');
+                  }}
+                >
                   Forgot password?
                 </button>
               </div>
@@ -278,7 +380,7 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
             <form onSubmit={handleRegister} className="space-y-4" noValidate>
               <div>
                 <Label>I want to register as</Label>
-                <RadioGroup value={userRole} onValueChange={(value) => setUserRole(value as 'candidate' | 'employer' | 'admin')} className="mt-2">
+                <RadioGroup value={userRole} onValueChange={(value) => setUserRole(value as 'candidate' | 'employer')} className="mt-2">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="candidate" id="candidate-register" />
                     <Label htmlFor="candidate-register" className="cursor-pointer">
@@ -289,12 +391,6 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
                     <RadioGroupItem value="employer" id="employer-register" />
                     <Label htmlFor="employer-register" className="cursor-pointer">
                       Employer (Hospital/Consultancy)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="admin" id="admin-register" />
-                    <Label htmlFor="admin-register" className="cursor-pointer">
-                      Admin
                     </Label>
                   </div>
                 </RadioGroup>
@@ -403,6 +499,179 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
           </TabsContent>
         </Tabs>
       </Card>
+
+      {/* Forgot Password Dialog - Multi-step */}
+      <Dialog open={forgotPasswordOpen} onOpenChange={handleCloseForgotPassword}>
+        <DialogContent className="sm:max-w-md z-[9999] bg-white">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              {forgotPasswordStep === 'email' && "Enter your email address and we'll send you an OTP to reset your password."}
+              {forgotPasswordStep === 'otp' && "Enter the 6-digit OTP sent to your email."}
+              {forgotPasswordStep === 'password' && "Enter your new password."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Step 1: Email */}
+          {forgotPasswordStep === 'email' && (
+            <form onSubmit={handleForgotPasswordStep1} className="space-y-4">
+              <div>
+                <Label htmlFor="forgot-email">Email</Label>
+                <div className="relative mt-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    className="pl-10"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    required
+                    disabled={forgotPasswordLoading}
+                  />
+                </div>
+              </div>
+              {forgotPasswordError && (
+                <p className="text-red-500 text-sm">{forgotPasswordError}</p>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleCloseForgotPassword(false)}
+                  disabled={forgotPasswordLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={forgotPasswordLoading}
+                >
+                  {forgotPasswordLoading ? 'Sending...' : 'Send OTP'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {/* Step 2: OTP */}
+          {forgotPasswordStep === 'otp' && (
+            <form onSubmit={handleForgotPasswordStep2} className="space-y-4">
+              <div>
+                <Label htmlFor="forgot-otp">OTP (6 digits)</Label>
+                <div className="relative mt-1">
+                  <Input
+                    id="forgot-otp"
+                    type="text"
+                    placeholder="000000"
+                    className="text-center text-2xl tracking-widest"
+                    value={forgotPasswordOtp}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setForgotPasswordOtp(value);
+                    }}
+                    maxLength={6}
+                    required
+                    disabled={forgotPasswordLoading}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  OTP sent to {forgotPasswordEmail}
+                </p>
+              </div>
+              {forgotPasswordError && (
+                <p className="text-red-500 text-sm">{forgotPasswordError}</p>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setForgotPasswordStep('email');
+                    setForgotPasswordOtp('');
+                    setForgotPasswordError(null);
+                  }}
+                  disabled={forgotPasswordLoading}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={forgotPasswordLoading || forgotPasswordOtp.length !== 6}
+                >
+                  {forgotPasswordLoading ? 'Verifying...' : 'Verify OTP'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {/* Step 3: New Password */}
+          {forgotPasswordStep === 'password' && (
+            <form onSubmit={handleForgotPasswordStep3} className="space-y-4">
+              <div>
+                <Label htmlFor="forgot-new-password">New Password</Label>
+                <div className="relative mt-1">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="forgot-new-password"
+                    type="password"
+                    placeholder="Enter new password"
+                    className="pl-10"
+                    value={forgotPasswordNewPassword}
+                    onChange={(e) => setForgotPasswordNewPassword(e.target.value)}
+                    required
+                    disabled={forgotPasswordLoading}
+                    minLength={8}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="forgot-confirm-password">Confirm Password</Label>
+                <div className="relative mt-1">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="forgot-confirm-password"
+                    type="password"
+                    placeholder="Confirm new password"
+                    className="pl-10"
+                    value={forgotPasswordConfirmPassword}
+                    onChange={(e) => setForgotPasswordConfirmPassword(e.target.value)}
+                    required
+                    disabled={forgotPasswordLoading}
+                    minLength={8}
+                  />
+                </div>
+              </div>
+              {forgotPasswordError && (
+                <p className="text-red-500 text-sm">{forgotPasswordError}</p>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setForgotPasswordStep('otp');
+                    setForgotPasswordNewPassword('');
+                    setForgotPasswordConfirmPassword('');
+                    setForgotPasswordError(null);
+                  }}
+                  disabled={forgotPasswordLoading}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={forgotPasswordLoading}
+                >
+                  {forgotPasswordLoading ? 'Resetting...' : 'Reset Password'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

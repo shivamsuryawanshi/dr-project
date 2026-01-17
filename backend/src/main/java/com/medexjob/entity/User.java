@@ -62,6 +62,12 @@ public class User {
     @Column(name = "password_reset_expires")
     private LocalDateTime passwordResetExpires;
     
+    @Column(name = "otp")
+    private String otp;
+    
+    @Column(name = "otp_expires")
+    private LocalDateTime otpExpires;
+    
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -176,6 +182,22 @@ public class User {
     
     public void setPasswordResetExpires(LocalDateTime passwordResetExpires) {
         this.passwordResetExpires = passwordResetExpires;
+    }
+    
+    public String getOtp() {
+        return otp;
+    }
+    
+    public void setOtp(String otp) {
+        this.otp = otp;
+    }
+    
+    public LocalDateTime getOtpExpires() {
+        return otpExpires;
+    }
+    
+    public void setOtpExpires(LocalDateTime otpExpires) {
+        this.otpExpires = otpExpires;
     }
     
     public LocalDateTime getCreatedAt() {

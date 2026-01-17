@@ -58,11 +58,22 @@ export async function fetchEmployers(params: EmployerQuery = {}, token: string) 
 }
 
 export async function fetchEmployer(id: string, token: string): Promise<EmployerResponse> {
-  const res = await fetch(`${API_BASE}/employers/${id}`, {
+  // First try to fetch by employer ID
+  let res = await fetch(`${API_BASE}/employers/${id}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
+  
+  // If not found, try to fetch by user ID
+  if (res.status === 404) {
+    res = await fetch(`${API_BASE}/employers/user/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  }
+  
   if (!res.ok) throw new Error(`Failed to fetch employer (${res.status})`);
   return res.json();
 }
@@ -99,5 +110,21 @@ export async function uploadEmployerDocument(id: string, document: File, token: 
     body: formData,
   });
   if (!res.ok) throw new Error(`Failed to upload document (${res.status})`);
+  return res.json();
+}
+
+export async function createEmployer(
+  data: { companyName?: string; companyType?: 'hospital' | 'consultancy' | 'hr' },
+  token: string
+): Promise<EmployerResponse> {
+  const res = await fetch(`${API_BASE}/employers/create`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Failed to create employer (${res.status})`);
   return res.json();
 }

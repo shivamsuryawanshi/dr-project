@@ -1,5 +1,5 @@
 // AI assisted development
-import { Bell, User, Menu, Briefcase, LogOut } from 'lucide-react';
+import { Bell, User, Briefcase, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 
@@ -128,7 +128,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
                   title="Logout"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Logout</span>
+                  Logout
                 </Button>
               </>
             ) : (
@@ -141,11 +141,6 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
                 </Button>
               </>
             )}
-
-            {/* Mobile Menu */}
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu className="w-5 h-5" />
-            </Button>
           </div>
         </div>
       </div>

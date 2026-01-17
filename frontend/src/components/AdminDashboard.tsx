@@ -1,21 +1,13 @@
 // AI assisted development
-import { BarChart, Briefcase, Users, Building2, Bell, Settings, LogOut, Newspaper } from 'lucide-react';
+import { BarChart, Briefcase, Users, Building2, Bell, Settings, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { useAuth } from '../contexts/AuthContext';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
 }
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
-  const { logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    onNavigate('logout');
-  };
-
   const adminCards = [
     {
       title: 'Manage Jobs',
@@ -24,10 +16,10 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       action: () => onNavigate('admin-jobs'),
     },
     {
-      title: 'Manage Users',
-      description: 'Oversee candidate and employer accounts.',
+      title: 'Manage Admins',
+      description: 'Add, edit, and remove admin accounts.',
       icon: <Users className="w-8 h-8 text-green-600" />,
-      action: () => onNavigate('admin-users'), // Placeholder for future user management
+      action: () => onNavigate('admin-users'),
     },
     {
       title: 'Employer Verification',
@@ -78,14 +70,6 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => onNavigate('home')}>
               Back to Home
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
             </Button>
           </div>
         </div>

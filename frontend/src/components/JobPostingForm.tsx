@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Save, Eye, MapPin, Briefcase, GraduationCap, DollarSign, Calendar, FileText, Building2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, Save, Eye, MapPin, Briefcase, GraduationCap, DollarSign, Calendar, FileText, Building2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,7 +8,10 @@ import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
+import { Alert, AlertDescription } from './ui/alert';
 import { JobCategory, JobSector } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { getCurrentSubscription, SubscriptionResponse } from '../api/subscriptions';
 
 interface JobPostingFormProps {
   onCancel: () => void; // Renamed for clarity when used in a dialog
@@ -42,7 +45,9 @@ interface JobFormData {
 }
 
 export function JobPostingForm({ onCancel, onSave, initialData }: JobPostingFormProps) {
+  const { token } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [currentSubscription, setCurrentSubscription] = useState<SubscriptionResponse | null>(null);
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
     organization: '',
@@ -81,6 +86,21 @@ export function JobPostingForm({ onCancel, onSave, initialData }: JobPostingForm
     'New Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune',
     'Jaipur', 'Chandigarh', 'Lucknow', 'Ahmedabad', 'Kochi', 'Bhubaneswar', 'Indore'
   ];
+
+  // Fetch current subscription to show job posting limit
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (token) {
+        try {
+          const subscription = await getCurrentSubscription(token);
+          setCurrentSubscription(subscription);
+        } catch (err) {
+          console.warn('Could not fetch subscription:', err);
+        }
+      }
+    };
+    fetchSubscription();
+  }, [token]);
 
   // Initialize form data with initialData if provided (for editing)
   useState(() => { // Use useState initializer for initial data
@@ -502,12 +522,29 @@ export function JobPostingForm({ onCancel, onSave, initialData }: JobPostingForm
           <div>
             <h1 className="text-3xl text-gray-900 mb-2">Post a New Job</h1>
             <p className="text-gray-600">Create a compelling job posting to attract the best medical professionals</p>
+            {currentSubscription && currentSubscription.status === 'active' && (
+              <p className="text-sm text-blue-600 mt-1">
+                Job Posts Available: {currentSubscription.jobPostsAllowed - currentSubscription.jobPostsUsed} / {currentSubscription.jobPostsAllowed}
+              </p>
+            )}
           </div>
           <Button variant="outline" onClick={onCancel}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
         </div>
+
+        {/* Job Limit Warning */}
+        {currentSubscription && currentSubscription.status === 'active' && 
+         currentSubscription.jobPostsUsed >= currentSubscription.jobPostsAllowed && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <AlertCircle className="w-4 h-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>Job Posting Limit Reached:</strong> You have used all {currentSubscription.jobPostsAllowed} job posts in your current subscription. 
+              Please upgrade your plan to post more jobs.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Progress Bar */}
         <div className="mb-8">
@@ -551,7 +588,11 @@ export function JobPostingForm({ onCancel, onSave, initialData }: JobPostingForm
             ) : (
               <Button 
                 onClick={handleSubmit}
-                disabled={!isStepValid(currentStep)}
+                disabled={
+                  !isStepValid(currentStep) || 
+                  (currentSubscription && currentSubscription.status === 'active' && 
+                   currentSubscription.jobPostsUsed >= currentSubscription.jobPostsAllowed)
+                }
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Eye className="w-4 h-4 mr-2" />
