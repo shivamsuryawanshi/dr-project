@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Users, Briefcase, Eye, MousePointer, Calendar, Download, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, Briefcase, Eye, MousePointer, Calendar } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -18,7 +18,6 @@ interface AnalyticsDashboardProps {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export function AnalyticsDashboard({ userRole, userId }: AnalyticsDashboardProps) {
-  const [timeRange, setTimeRange] = useState('6months');
   const [selectedMetric, setSelectedMetric] = useState('views');
   const [overview, setOverview] = useState<{ totalJobs: number; totalApplications: number; totalUsers: number; totalEmployers: number } | null>(null);
   const [categoryData, setCategoryData] = useState<any[]>([]);
@@ -79,24 +78,6 @@ export function AnalyticsDashboard({ userRole, userId }: AnalyticsDashboardProps
                 : 'Track your job postings performance and candidate engagement'
               }
             </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7days">Last 7 days</SelectItem>
-                <SelectItem value="30days">Last 30 days</SelectItem>
-                <SelectItem value="3months">Last 3 months</SelectItem>
-                <SelectItem value="6months">Last 6 months</SelectItem>
-                <SelectItem value="1year">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
-            </Button>
           </div>
         </div>
 
@@ -212,7 +193,6 @@ export function AnalyticsDashboard({ userRole, userId }: AnalyticsDashboardProps
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="jobs">Jobs Performance</TabsTrigger>
             <TabsTrigger value="users">Users & Engagement</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
@@ -383,42 +363,6 @@ export function AnalyticsDashboard({ userRole, userId }: AnalyticsDashboardProps
                 </div>
               </Card>
             )}
-          </TabsContent>
-
-          <TabsContent value="reports" className="mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-6">Generate Reports</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Button variant="outline" className="h-20 flex-col">
-                  <Download className="w-6 h-6 mb-2" />
-                  Job Performance Report
-                </Button>
-                <Button variant="outline" className="h-20 flex-col">
-                  <Download className="w-6 h-6 mb-2" />
-                  Application Analytics
-                </Button>
-                <Button variant="outline" className="h-20 flex-col">
-                  <Download className="w-6 h-6 mb-2" />
-                  User Engagement Report
-                </Button>
-                {isAdmin && (
-                  <>
-                    <Button variant="outline" className="h-20 flex-col">
-                      <Download className="w-6 h-6 mb-2" />
-                      Platform Overview
-                    </Button>
-                    <Button variant="outline" className="h-20 flex-col">
-                      <Download className="w-6 h-6 mb-2" />
-                      Employer Performance
-                    </Button>
-                    <Button variant="outline" className="h-20 flex-col">
-                      <Download className="w-6 h-6 mb-2" />
-                      Financial Report
-                    </Button>
-                  </>
-                )}
-              </div>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>

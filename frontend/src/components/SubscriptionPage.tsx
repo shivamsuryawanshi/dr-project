@@ -539,7 +539,7 @@ export function SubscriptionPage({ onNavigate }: SubscriptionPageProps) {
 
                     {/* CTA Button */}
                     <Button
-                      className={`w-full py-3.5 text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg rounded-lg bg-gradient-to-r ${config.buttonGradient} ${config.buttonHover} text-white mt-auto flex items-center justify-center gap-1.5`}
+                      className={`w-full py-3.5 text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white mt-auto flex items-center justify-center gap-1.5`}
                       onClick={() => handleSelectPlan(plan)}
                       disabled={processingPayment === plan.id}
                     >

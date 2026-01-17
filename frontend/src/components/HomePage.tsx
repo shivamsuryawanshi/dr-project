@@ -72,10 +72,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
     (async () => {
       try {
         const [feat, latest, gov, priv, meta, news] = await Promise.all([
-          fetchJobs({ featured: true, size: 6 }).then(r => r.content ?? []),
-          fetchJobs({ size: 6, sort: 'createdAt,desc' }).then(r => r.content ?? []),
-          fetchJobs({ sector: 'government', size: 3 }).then(r => r.content ?? []),
-          fetchJobs({ sector: 'private', size: 3 }).then(r => r.content ?? []),
+          fetchJobs({ featured: true, size: 6, status: 'active' }).then(r => r.content ?? []),
+          fetchJobs({ size: 6, sort: 'createdAt,desc', status: 'active' }).then(r => r.content ?? []),
+          fetchJobs({ sector: 'government', size: 10, status: 'active' }).then(r => r.content ?? []), // Fetch more to ensure we get 3 after filtering
+          fetchJobs({ sector: 'private', size: 10, status: 'active' }).then(r => r.content ?? []), // Fetch more to ensure we get 3 after filtering
           fetchJobsMeta(),
           fetchPulseUpdates(),
         ]);
@@ -103,8 +103,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
         const combinedJobs = Array.from(jobMap.values()).slice(0, 6);
         setFeaturedJobs(combinedJobs);
         
-        setGovernmentJobs(Array.isArray(gov) ? gov : []);
-        setPrivateJobs(Array.isArray(priv) ? priv : []);
+        // Filter government jobs - ensure only government sector jobs are included
+        const filteredGovJobs = Array.isArray(gov) 
+          ? gov.filter(job => {
+              const jobSector = job.sector?.toLowerCase() || '';
+              return jobSector === 'government';
+            }).slice(0, 3)
+          : [];
+        setGovernmentJobs(filteredGovJobs);
+        
+        // Filter private jobs - ensure only private sector jobs are included
+        const filteredPrivateJobs = Array.isArray(priv) 
+          ? priv.filter(job => {
+              const jobSector = job.sector?.toLowerCase() || '';
+              return jobSector === 'private';
+            }).slice(0, 3)
+          : [];
+        setPrivateJobs(filteredPrivateJobs);
         setNewsUpdates(Array.isArray(news) ? news.slice(0, 6) : []);
 
         const locs: string[] = Array.isArray(meta?.locations) ? meta.locations : [];
@@ -300,28 +315,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
               {governmentJobs.length > 0 ? (
                 <div className="space-y-4">
                   {governmentJobs.map((job, index) => (
-                    <Card 
-                      key={job.id} 
-                      className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group border-l-4 border-l-blue-600 animate-fade-in-right" 
-                      onClick={() => onNavigate('job-detail', job.id)}
+                    <div 
+                      key={job.id}
+                      className="animate-fade-in-right"
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors" variant="outline">
-                        Government
-                      </Badge>
-                      <h3 className="text-lg text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{job.title}</h3>
-                      <p className="text-sm text-gray-600 mb-3 flex items-center">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        {job.organization}
-                      </p>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span className="flex items-center">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          {job.location}
-                        </span>
-                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full">{job.numberOfPosts} Posts</span>
-                      </div>
-                    </Card>
+                      <JobCard
+                        job={job}
+                        onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                      />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -354,28 +357,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
               {privateJobs.length > 0 ? (
                 <div className="space-y-4">
                   {privateJobs.map((job, index) => (
-                    <Card 
-                      key={job.id} 
-                      className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group border-l-4 border-l-green-600 animate-fade-in-left" 
-                      onClick={() => onNavigate('job-detail', job.id)}
+                    <div 
+                      key={job.id}
+                      className="animate-fade-in-left"
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
-                      <Badge className="bg-green-100 text-green-700 border-green-200 mb-3 group-hover:bg-green-600 group-hover:text-white transition-colors" variant="outline">
-                        Private
-                      </Badge>
-                      <h3 className="text-lg text-gray-900 mb-2 group-hover:text-green-600 transition-colors">{job.title}</h3>
-                      <p className="text-sm text-gray-600 mb-3 flex items-center">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        {job.organization}
-                      </p>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span className="flex items-center">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          {job.location}
-                        </span>
-                        <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full">{job.salary}</span>
-                      </div>
-                    </Card>
+                      <JobCard
+                        job={job}
+                        onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                      />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -572,8 +563,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             </Button>
             <Button 
               size="lg" 
-              variant="outline" 
-              className="border-2 border-white text-white hover:bg-white hover:text-blue-600 transform hover:scale-105 transition-all duration-300"
+              className="bg-white text-blue-600 hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
               onClick={() => onNavigate('register')}
             >
               Register as Employer

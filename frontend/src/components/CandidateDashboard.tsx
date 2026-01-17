@@ -487,29 +487,6 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
               </div>
             </Card>
 
-            {/* Quick Actions */}
-            <Card className="p-6">
-              <h3 className="text-lg text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Update Resume
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => onNavigate('job-alerts')}
-                >
-                  <Bell className="w-4 h-4 mr-2" />
-                  Manage Alerts
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => onNavigate('jobs')}>
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Browse All Jobs
-                </Button>
-              </div>
-            </Card>
-
             {/* Notifications */}
             <Card className="p-6">
               <h3 className="text-lg text-gray-900 mb-4">Recent Notifications</h3>

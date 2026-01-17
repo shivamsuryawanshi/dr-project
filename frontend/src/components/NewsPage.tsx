@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Search, Calendar, Newspaper, Filter, RefreshCw, Landmark, Briefcase, GraduationCap, Timer, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Search, Calendar, Newspaper, Filter, RefreshCw, Landmark, Briefcase, GraduationCap, Timer, Sparkles } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface NewsPageProps {
@@ -296,7 +296,7 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
                       </div>
                     </div>
 
-                    <div className="relative mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="relative mt-2">
                       <div className="space-y-2 min-w-0">
                         <h3 className="text-lg font-semibold text-slate-900 group-hover:text-slate-950 transition-colors line-clamp-2">
                           {update.title}
@@ -307,18 +307,6 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
                           <span className="inline-flex items-center gap-1 bg-white/70 px-2.5 py-1 rounded-full border border-white/60">Status: Active</span>
                         </div>
                       </div>
-
-                      <Button 
-                        variant="outline" 
-                        className="self-start md:self-center bg-white text-green-700 border-green-200 hover:bg-green-600 hover:text-white hover:border-green-600 transition-all shrink-0 group/btn"
-                        onClick={() => {
-                          // In future, can navigate to news detail page
-                          // For now, just show the news
-                        }}
-                      >
-                        View Details
-                        <ArrowUpRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
-                      </Button>
                     </div>
                   </Card>
                 );

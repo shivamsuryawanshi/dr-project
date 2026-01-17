@@ -275,8 +275,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
             </Button>
             <Button 
               size="lg"
-              variant="outline"
-              className="border-2 border-white text-white hover:bg-white hover:text-blue-600 transform hover:scale-105 transition-all duration-300"
+              className="bg-white text-blue-600 hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-xl"
               onClick={() => onNavigate('jobs')}
             >
               Browse Jobs

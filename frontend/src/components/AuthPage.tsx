@@ -23,6 +23,7 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(mode);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
   // Debug: Log state changes
@@ -40,6 +41,8 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
   const lastSubmitTimeRef = useRef<number>(0);
 
   useEffect(() => {
+    // Update active tab when mode prop changes
+    setActiveTab(mode);
     if (mode === 'login') {
       const flag = localStorage.getItem('registrationSuccess');
       if (flag) {
@@ -171,15 +174,13 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
     try {
       await register(userData);
       // Show success message
-      setSuccessMessage('Registration successful! Redirecting to login...');
-      // Show alert
-      alert('Registration successful! You can now log in with your credentials.');
-      // Mark success and redirect to login to show a success message
-      localStorage.setItem('registrationSuccess', '1');
-      // Wait a bit to show the success message, then redirect using navigate directly
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
+      setSuccessMessage('Registration successful! Please log in to continue.');
+      // Clear form errors
+      setErrors({});
+      // Switch to login tab
+      setActiveTab('login');
+      // Update URL to login
+      onNavigate('login');
     } catch (err: any) {
       if (err.errors) {
         setErrors(err.errors);
@@ -282,10 +283,13 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
           </p>
         </div>
 
-        <Tabs defaultValue={mode} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value as 'login' | 'register');
+          onNavigate(value);
+        }} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login" onClick={() => onNavigate('login')}>Login</TabsTrigger>
-            <TabsTrigger value="register" onClick={() => onNavigate('register')}>Register</TabsTrigger>
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login" className="space-y-4 mt-6">
@@ -323,24 +327,6 @@ export function AuthPage({ mode, onNavigate }: AuthPageProps) {
                     required
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label>Login as</Label>
-                <RadioGroup value={userRole} onValueChange={(value) => setUserRole(value as 'candidate' | 'employer' | 'admin')} className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="candidate" id="candidate-login" />
-                    <Label htmlFor="candidate-login" className="cursor-pointer">Candidate</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="employer" id="employer-login" />
-                    <Label htmlFor="employer-login" className="cursor-pointer">Employer</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="admin" id="admin-login" />
-                    <Label htmlFor="admin-login" className="cursor-pointer">Admin</Label>
-                  </div>
-                </RadioGroup>
               </div>
 
               {errors.form && <p className="text-red-500 text-sm">{errors.form}</p>}

@@ -958,38 +958,46 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                   </div>
                 )}
 
-                <Separator />
+                {/* Only show save button for candidates when logged in */}
+                {isAuthenticated && user?.role === 'candidate' && (
+                  <>
+                    <Separator />
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={handleSaveJob}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        'Saving...'
+                      ) : isSaved ? (
+                        <>
+                          <BookmarkCheck className="w-4 h-4 mr-2" />
+                          Saved
+                        </>
+                      ) : (
+                        <>
+                          <Bookmark className="w-4 h-4 mr-2" />
+                          Save Job
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
 
-                {isAuthenticated && user?.role === 'candidate' ? (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={handleSaveJob}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      'Saving...'
-                    ) : isSaved ? (
-                      <>
-                        <BookmarkCheck className="w-4 h-4 mr-2" />
-                        Saved
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark className="w-4 h-4 mr-2" />
-                        Save Job
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => onNavigate('login')}
-                  >
-                    <Bookmark className="w-4 h-4 mr-2" />
-                    Login to Save
-                  </Button>
+                {/* Show "Login to Save" only when user is NOT logged in */}
+                {!isAuthenticated && (
+                  <>
+                    <Separator />
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => onNavigate('login')}
+                    >
+                      <Bookmark className="w-4 h-4 mr-2" />
+                      Login to Save
+                    </Button>
+                  </>
                 )}
               </div>
             </Card>
