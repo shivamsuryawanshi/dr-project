@@ -140,7 +140,7 @@ function AppContent() {
                           type: 'hospital'
                         };
                         await createJob(payload);
-                        alert('Job posted successfully! It will be reviewed by admin before publishing.');
+                        alert('Job created successfully!');
                         handleNavigate('dashboard/employer');
                       } catch (e: any) {
                         console.error("Error creating job:", e);

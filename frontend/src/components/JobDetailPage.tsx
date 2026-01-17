@@ -40,6 +40,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
   const [applying, setApplying] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
   const locationText = job?.location || [job?.city, job?.state].filter(Boolean).join(', ');
   const { jobId } = useParams<{ jobId: string }>();
 
@@ -89,6 +90,33 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
       }
     };
     checkSavedStatus();
+  }, [jobId, isAuthenticated, token, user]);
+
+  // Check if user has already applied for this job
+  useEffect(() => {
+    const checkApplicationStatus = async () => {
+      if (jobId && isAuthenticated && token && user?.role === 'candidate' && user?.id) {
+        try {
+          const { fetchApplications } = await import('../api/applications');
+          const response = await fetchApplications({ 
+            jobId, 
+            candidateId: user.id,
+            page: 0,
+            size: 1
+          }, token);
+          
+          const hasApplication = response?.content && response.content.length > 0;
+          setHasApplied(hasApplication);
+          console.log('📋 Application status checked:', hasApplication ? 'Already applied' : 'Not applied');
+        } catch (error) {
+          console.error('Error checking application status:', error);
+          setHasApplied(false);
+        }
+      } else {
+        setHasApplied(false);
+      }
+    };
+    checkApplicationStatus();
   }, [jobId, isAuthenticated, token, user]);
 
 
@@ -144,6 +172,9 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
       console.log('📋 Application ID:', response.id);
       console.log('👤 Candidate ID:', response.candidateId);
 
+      // Mark as applied
+      setHasApplied(true);
+
       // Close dialog and reset form
       setShowApplyDialog(false);
       setApplicationForm({
@@ -160,18 +191,27 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
       // Increased delay to ensure backend has saved the application and database is updated
       setTimeout(() => {
         console.log('🔄 Redirecting to dashboard...');
-        // Redirect to dashboard where the applied job will be visible
-        // Use window.location to force a full page reload and ensure fresh data
-        if (user?.role === 'candidate') {
-          window.location.href = '/dashboard/candidate';
-        } else {
-          onNavigate('dashboard');
-        }
+        console.log('👤 Current user:', user);
+        console.log('👤 User role:', user?.role);
+        
+        // Job applications are always from candidate accounts
+        // Always redirect to candidate dashboard regardless of role check
+        // This ensures user doesn't get redirected to wrong dashboard
+        window.location.href = '/dashboard/candidate';
       }, 1000); // Increased delay to 1 second to ensure backend processing
     } catch (error: any) {
       console.error('❌ Application submission error:', error);
-      const errorMessage = error?.message || 'Failed to submit application. Please try again.';
-      alert(errorMessage);
+      
+      // Check if it's a duplicate application error
+      if (error?.message?.includes('already applied') || 
+          error?.message?.includes('already exists') ||
+          error?.errorCode === 'DUPLICATE_APPLICATION') {
+        alert('You have already applied for this job!');
+        setHasApplied(true);
+      } else {
+        const errorMessage = error?.message || 'Failed to submit application. Please try again.';
+        alert(errorMessage);
+      }
     } finally {
       setApplying(false);
     }
@@ -399,8 +439,15 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                     {isAuthenticated ? (
                       <>
                         <Button 
-                          className="w-full bg-green-600 hover:bg-green-700"
+                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          disabled={hasApplied || !isAuthenticated || user?.role !== 'candidate'}
                           onClick={(e) => {
+                            if (hasApplied) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              alert('You have already applied for this job!');
+                              return;
+                            }
                             e.preventDefault();
                             e.stopPropagation();
                             console.log('🔘 Apply Now button clicked (Government)');
@@ -431,7 +478,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                             }, 3000);
                           }}
                         >
-                            Apply Now
+                            {hasApplied ? 'Already Applied' : 'Apply Now'}
                           </Button>
                         <Dialog 
                           open={showApplyDialog}
@@ -669,8 +716,15 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                     {isAuthenticated ? (
                       <>
                         <Button 
-                          className="w-full bg-green-600 hover:bg-green-700"
+                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          disabled={hasApplied || !isAuthenticated || user?.role !== 'candidate'}
                           onClick={(e) => {
+                            if (hasApplied) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              alert('You have already applied for this job!');
+                              return;
+                            }
                             e.preventDefault();
                             e.stopPropagation();
                             console.log('🔘 Apply Now button clicked (Private)');
@@ -689,7 +743,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                             }, 2000);
                           }}
                         >
-                            Apply Now
+                            {hasApplied ? 'Already Applied' : 'Apply Now'}
                           </Button>
                         <Dialog 
                           open={showApplyDialog}

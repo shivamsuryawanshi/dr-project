@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -55,4 +56,16 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
            "LOWER(a.candidateName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(a.candidateEmail) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Application> searchApplications(@Param("keyword") String keyword, Pageable pageable);
+
+    // Check if candidate has already applied for a job (by candidateId)
+    boolean existsByJobIdAndCandidateId(UUID jobId, UUID candidateId);
+
+    // Check if candidate has already applied for a job (by email)
+    boolean existsByJobIdAndCandidateEmail(UUID jobId, String candidateEmail);
+
+    // Find application by job and candidateId
+    Optional<Application> findByJobIdAndCandidateId(UUID jobId, UUID candidateId);
+
+    // Find application by job and email
+    Optional<Application> findByJobIdAndCandidateEmail(UUID jobId, String candidateEmail);
 }

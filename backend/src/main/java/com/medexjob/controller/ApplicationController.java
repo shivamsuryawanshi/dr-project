@@ -70,14 +70,6 @@ public class ApplicationController {
         return jobRepository.findById(jobId)
                 .map(job -> {
                     try {
-                        Application application = new Application();
-                        application.setJob(job);
-                        application.setCandidateName(candidateName);
-                        application.setCandidateEmail(candidateEmail);
-                        application.setCandidatePhone(candidatePhone);
-                        application.setNotes(notes);
-                        application.setStatus(Application.ApplicationStatus.APPLIED);
-
                         // Extract candidateId from authenticated user if available
                         UUID candidateIdSet = null;
                         try {
@@ -92,7 +84,6 @@ public class ApplicationController {
                                     // Set candidateId if user is a candidate
                                     if (user.getRole() == User.UserRole.CANDIDATE) {
                                         candidateIdSet = user.getId();
-                                        application.setCandidateId(candidateIdSet);
                                         logger.info("✅ CandidateId set: {}", candidateIdSet);
                                     } else {
                                         logger.warn("⚠️ User is not a candidate, role: {}", user.getRole());
@@ -107,6 +98,46 @@ public class ApplicationController {
                             logger.error("❌ Error extracting candidateId: {}", e.getMessage(), e);
                             // If authentication fails, continue without candidateId
                             // This allows applications from non-authenticated users (if needed)
+                        }
+
+                        // Check for duplicate application
+                        boolean alreadyApplied = false;
+                        String duplicateMessage = null;
+                        
+                        if (candidateIdSet != null) {
+                            // Check by candidateId (for authenticated users)
+                            alreadyApplied = applicationRepository.existsByJobIdAndCandidateId(jobId, candidateIdSet);
+                            if (alreadyApplied) {
+                                duplicateMessage = "You have already applied for this job.";
+                                logger.warn("🚫 Duplicate application attempt: Candidate {} already applied for job {}", candidateIdSet, jobId);
+                            }
+                        } else {
+                            // Check by email (for non-authenticated users or as fallback)
+                            alreadyApplied = applicationRepository.existsByJobIdAndCandidateEmail(jobId, candidateEmail);
+                            if (alreadyApplied) {
+                                duplicateMessage = "An application with this email already exists for this job.";
+                                logger.warn("🚫 Duplicate application attempt: Email {} already applied for job {}", candidateEmail, jobId);
+                            }
+                        }
+
+                        if (alreadyApplied) {
+                            Map<String, Object> error = new HashMap<>();
+                            error.put("message", duplicateMessage);
+                            error.put("status", "error");
+                            error.put("errorCode", "DUPLICATE_APPLICATION");
+                            logger.info("❌ Application rejected: {}", duplicateMessage);
+                            return ResponseEntity.status(400).body(error);
+                        }
+
+                        Application application = new Application();
+                        application.setJob(job);
+                        application.setCandidateName(candidateName);
+                        application.setCandidateEmail(candidateEmail);
+                        application.setCandidatePhone(candidatePhone);
+                        application.setNotes(notes);
+                        application.setStatus(Application.ApplicationStatus.APPLIED);
+                        if (candidateIdSet != null) {
+                            application.setCandidateId(candidateIdSet);
                         }
 
                         // Handle resume upload

@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { fetchJobs } from '../api/jobs';
 import { fetchApplications, ApplicationResponse } from '../api/applications';
 import { getCurrentSubscription, SubscriptionResponse } from '../api/subscriptions';
+import { fetchNotifications } from '../api/notifications';
 
 interface EmployerDashboardProps {
   onNavigate: (page: string) => void;
@@ -37,6 +38,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
   const [employer, setEmployer] = useState<EmployerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionResponse | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   const totalViews = myJobs.reduce((sum, job) => sum + (job.views || 0), 0);
   // Calculate total applications from both myApplications and job applications count
@@ -151,6 +153,16 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           console.warn('Could not fetch subscription:', err);
           setCurrentSubscription(null);
         }
+
+        // Fetch notifications
+        try {
+          const notificationsData = await fetchNotifications({ page: 0, size: 10 }, token);
+          setNotifications(notificationsData.content || []);
+          console.log('✅ Notifications fetched:', notificationsData.content?.length || 0);
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+          setNotifications([]);
+        }
       } catch (error) {
         console.error('Failed to fetch employer data:', error);
       } finally {
@@ -202,6 +214,14 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               }
               console.log(`🔄 Refreshed applications: ${allApplications.length} total`);
               setMyApplications(allApplications);
+            }
+
+            // Refresh notifications
+            try {
+              const notificationsData = await fetchNotifications({ page: 0, size: 10 }, token);
+              setNotifications(notificationsData.content || []);
+            } catch (error) {
+              console.error('Error refreshing notifications:', error);
             }
           } catch (error) {
             console.error('Failed to refresh data:', error);
@@ -400,6 +420,14 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
             <TabsTrigger value="subscription">Subscription</TabsTrigger>
             <TabsTrigger value="jobs">My Jobs</TabsTrigger>
             <TabsTrigger value="applications">Applications</TabsTrigger>
+            <TabsTrigger value="notifications">
+              Notifications
+              {notifications.filter((n: any) => !n.read).length > 0 && (
+                <Badge className="ml-2 bg-red-500 text-white">
+                  {notifications.filter((n: any) => !n.read).length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="analytics" onClick={() => onNavigate('analytics')}>Analytics</TabsTrigger>
             <TabsTrigger value="verification">Verification</TabsTrigger>
           </TabsList>
@@ -640,6 +668,41 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                 <Button onClick={() => onNavigate('verification')}>
                   Go to Verification
                 </Button>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg text-gray-900">Recent Notifications</h3>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onNavigate('notifications')}
+                >
+                  View All
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No notifications yet</p>
+                ) : (
+                  notifications.slice(0, 5).map((notification) => (
+                    <div key={notification.id} className="pb-3 border-b last:border-b-0">
+                      <p className="text-sm text-gray-900 mb-1">{notification.message}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(notification.createdAt).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           </TabsContent>
