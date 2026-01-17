@@ -66,14 +66,23 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
           params.type = filter;
         }
 
+        console.log('📥 Fetching notifications with params:', params);
         const response = await fetchNotifications(params, token);
+        console.log('✅ Notifications response:', response);
         setNotifications(response.content || []);
 
         // Fetch unread count
+        console.log('📊 Fetching unread count...');
         const count = await getUnreadCount(token);
+        console.log('✅ Unread count:', count);
         setUnreadCount(count);
       } catch (err: any) {
-        console.error('Error fetching notifications:', err);
+        console.error('❌ Error fetching notifications:', err);
+        console.error('Error details:', {
+          message: err.message,
+          stack: err.stack,
+          response: err.response
+        });
         setError(err.message || 'Failed to load notifications. Please try again.');
         setNotifications([]);
       } finally {

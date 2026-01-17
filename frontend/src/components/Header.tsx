@@ -2,6 +2,9 @@
 import { Bell, User, Briefcase, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { getUnreadCount } from '../api/notifications';
 
 interface HeaderProps {
   currentPage: string;
@@ -10,14 +13,32 @@ interface HeaderProps {
   userRole?: 'admin' | 'employer' | 'candidate' | string;
 }
 
-import { useAuth } from '../contexts/AuthContext';
-import { mockNotifications } from '../data/mockData';
-
 export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: HeaderProps) {
-  const { user, logout } = useAuth();
-  const unreadCount = isAuthenticated && user
-    ? mockNotifications.filter(n => n.userId === user.id && !n.read).length
-    : 0;
+  const { user, logout, token } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread notification count from API
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (isAuthenticated && user && token) {
+        try {
+          const count = await getUnreadCount(token);
+          setUnreadCount(count);
+        } catch (error) {
+          console.error('Error fetching unread count:', error);
+          setUnreadCount(0);
+        }
+      } else {
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+    
+    // Refresh count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user, token]);
 
   const handleLogout = () => {
     logout();

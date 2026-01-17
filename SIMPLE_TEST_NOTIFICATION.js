@@ -1,0 +1,7 @@
+// AI assisted development
+
+// Simple One-Line Test Notification
+// Browser Console Mein Copy-Paste Karein Aur Enter Press Karein
+
+fetch('/api/notifications/test', {method: 'POST', headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json'}}).then(r => r.json()).then(d => {console.log('✅ Created:', d); setTimeout(() => window.location.reload(), 1000);}).catch(e => console.error('❌ Error:', e));
+

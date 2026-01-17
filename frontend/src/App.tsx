@@ -96,6 +96,18 @@ function AppContent() {
           <Route path="/privacy-policy" element={<PrivacyPolicyPage onNavigate={handleNavigate} />} />
           <Route path="/terms-conditions" element={<TermsConditionsPage onNavigate={handleNavigate} />} />
           <Route path="/subscription" element={<SubscriptionPage onNavigate={handleNavigate} />} />
+          
+          {/* Notifications Route */}
+          <Route 
+            path="/notifications" 
+            element={
+              isAuthenticated && user ? (
+                <NotificationCenter userId={user.id} userRole={user.role as 'admin' | 'employer' | 'candidate'} />
+              ) : (
+                <AuthPage mode="login" onNavigate={handleNavigate} />
+              )
+            } 
+          />
 
           {/* Authenticated Routes */}
           {isAuthenticated && user && (
@@ -106,7 +118,6 @@ function AppContent() {
               {/* Role-specific dashboard routes */}
               <Route path="/dashboard/candidate" element={<CandidateDashboard onNavigate={handleNavigate} />} />
               <Route path="/dashboard/employer" element={<EmployerDashboard onNavigate={handleNavigate} />} />
-              <Route path="/notifications" element={<NotificationCenter userId={user.id} userRole={user.role} />} />
               <Route path="/verification" element={<EmployerVerification onNavigate={handleNavigate} />} />
               
               {/* Employer Job Posting Route */}

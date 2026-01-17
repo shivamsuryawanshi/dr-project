@@ -149,6 +149,18 @@ public class SubscriptionController {
                 }
             }
             
+            // Notify employer about subscription activation
+            try {
+                notificationService.notifyEmployerSubscription(
+                    user.getId(),
+                    plan.getName(),
+                    "activated",
+                    subscription.getId()
+                );
+            } catch (Exception e) {
+                logger.error("❌ Error creating subscription notification: {}", e.getMessage(), e);
+            }
+            
             logger.info("Subscription created successfully: {} for user: {}", subscription.getId(), user.getEmail());
 
             return ResponseEntity.ok(subscriptionToResponse(subscription));

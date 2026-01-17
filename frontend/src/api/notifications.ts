@@ -46,7 +46,10 @@ export async function fetchNotifications(params: NotificationQuery = {}, token: 
   if (params.type) qs.set('type', params.type);
   if (params.unreadOnly !== undefined) qs.set('unreadOnly', String(params.unreadOnly));
 
-  const res = await fetch(`${API_BASE}/notifications?${qs.toString()}`, {
+  const url = `${API_BASE}/notifications?${qs.toString()}`;
+  console.log('🌐 Fetching notifications from:', url);
+  
+  const res = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -54,25 +57,35 @@ export async function fetchNotifications(params: NotificationQuery = {}, token: 
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch notifications (${res.status})`);
-  }
-
-  return res.json();
-}
-
-export async function getUnreadCount(token: string): Promise<number> {
-  const res = await fetch(`${API_BASE}/notifications/unread-count`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch unread count (${res.status})`);
+    const errorText = await res.text();
+    console.error('❌ API Error:', res.status, errorText);
+    throw new Error(`Failed to fetch notifications (${res.status}): ${errorText}`);
   }
 
   const data = await res.json();
+  console.log('✅ Notifications fetched:', data);
+  return data;
+}
+
+export async function getUnreadCount(token: string): Promise<number> {
+  const url = `${API_BASE}/notifications/unread-count`;
+  console.log('🌐 Fetching unread count from:', url);
+  
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('❌ API Error:', res.status, errorText);
+    throw new Error(`Failed to fetch unread count (${res.status}): ${errorText}`);
+  }
+
+  const data = await res.json();
+  console.log('✅ Unread count:', data);
   return data.unreadCount || 0;
 }
 

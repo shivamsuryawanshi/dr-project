@@ -11,6 +11,7 @@ import { useLocation } from 'react-router-dom';
 import { fetchApplications, ApplicationResponse } from '../api/applications';
 import { fetchJobs, fetchJob } from '../api/jobs';
 import { getSavedJobs, unsaveJob } from '../api/savedJobs';
+import { fetchNotifications } from '../api/notifications';
 
 interface CandidateDashboardProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -140,8 +141,14 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
         setRecommendedJobs([]);
       }
 
-      // Notifications - for now empty, can be fetched from backend later
-      setNotifications([]);
+      // Fetch notifications from backend
+      try {
+        const notificationsData = await fetchNotifications({ page: 0, size: 10 }, token);
+        setNotifications(notificationsData.content || []);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        setNotifications([]);
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       // Set empty arrays on error
