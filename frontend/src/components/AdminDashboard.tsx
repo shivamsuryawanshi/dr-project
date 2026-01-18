@@ -2,12 +2,44 @@
 import { BarChart, Briefcase, Users, Building2, Bell, Settings, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { Badge } from './ui/badge';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { getUnreadCount, fetchNotifications } from '../api/notifications';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
 }
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
+  const { token } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
+
+  // Fetch admin notifications
+  useEffect(() => {
+    const loadAdminNotifications = async () => {
+      if (!token) return;
+
+      try {
+        // Fetch unread count
+        const count = await getUnreadCount(token);
+        setUnreadCount(count);
+
+        // Fetch recent notifications
+        const notificationsData = await fetchNotifications({ page: 0, size: 5 }, token);
+        setRecentNotifications(notificationsData.content || []);
+      } catch (error) {
+        console.error('Error fetching admin notifications:', error);
+      }
+    };
+
+    loadAdminNotifications();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(loadAdminNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [token]);
   const adminCards = [
     {
       title: 'Manage Jobs',
@@ -68,11 +100,58 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <p className="text-gray-600">Welcome, Administrator! Manage your MedExJob.com platform here.</p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Notifications Badge */}
+            <Button 
+              variant="outline" 
+              onClick={() => onNavigate('notifications')}
+              className="relative"
+            >
+              <Bell className="w-5 h-5 mr-2" />
+              Notifications
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 p-0 flex items-center justify-center bg-red-500 text-white">
+                  {unreadCount}
+                </Badge>
+              )}
+            </Button>
             <Button variant="outline" onClick={() => onNavigate('home')}>
               Back to Home
             </Button>
           </div>
         </div>
+
+        {/* Recent Notifications Section */}
+        {recentNotifications.length > 0 && (
+          <Card className="mb-8 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Recent Notifications
+                {unreadCount > 0 && (
+                  <Badge className="bg-red-500 text-white">{unreadCount} unread</Badge>
+                )}
+              </h2>
+              <Button variant="link" onClick={() => onNavigate('notifications')}>
+                View All
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {recentNotifications.slice(0, 3).map((notification) => (
+                <div 
+                  key={notification.id} 
+                  className={`p-3 rounded-lg border ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                >
+                  <p className={`text-sm ${!notification.read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {new Date(notification.createdAt).toLocaleString('en-IN')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {adminCards.map((card, index) => (

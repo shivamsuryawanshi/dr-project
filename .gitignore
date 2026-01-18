@@ -41,3 +41,7 @@ Thumbs.db
 # Old folders (can be deleted manually)
 MedExJob-main*/
 
+# GitHub Actions local files
+.github/workflows/*.local.yml
+.github/workflows/*.local.yaml
+
