@@ -97,6 +97,17 @@ export async function fetchJob(id: string) {
   }
 }
 
+export async function incrementJobView(id: string) {
+  try {
+    const res = await apiClient.post(`/jobs/${id}/view`);
+    return res.data;
+  } catch (error) {
+    console.error('Error incrementing job view:', error);
+    // Don't throw error, just log it - view increment is not critical
+    return null;
+  }
+}
+
 export async function fetchJobsMeta() {
   try {
     const res = await apiClient.get('/jobs/meta');

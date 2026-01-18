@@ -9,7 +9,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { useEffect, useState, useRef } from 'react';
-import { fetchJob } from '../api/jobs';
+import { fetchJob, incrementJobView } from '../api/jobs';
 import { useParams } from 'react-router-dom';
 import { applyForJob } from '../api/applications';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +30,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
   const [isDialogOpening, setIsDialogOpening] = useState(false);
   const buttonClickTimeRef = useRef<number>(0);
   const dialogJustOpenedRef = useRef<boolean>(false);
+  const viewIncrementedRef = useRef<string | null>(null);
   const [applicationForm, setApplicationForm] = useState({
     candidateName: '',
     candidateEmail: '',
@@ -56,18 +57,43 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
         setLoading(false);
         return;
       }
+      
+      // Reset view increment tracking when jobId changes
+      if (viewIncrementedRef.current !== jobId) {
+        viewIncrementedRef.current = null;
+      }
+      
       setLoading(true);
       try {
         const data = await fetchJob(jobId);
         setJob(data);
         setNotFound(false);
+        
+        // Increment view count when a candidate views the job
+        // Only increment if user is a candidate or not logged in (public view)
+        // And only once per jobId to avoid duplicate increments on re-renders
+        if (data && (!user || user?.role === 'candidate') && viewIncrementedRef.current !== jobId) {
+          try {
+            const result = await incrementJobView(jobId);
+            viewIncrementedRef.current = jobId;
+            // Update the job state with incremented view count from API response
+            if (result && result.views !== undefined) {
+              setJob({ ...data, views: result.views });
+            } else if (data.views !== undefined) {
+              setJob({ ...data, views: (data.views || 0) + 1 });
+            }
+          } catch (error) {
+            // Silently fail - view increment is not critical
+            console.error('Failed to increment view count:', error);
+          }
+        }
       } catch (e) {
         setNotFound(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [jobId]);
+  }, [jobId, user]);
 
   useEffect(() => {
     // Pre-fill form if user is logged in

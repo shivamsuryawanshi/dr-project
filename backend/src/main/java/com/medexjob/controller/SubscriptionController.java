@@ -161,6 +161,24 @@ public class SubscriptionController {
                 logger.error("❌ Error creating subscription notification: {}", e.getMessage(), e);
             }
             
+            // Notify admin about subscription purchase
+            try {
+                String employerName = user.getName();
+                Optional<Employer> employerOpt = employerRepository.findByUserId(user.getId());
+                if (employerOpt.isPresent()) {
+                    employerName = employerOpt.get().getCompanyName();
+                }
+                String message = String.format("New subscription purchased: '%s' plan by %s (%s)", 
+                    plan.getName(), employerName, user.getEmail());
+                notificationService.notifyAdminPendingApproval(
+                    "subscription_purchased",
+                    message,
+                    subscription.getId()
+                );
+            } catch (Exception e) {
+                logger.error("❌ Error creating admin subscription notification: {}", e.getMessage(), e);
+            }
+            
             logger.info("Subscription created successfully: {} for user: {}", subscription.getId(), user.getEmail());
 
             return ResponseEntity.ok(subscriptionToResponse(subscription));

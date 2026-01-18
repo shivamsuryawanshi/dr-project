@@ -197,6 +197,35 @@ public class JobController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Increment view count when a candidate views a job
+    @PostMapping("/{id}/view")
+    public ResponseEntity<Map<String, Object>> incrementView(@PathVariable("id") UUID id) {
+        try {
+            Optional<Job> jobOpt = jobRepository.findById(id);
+            if (jobOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Job job = jobOpt.get();
+            
+            // Only increment views for ACTIVE jobs
+            if (job.getStatus() != Job.JobStatus.ACTIVE) {
+                return ResponseEntity.ok(Map.of("message", "View not incremented for non-active job", "views", job.getViews()));
+            }
+            
+            // Increment view count
+            job.setViews(job.getViews() + 1);
+            Job saved = jobRepository.save(job);
+            
+            logger.info("View count incremented for job: {} (new count: {})", id, saved.getViews());
+            
+            return ResponseEntity.ok(Map.of("message", "View count incremented", "views", saved.getViews()));
+        } catch (Exception e) {
+            logger.error("Error incrementing view count for job: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to increment view count: " + e.getMessage()));
+        }
+    }
+
     // Employer: Create Job (with subscription validation)
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@RequestBody JobRequest req) {
