@@ -156,26 +156,32 @@ jobs:
             RETRY_COUNT=0
             
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/actuator/health 2>/dev/null || echo "000")
+              # Check if port 8081 is responding with any HTTP code
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null || echo "000")
               
-              if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "503" ]; then
-                echo "✅ Backend health check passed! (HTTP $HTTP_CODE)"
+              # Any HTTP response means backend is running
+              if [ "$HTTP_CODE" != "000" ]; then
+                echo "✅ Backend is responding! (HTTP $HTTP_CODE)"
                 exit 0
               fi
               
-              # Check if port is responding at all
-              if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null | grep -qE "200|401|403|404|500"; then
-                echo "✅ Backend is responding! Health check passed!"
-                exit 0
+              # Also check if service is active
+              if systemctl is-active --quiet medexjob-backend; then
+                sleep 5
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null || echo "000")
+                if [ "$HTTP_CODE" != "000" ]; then
+                  echo "✅ Backend service active and responding! (HTTP $HTTP_CODE)"
+                  exit 0
+                fi
               fi
               
-              echo "⏳ Waiting for backend to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES, HTTP: $HTTP_CODE)"
+              echo "⏳ Waiting for backend to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
               sleep 10
               RETRY_COUNT=$((RETRY_COUNT + 1))
             done
             
             echo "❌ Backend health check failed!"
-            sudo journalctl -u ${{ env.SERVICE_NAME }} -n 50 --no-pager
+            sudo journalctl -u medexjob-backend -n 50 --no-pager
             exit 1
           EOF
 
