@@ -109,7 +109,8 @@ public class NotificationService {
                             status);
             }
 
-            Notification notification = new Notification(candidateId, notificationType, message);
+            String title = "Application Status Update";
+            Notification notification = new Notification(candidateId, notificationType, title, message);
             if (jobId != null)
                 notification.setRelatedJobId(jobId);
             if (applicationId != null)
@@ -143,7 +144,8 @@ public class NotificationService {
                     jobTitle,
                     interviewDate != null ? interviewDate : "TBD");
 
-            Notification notification = new Notification(candidateId, "interview_scheduled", message);
+            String title = "Interview Scheduled";
+            Notification notification = new Notification(candidateId, "interview_scheduled", title, message);
             if (jobId != null)
                 notification.setRelatedJobId(jobId);
             if (applicationId != null)
@@ -194,7 +196,8 @@ public class NotificationService {
                             jobTitle);
             }
 
-            Notification notification = new Notification(employerUserId, notificationType, message);
+            String title = "Job Status Update";
+            Notification notification = new Notification(employerUserId, notificationType, title, message);
             if (jobId != null)
                 notification.setRelatedJobId(jobId);
 
@@ -252,7 +255,8 @@ public class NotificationService {
                             planName);
             }
 
-            Notification notification = new Notification(employerUserId, notificationType, message);
+            String title = "Subscription Update";
+            Notification notification = new Notification(employerUserId, notificationType, title, message);
             notificationRepository.save(notification);
             logger.info("🔔 Subscription notification sent to employer: {}", employerUserId);
         } catch (Exception e) {
@@ -267,8 +271,9 @@ public class NotificationService {
         try {
             List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
 
+            String title = "Pending Approval";
             for (User admin : admins) {
-                Notification notification = new Notification(admin.getId(), type, message);
+                Notification notification = new Notification(admin.getId(), type, title, message);
                 if (relatedId != null) {
                     if (type.contains("job")) {
                         notification.setRelatedJobId(relatedId);
@@ -303,9 +308,11 @@ public class NotificationService {
                     candidateName,
                     candidateEmail);
 
+            String title = "New Application Received";
             Notification notification = new Notification(
                     employerUserId,
                     "application_received",
+                    title,
                     message);
             notification.setRelatedJobId(jobId);
             notification.setRelatedApplicationId(applicationId);
@@ -335,9 +342,11 @@ public class NotificationService {
                     "✅ Your application for '%s' has been submitted successfully!",
                     jobTitle);
 
+            String title = "Application Submitted";
             Notification notification = new Notification(
                     candidateId,
                     "application_update",
+                    title,
                     message);
             notification.setRelatedJobId(jobId);
             notification.setRelatedApplicationId(applicationId);
@@ -361,31 +370,36 @@ public class NotificationService {
 
         try {
             String message = "";
+            String title = "";
             String notificationType = "employer_verification";
 
             switch (status.toUpperCase()) {
                 case "APPROVED":
+                    title = "Employer Account Approved";
                     message = String.format(
                             "✅ Your employer account for '%s' has been verified and approved!",
                             companyName);
                     break;
                 case "REJECTED":
+                    title = "Employer Account Rejected";
                     message = String.format(
                             "Your employer account for '%s' verification has been rejected. Please contact support.",
                             companyName);
                     break;
                 case "PENDING":
+                    title = "Employer Verification Pending";
                     message = String.format(
                             "Your employer account for '%s' verification is pending review.",
                             companyName);
                     break;
                 default:
+                    title = "Employer Verification Update";
                     message = String.format(
                             "Your employer account for '%s' verification status has been updated.",
                             companyName);
             }
 
-            Notification notification = new Notification(employerUserId, notificationType, message);
+            Notification notification = new Notification(employerUserId, notificationType, title, message);
             notificationRepository.save(notification);
             logger.info("🔔 Verification notification sent to employer: {}", employerUserId);
         } catch (Exception e) {

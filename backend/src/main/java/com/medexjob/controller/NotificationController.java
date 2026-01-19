@@ -395,12 +395,18 @@ public class NotificationController {
             UUID userId = UUID.fromString((String) request.get("userId"));
             String notificationType = (String) request.get("type");
             String message = (String) request.get("message");
+            String title = request.containsKey("title") ? (String) request.get("title") : null;
             UUID relatedJobId = request.containsKey("relatedJobId") 
                 ? UUID.fromString((String) request.get("relatedJobId")) : null;
             UUID relatedApplicationId = request.containsKey("relatedApplicationId")
                 ? UUID.fromString((String) request.get("relatedApplicationId")) : null;
 
-            Notification notification = new Notification(userId, notificationType, message);
+            Notification notification;
+            if (title != null && !title.trim().isEmpty()) {
+                notification = new Notification(userId, notificationType, title, message);
+            } else {
+                notification = new Notification(userId, notificationType, message);
+            }
             if (relatedJobId != null) {
                 notification.setRelatedJobId(relatedJobId);
             }
@@ -422,6 +428,7 @@ public class NotificationController {
         response.put("id", notification.getId().toString());
         response.put("userId", notification.getUserId().toString());
         response.put("type", notification.getType());
+        response.put("title", notification.getTitle());
         response.put("message", notification.getMessage());
         response.put("read", notification.getIsRead());
         if (notification.getRelatedJobId() != null) {

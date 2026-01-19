@@ -23,9 +23,17 @@ public class Notification {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @NotNull
+    @Column(name = "to_user_id", nullable = false)
+    private UUID toUserId;
+
     @NotBlank
     @Column(name = "type", nullable = false, length = 50)
     private String type; // job_alert, application_update, interview_scheduled, subscription
+
+    @NotBlank
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;
 
     @NotBlank
     @Column(name = "message", nullable = false, length = 500)
@@ -50,9 +58,44 @@ public class Notification {
 
     public Notification(UUID userId, String type, String message) {
         this.userId = userId;
+        this.toUserId = userId; // Set to_user_id to same as user_id (recipient)
         this.type = type;
         this.message = message;
         this.isRead = false;
+        // Set default title based on type
+        this.title = generateTitleFromType(type);
+    }
+
+    public Notification(UUID userId, String type, String title, String message) {
+        this.userId = userId;
+        this.toUserId = userId; // Set to_user_id to same as user_id (recipient)
+        this.type = type;
+        this.title = title;
+        this.message = message;
+        this.isRead = false;
+    }
+
+    // Helper method to generate title from type
+    private String generateTitleFromType(String type) {
+        if (type == null) {
+            return "Notification";
+        }
+        switch (type.toLowerCase()) {
+            case "employer_verification":
+                return "Employer Verification Update";
+            case "job_alert":
+                return "Job Alert";
+            case "application_update":
+                return "Application Update";
+            case "interview_scheduled":
+                return "Interview Scheduled";
+            case "subscription":
+                return "Subscription Update";
+            case "application_received":
+                return "New Application Received";
+            default:
+                return "Notification";
+        }
     }
 
     // Getters and Setters
@@ -72,6 +115,14 @@ public class Notification {
         this.userId = userId;
     }
 
+    public UUID getToUserId() {
+        return toUserId;
+    }
+
+    public void setToUserId(UUID toUserId) {
+        this.toUserId = toUserId;
+    }
+
     public String getType() {
         return type;
     }
@@ -86,6 +137,14 @@ public class Notification {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public Boolean getIsRead() {
@@ -120,4 +179,3 @@ public class Notification {
         this.createdAt = createdAt;
     }
 }
-

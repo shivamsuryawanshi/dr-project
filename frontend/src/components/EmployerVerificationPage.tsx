@@ -102,10 +102,13 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
       setIsReviewDialogOpen(false);
       setSelectedEmployer(null);
       setReviewNotes('');
-      alert(`Employer verification ${reviewAction} successfully!`);
+      const actionText = reviewAction === 'approved' ? 'approved' : 'rejected';
+      alert(`Employer verification ${actionText} successfully!`);
     } catch (error: any) {
       console.error('Failed to update verification status:', error);
-      alert(`Failed to ${reviewAction} employer: ${error.message || 'Unknown error'}`);
+      const actionText = reviewAction === 'approved' ? 'approve' : 'reject';
+      const errorMessage = error.message || 'Unknown error occurred. Please try again.';
+      alert(`Failed to ${actionText} employer: ${errorMessage}`);
       // Keep dialog open so user can try again
     }
   };

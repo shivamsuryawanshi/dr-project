@@ -219,8 +219,27 @@ public class EmployerController {
                 return ResponseEntity.status(400).body(Map.of("error", "Status is required"));
             }
 
-            // Use query with JOIN FETCH to eagerly load user
-            Optional<Employer> employerOpt = employerRepository.findByIdWithUser(id);
+            // Try to find employer with user, fallback to regular find if query fails
+            Optional<Employer> employerOpt = Optional.empty();
+            try {
+                employerOpt = employerRepository.findByIdWithUser(id);
+            } catch (Exception e) {
+                System.err.println("Warning: findByIdWithUser failed, trying regular findById: " + e.getMessage());
+                // Fallback to regular findById
+                employerOpt = employerRepository.findById(id);
+                if (employerOpt.isPresent()) {
+                    Employer emp = employerOpt.get();
+                    // Manually initialize user if it exists
+                    try {
+                        if (emp.getUser() != null) {
+                            Hibernate.initialize(emp.getUser());
+                            emp.getUser().getId(); // Access to trigger loading
+                        }
+                    } catch (Exception initEx) {
+                        System.err.println("Warning: Could not initialize user: " + initEx.getMessage());
+                    }
+                }
+            }
 
             if (employerOpt.isEmpty()) {
                 System.out.println("Employer not found with ID: " + id);
@@ -228,6 +247,15 @@ public class EmployerController {
             }
 
             Employer employer = employerOpt.get();
+
+            // Validate that employer has a user
+            if (employer.getUser() == null) {
+                System.err.println("Error: Employer " + id + " does not have an associated user");
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Invalid employer data",
+                        "message", "Employer does not have an associated user. Please contact support."));
+            }
+
             System.out.println("Employer found: " + employer.getCompanyName());
 
             // Validate status
@@ -276,145 +304,177 @@ public class EmployerController {
             }
 
             System.out.println("Saving employer...");
-            Employer saved = employerRepository.save(employer);
-            System.out.println("Employer saved with ID: " + saved.getId());
+            Employer saved;
+            try {
+                saved = employerRepository.save(employer);
+                System.out.println("Employer saved with ID: " + saved.getId());
+            } catch (Exception saveEx) {
+                System.err.println("ERROR: Failed to save employer: " + saveEx.getClass().getName());
+                System.err.println("Error message: " + saveEx.getMessage());
+                if (saveEx.getCause() != null) {
+                    System.err.println("Cause: " + saveEx.getCause().getMessage());
+                }
+                saveEx.printStackTrace();
+                throw new RuntimeException("Failed to save employer: " + saveEx.getMessage(), saveEx);
+            }
 
             // Flush to ensure save is committed
-            employerRepository.flush();
-            System.out.println("Flushed to database");
+            try {
+                employerRepository.flush();
+                System.out.println("Flushed to database");
+            } catch (Exception flushEx) {
+                System.err.println("ERROR: Flush failed: " + flushEx.getClass().getName());
+                System.err.println("Error message: " + flushEx.getMessage());
+                flushEx.printStackTrace();
+                // Don't throw - the save might still be successful, but log the error
+                System.err.println("Warning: Flush failed but continuing: " + flushEx.getMessage());
+            }
 
             // Reload with user to ensure everything is properly loaded within transaction
-            Optional<Employer> reloadedOpt = employerRepository.findByIdWithUser(saved.getId());
-            if (reloadedOpt.isPresent()) {
-                saved = reloadedOpt.get();
-                System.out.println("Employer reloaded with user");
+            // Use fallback mechanism similar to initial load
+            try {
+                Optional<Employer> reloadedOpt = employerRepository.findByIdWithUser(saved.getId());
+                if (reloadedOpt.isPresent()) {
+                    saved = reloadedOpt.get();
+                    System.out.println("Employer reloaded with user");
+                }
+            } catch (Exception reloadEx) {
+                System.err.println("Warning: Reload with user failed, using saved employer: " + reloadEx.getMessage());
+                // Continue with the saved employer - it should still have the user loaded
+                try {
+                    if (saved.getUser() != null) {
+                        Hibernate.initialize(saved.getUser());
+                        saved.getUser().getId(); // Access to trigger loading
+                    }
+                } catch (Exception initEx) {
+                    System.err.println("Warning: Could not initialize user after reload: " + initEx.getMessage());
+                }
             }
 
             // Notify employer about verification status change
+            // This is done in a separate try-catch to ensure it doesn't fail the
+            // transaction
             try {
-                if (saved.getUser() != null) {
-                    String message = "";
-                    switch (verificationStatus) {
-                        case APPROVED:
-                            message = String.format(
-                                "✅ Your employer account for '%s' has been verified and approved!",
-                                saved.getCompanyName()
-                            );
-                            break;
-                        case REJECTED:
-                            message = String.format(
-                                "Your employer account for '%s' verification has been rejected. Please contact support.",
-                                saved.getCompanyName()
-                            );
-                            break;
-                        case PENDING:
-                            message = String.format(
-                                "Your employer account for '%s' verification is pending review.",
-                                saved.getCompanyName()
-                            );
-                            break;
-                    }
-                    
-                    if (!message.isEmpty()) {
-                        // Use NotificationService to create notification
+                if (saved.getUser() != null && saved.getUser().getId() != null) {
+                    UUID userId = saved.getUser().getId();
+                    String companyName = saved.getCompanyName() != null ? saved.getCompanyName() : "Unknown Company";
+
+                    // Use NotificationService to create notification
+                    // Wrap in try-catch to ensure notification failure doesn't break the main flow
+                    try {
                         notificationService.notifyEmployerVerification(
-                            saved.getUser().getId(),
-                            saved.getCompanyName(),
-                            verificationStatus.name(),
-                            saved.getId()
-                        );
+                                userId,
+                                companyName,
+                                verificationStatus.name(),
+                                saved.getId());
                         System.out.println("Verification notification sent to employer");
+                    } catch (Exception notifEx) {
+                        // Log but don't fail - notification is not critical
+                        System.err
+                                .println("Warning: Failed to send verification notification: " + notifEx.getMessage());
+                        notifEx.printStackTrace();
                     }
+                } else {
+                    System.err.println("Warning: Cannot send notification - user is null or user ID is null");
                 }
             } catch (Exception e) {
-                System.err.println("Error creating verification notification: " + e.getMessage());
+                // Log but don't fail - notification is not critical
+                System.err.println("Warning: Error in notification block: " + e.getMessage());
+                e.printStackTrace();
             }
 
             // Notify admin about new verification request (if status is PENDING)
             if (verificationStatus == Employer.VerificationStatus.PENDING) {
                 try {
+                    String companyName = saved.getCompanyName() != null ? saved.getCompanyName() : "Unknown Company";
                     notificationService.notifyAdminPendingApproval(
-                        "employer_verification",
-                        String.format("New employer verification request from %s", saved.getCompanyName()),
-                        saved.getId()
-                    );
+                            "employer_verification",
+                            String.format("New employer verification request from %s", companyName),
+                            saved.getId());
                 } catch (Exception e) {
-                    System.err.println("Error creating admin notification: " + e.getMessage());
-                }
-            }
-
-            // Ensure user is fully initialized within transaction
-            if (saved.getUser() != null) {
-                try {
-                    Hibernate.initialize(saved.getUser());
-                    // Access all user properties to ensure they're loaded
-                    saved.getUser().getId();
-                    saved.getUser().getName();
-                    String userEmail = saved.getUser().getEmail();
-                    System.out.println("User fully initialized: " + userEmail);
-                } catch (Exception e) {
-                    System.err.println("Warning: Could not fully initialize user: " + e.getMessage());
+                    // Log but don't fail - admin notification is not critical
+                    System.err.println("Warning: Error creating admin notification: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
 
-            System.out.println("Creating response within transaction...");
-            // Extract all data while still in transaction to avoid lazy loading issues
-            Map<String, Object> response = new LinkedHashMap<>();
-
-            try {
-                // Extract all data immediately while in transaction
-                response.put("id", saved.getId() != null ? saved.getId().toString() : "N/A");
-
-                // Extract user data immediately
-                User user = saved.getUser();
-                if (user != null) {
+            // Ensure user is fully initialized within transaction BEFORE creating response
+            User userForResponse = null;
+            if (saved.getUser() != null) {
+                try {
+                    Hibernate.initialize(saved.getUser());
+                    // Access all user properties to ensure they're loaded within transaction
+                    UUID userId = saved.getUser().getId();
+                    String userName = saved.getUser().getName();
+                    String userEmail = saved.getUser().getEmail();
+                    System.out.println("User fully initialized: " + userEmail);
+                    // Store user reference to avoid lazy loading issues
+                    userForResponse = saved.getUser();
+                } catch (Exception e) {
+                    System.err.println("Warning: Could not fully initialize user: " + e.getMessage());
+                    e.printStackTrace();
+                    // Try to get user from repository if direct access fails
                     try {
-                        response.put("userId", user.getId() != null ? user.getId().toString() : "N/A");
-                        response.put("userName", user.getName() != null ? user.getName() : "N/A");
-                        response.put("userEmail", user.getEmail() != null ? user.getEmail() : "N/A");
-                    } catch (Exception userEx) {
-                        System.err.println("Error extracting user data: " + userEx.getMessage());
-                        response.put("userId", "N/A");
-                        response.put("userName", "N/A");
-                        response.put("userEmail", "N/A");
+                        if (saved.getUser() != null && saved.getUser().getId() != null) {
+                            Optional<User> userOpt = userRepository.findById(saved.getUser().getId());
+                            if (userOpt.isPresent()) {
+                                userForResponse = userOpt.get();
+                                System.out.println("User loaded from repository as fallback");
+                            }
+                        }
+                    } catch (Exception repoEx) {
+                        System.err.println("Warning: Could not load user from repository: " + repoEx.getMessage());
                     }
-                } else {
-                    response.put("userId", "N/A");
-                    response.put("userName", "N/A");
-                    response.put("userEmail", "N/A");
                 }
+            }
 
-                // Extract company data
-                response.put("companyName", saved.getCompanyName() != null ? saved.getCompanyName() : "N/A");
-                response.put("companyType",
-                        saved.getCompanyType() != null ? saved.getCompanyType().name().toLowerCase() : "N/A");
-
-                // Extract verification data
-                response.put("isVerified", saved.getIsVerified() != null ? saved.getIsVerified() : false);
-                response.put("verificationStatus",
-                        saved.getVerificationStatus() != null ? saved.getVerificationStatus().name().toLowerCase()
-                                : "pending");
-                response.put("verificationNotes", saved.getVerificationNotes());
-                response.put("verifiedAt", saved.getVerifiedAt() != null ? saved.getVerifiedAt().toString() : null);
-                response.put("createdAt", saved.getCreatedAt() != null ? saved.getCreatedAt().toString() : null);
-                response.put("updatedAt", saved.getUpdatedAt() != null ? saved.getUpdatedAt().toString() : null);
-
+            System.out.println("Creating response within transaction...");
+            // Use the existing toResponse method which handles all edge cases safely
+            Map<String, Object> response;
+            try {
+                // Ensure we're still in transaction when calling toResponse
+                response = toResponse(saved);
                 response.put("message", "Verification status updated successfully");
-
-                System.out.println("Response created successfully with " + response.size() + " fields");
+                System.out.println("Response created successfully using toResponse method");
             } catch (Exception responseEx) {
-                System.err.println("Error creating response: " + responseEx.getClass().getName() + " - "
+                System.err.println("Error creating response with toResponse: " + responseEx.getClass().getName() + " - "
                         + responseEx.getMessage());
                 responseEx.printStackTrace();
-                // Create minimal response as fallback
-                response.clear();
-                response.put("id", saved.getId() != null ? saved.getId().toString() : "N/A");
-                response.put("verificationStatus",
-                        saved.getVerificationStatus() != null ? saved.getVerificationStatus().name().toLowerCase()
-                                : "pending");
-                response.put("isVerified", saved.getIsVerified() != null ? saved.getIsVerified() : false);
-                response.put("message", "Verification status updated successfully");
+                // Create minimal response as fallback - extract all data safely
+                response = new LinkedHashMap<>();
+                try {
+                    response.put("id", saved.getId() != null ? saved.getId().toString() : "N/A");
+                    response.put("verificationStatus",
+                            saved.getVerificationStatus() != null ? saved.getVerificationStatus().name().toLowerCase()
+                                    : "pending");
+                    response.put("isVerified", saved.getIsVerified() != null ? saved.getIsVerified() : false);
+
+                    // Safely add user data if available
+                    if (userForResponse != null) {
+                        try {
+                            response.put("userId",
+                                    userForResponse.getId() != null ? userForResponse.getId().toString() : "N/A");
+                            response.put("userName",
+                                    userForResponse.getName() != null ? userForResponse.getName() : "N/A");
+                            response.put("userEmail",
+                                    userForResponse.getEmail() != null ? userForResponse.getEmail() : "N/A");
+                        } catch (Exception userEx) {
+                            System.err.println(
+                                    "Warning: Could not add user data to fallback response: " + userEx.getMessage());
+                        }
+                    }
+
+                    response.put("companyName", saved.getCompanyName() != null ? saved.getCompanyName() : "N/A");
+                    response.put("message", "Verification status updated successfully");
+                } catch (Exception fallbackEx) {
+                    System.err.println("Error creating fallback response: " + fallbackEx.getMessage());
+                    // Absolute minimal response
+                    response = Map.of(
+                            "id", saved.getId() != null ? saved.getId().toString() : "unknown",
+                            "verificationStatus", verificationStatus.name().toLowerCase(),
+                            "isVerified", verificationStatus == Employer.VerificationStatus.APPROVED,
+                            "message", "Verification status updated successfully");
+                }
                 System.out.println("Using fallback response");
             }
 
