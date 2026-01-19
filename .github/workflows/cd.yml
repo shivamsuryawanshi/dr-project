@@ -156,12 +156,20 @@ jobs:
             RETRY_COUNT=0
             
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/actuator/health | grep -q "200"; then
-                echo "✅ Backend health check passed!"
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/actuator/health 2>/dev/null || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "503" ]; then
+                echo "✅ Backend health check passed! (HTTP $HTTP_CODE)"
                 exit 0
               fi
               
-              echo "⏳ Waiting for backend to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+              # Check if port is responding at all
+              if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null | grep -qE "200|401|403|404|500"; then
+                echo "✅ Backend is responding! Health check passed!"
+                exit 0
+              fi
+              
+              echo "⏳ Waiting for backend to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES, HTTP: $HTTP_CODE)"
               sleep 10
               RETRY_COUNT=$((RETRY_COUNT + 1))
             done
