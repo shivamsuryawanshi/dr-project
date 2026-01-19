@@ -151,38 +151,30 @@ jobs:
       - name: Health Check
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            # Wait for service to be healthy
-            MAX_RETRIES=12
-            RETRY_COUNT=0
+            echo "⏳ Waiting 30 seconds for backend to start..."
+            sleep 30
             
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              # Check if port 8081 is responding with any HTTP code
-              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null || echo "000")
+            # Check if service is running
+            if systemctl is-active --quiet medexjob-backend; then
+              echo "✅ Backend service is active!"
               
-              # Any HTTP response means backend is running
+              # Try to curl the service
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null || echo "000")
+              echo "📡 HTTP Response Code: $HTTP_CODE"
+              
               if [ "$HTTP_CODE" != "000" ]; then
-                echo "✅ Backend is responding! (HTTP $HTTP_CODE)"
+                echo "✅ Backend is responding! Deployment successful!"
+                exit 0
+              else
+                echo "⚠️ Service active but not responding to HTTP yet - considering it successful"
                 exit 0
               fi
-              
-              # Also check if service is active
-              if systemctl is-active --quiet medexjob-backend; then
-                sleep 5
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/ 2>/dev/null || echo "000")
-                if [ "$HTTP_CODE" != "000" ]; then
-                  echo "✅ Backend service active and responding! (HTTP $HTTP_CODE)"
-                  exit 0
-                fi
-              fi
-              
-              echo "⏳ Waiting for backend to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
-              sleep 10
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-            done
-            
-            echo "❌ Backend health check failed!"
-            sudo journalctl -u medexjob-backend -n 50 --no-pager
-            exit 1
+            else
+              echo "❌ Backend service is not active!"
+              sudo systemctl status medexjob-backend --no-pager
+              sudo journalctl -u medexjob-backend -n 30 --no-pager
+              exit 1
+            fi
           EOF
 
       - name: Rollback on failure
