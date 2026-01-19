@@ -1,0 +1,338 @@
+# AI assisted development
+name: CD - Deploy to VPS
+
+on:
+  # Auto deploy after CI success on main branch
+  workflow_run:
+    workflows: ["Full CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+  # Manual trigger for deployment
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      deploy_backend:
+        description: 'Deploy Backend'
+        required: true
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy Frontend'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  BACKEND_PATH: /opt/medexjob/backend
+  FRONTEND_PATH: /var/www/medexjob
+  SERVICE_NAME: medexjob-backend
+
+jobs:
+  # Pre-deployment checks
+  pre-deploy:
+    name: Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    # Only run if CI was successful or manual trigger
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    
+    steps:
+      - name: Check deployment conditions
+        id: check
+        run: |
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+          echo "✅ Pre-deployment checks passed"
+
+  # Deploy Backend
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: ${{ needs.pre-deploy.outputs.should_deploy == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_backend == 'true') }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: https://medexjob.com/api
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download backend artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: ci.yml
+          name: backend-jar
+          path: ./artifacts/backend
+          if_no_artifact_found: warn
+
+      - name: Verify artifact exists
+        id: verify
+        run: |
+          if [ -f ./artifacts/backend/*.jar ]; then
+            echo "✅ Backend JAR found"
+            echo "jar_exists=true" >> $GITHUB_OUTPUT
+            ls -lh ./artifacts/backend/
+          else
+            echo "⚠️ No JAR artifact found, building fresh..."
+            echo "jar_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up JDK 17 (if build needed)
+        if: steps.verify.outputs.jar_exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Backend (if no artifact)
+        if: steps.verify.outputs.jar_exists == 'false'
+        working-directory: backend
+        run: |
+          mvn clean package -DskipTests
+          mkdir -p ../artifacts/backend
+          cp target/*.jar ../artifacts/backend/
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create backup on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            # Create backup directory
+            sudo mkdir -p ${{ env.BACKEND_PATH }}/backups
+            
+            # Backup current JAR if exists
+            if [ -f ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar ]; then
+              BACKUP_NAME="medexjob-backend-$(date +%Y%m%d-%H%M%S).jar"
+              sudo cp ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar ${{ env.BACKEND_PATH }}/backups/$BACKUP_NAME
+              echo "✅ Backup created: $BACKUP_NAME"
+              
+              # Keep only last 5 backups
+              cd ${{ env.BACKEND_PATH }}/backups
+              ls -t | tail -n +6 | xargs -r sudo rm --
+            fi
+          EOF
+
+      - name: Deploy Backend JAR
+        run: |
+          # Upload JAR to server
+          scp -i ~/.ssh/deploy_key -P ${{ secrets.VPS_PORT || 22 }} \
+            ./artifacts/backend/*.jar \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/medexjob-backend-1.0.0.jar
+          
+          # Move to target location and restart service
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            sudo mkdir -p ${{ env.BACKEND_PATH }}/target
+            sudo mv /tmp/medexjob-backend-1.0.0.jar ${{ env.BACKEND_PATH }}/target/
+            sudo chown medexjob:medexjob ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar
+            sudo chmod 755 ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar
+            
+            echo "🔄 Restarting backend service..."
+            sudo systemctl restart ${{ env.SERVICE_NAME }}
+            sleep 5
+          EOF
+
+      - name: Health Check
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            # Wait for service to be healthy
+            MAX_RETRIES=12
+            RETRY_COUNT=0
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/actuator/health | grep -q "200"; then
+                echo "✅ Backend health check passed!"
+                exit 0
+              fi
+              
+              echo "⏳ Waiting for backend to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+              sleep 10
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            done
+            
+            echo "❌ Backend health check failed!"
+            sudo journalctl -u ${{ env.SERVICE_NAME }} -n 50 --no-pager
+            exit 1
+          EOF
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            echo "🔙 Rolling back to previous version..."
+            LATEST_BACKUP=$(ls -t ${{ env.BACKEND_PATH }}/backups/*.jar 2>/dev/null | head -1)
+            
+            if [ -n "$LATEST_BACKUP" ]; then
+              sudo cp "$LATEST_BACKUP" ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar
+              sudo systemctl restart ${{ env.SERVICE_NAME }}
+              echo "✅ Rollback completed"
+            else
+              echo "⚠️ No backup found for rollback"
+            fi
+          EOF
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  # Deploy Frontend
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: ${{ needs.pre-deploy.outputs.should_deploy == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_frontend == 'true') }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: https://medexjob.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download frontend artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: ci.yml
+          name: frontend-build
+          path: ./artifacts/frontend
+          if_no_artifact_found: warn
+
+      - name: Verify artifact exists
+        id: verify
+        run: |
+          if [ -d ./artifacts/frontend ] && [ "$(ls -A ./artifacts/frontend)" ]; then
+            echo "✅ Frontend build found"
+            echo "build_exists=true" >> $GITHUB_OUTPUT
+            ls -lh ./artifacts/frontend/
+          else
+            echo "⚠️ No frontend build found, building fresh..."
+            echo "build_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js (if build needed)
+        if: steps.verify.outputs.build_exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Build Frontend (if no artifact)
+        if: steps.verify.outputs.build_exists == 'false'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          mkdir -p ../artifacts/frontend
+          cp -r dist/* ../artifacts/frontend/
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create backup on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            # Create backup directory
+            sudo mkdir -p /var/www/backups
+            
+            # Backup current frontend if exists
+            if [ -d "${{ env.FRONTEND_PATH }}" ] && [ "$(ls -A ${{ env.FRONTEND_PATH }})" ]; then
+              BACKUP_NAME="frontend-$(date +%Y%m%d-%H%M%S)"
+              sudo tar -czf /var/www/backups/$BACKUP_NAME.tar.gz -C ${{ env.FRONTEND_PATH }} .
+              echo "✅ Backup created: $BACKUP_NAME.tar.gz"
+              
+              # Keep only last 5 backups
+              cd /var/www/backups
+              ls -t frontend-*.tar.gz | tail -n +6 | xargs -r sudo rm --
+            fi
+          EOF
+
+      - name: Deploy Frontend
+        run: |
+          # Create tarball of frontend build
+          cd artifacts/frontend
+          tar -czf /tmp/frontend-build.tar.gz .
+          
+          # Upload to server
+          scp -i ~/.ssh/deploy_key -P ${{ secrets.VPS_PORT || 22 }} \
+            /tmp/frontend-build.tar.gz \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/
+          
+          # Extract and set permissions
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            sudo mkdir -p ${{ env.FRONTEND_PATH }}
+            sudo rm -rf ${{ env.FRONTEND_PATH }}/*
+            sudo tar -xzf /tmp/frontend-build.tar.gz -C ${{ env.FRONTEND_PATH }}
+            sudo chown -R www-data:www-data ${{ env.FRONTEND_PATH }}
+            sudo chmod -R 755 ${{ env.FRONTEND_PATH }}
+            rm /tmp/frontend-build.tar.gz
+            
+            echo "🔄 Reloading Nginx..."
+            sudo nginx -t && sudo systemctl reload nginx
+          EOF
+
+      - name: Frontend Health Check
+        run: |
+          sleep 5
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://medexjob.com || echo "000")
+          
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
+            echo "✅ Frontend is accessible (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️ Frontend returned HTTP $HTTP_STATUS"
+          fi
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  # Post-deployment notification
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+    
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.deploy-backend.result == 'success' && '✅ Success' || needs.deploy-backend.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.deploy-frontend.result == 'success' && '✅ Success' || needs.deploy-frontend.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+      # Optional: Slack/Discord notification
+      # - name: Send Slack Notification
+      #   if: always()
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: ${{ job.status }}
+      #     fields: repo,message,commit,author,action,eventName,ref,workflow
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
