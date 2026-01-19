@@ -140,7 +140,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             sudo mkdir -p ${{ env.BACKEND_PATH }}/target
             sudo mv /tmp/medexjob-backend-1.0.0.jar ${{ env.BACKEND_PATH }}/target/
-            sudo chown medexjob:medexjob ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar
+            sudo chown root:root ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar
             sudo chmod 755 ${{ env.BACKEND_PATH }}/target/medexjob-backend-1.0.0.jar
             
             echo "🔄 Restarting backend service..."
