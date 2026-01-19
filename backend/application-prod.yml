@@ -62,10 +62,10 @@ ftp:
   remote-dir: public_html/uploads
 
 cors:
-  allowed-origins: https://medexjob.com,https://www.medexjob.com,http://medexjob.com,http://www.medexjob.com,http://72.62.196.181
+  allowed-origins: "*"
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
-  allow-credentials: true
+  allow-credentials: false
 
 logging:
   level:
