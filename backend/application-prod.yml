@@ -51,6 +51,15 @@ razorpay:
 file:
   upload-dir: /opt/medexjob/uploads
   max-size: 10485760
+  base-url: https://medexjob.com
+
+# FTP Configuration for Hostinger
+ftp:
+  host: 82.180.143.101
+  port: 21
+  username: u284488379
+  password: ${FTP_PASSWORD:Shivam@3650}
+  remote-dir: public_html/uploads
 
 cors:
   allowed-origins: https://medexjob.com,https://www.medexjob.com,http://medexjob.com,http://www.medexjob.com,http://72.62.196.181

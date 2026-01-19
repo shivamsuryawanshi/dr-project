@@ -15,6 +15,8 @@ import { applyForJob } from '../api/applications';
 import { useAuth } from '../contexts/AuthContext';
 import { saveJob, unsaveJob, checkIfJobIsSaved } from '../api/savedJobs';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { JobDocumentsSection } from './JobDocumentsSection';
+import { ResumeUploadSection } from './ResumeUploadSection';
 
 interface JobDetailPageProps {
   onNavigate: (page: string) => void;
@@ -1042,6 +1044,16 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
                 </div>
               </div>
             </Card>
+
+            {/* Job Documents Section - Visible to all authenticated users */}
+            {isAuthenticated && jobId && (
+              <JobDocumentsSection jobId={jobId} />
+            )}
+
+            {/* Resume Upload Section - Only for candidates */}
+            {isAuthenticated && user?.role === 'candidate' && jobId && (
+              <ResumeUploadSection jobId={jobId} />
+            )}
           </div>
         </div>
       </div>
