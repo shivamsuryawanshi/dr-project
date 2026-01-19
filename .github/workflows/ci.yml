@@ -51,7 +51,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Build Backend
-        working-directory: MedExJobUpdated/backend
+        working-directory: backend #MedExJobUpdated/backend
         run: |
           mvn clean package -DskipTests
 
@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
-          path: MedExJobUpdated/backend/target/*.jar
+          path: backend/target/*.jar   #MedExJobUpdated/backend/target/*.jar
           retention-days: 7
 
   frontend:
@@ -78,18 +78,18 @@ jobs:
           cache-dependency-path: MedExJobUpdated/frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: MedExJobUpdated/frontend
+        working-directory: frontend
         run: npm ci
 
       - name: Build Frontend
-        working-directory: MedExJobUpdated/frontend
+        working-directory: frontend
         run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: MedExJobUpdated/frontend/dist/
+          path: frontend/dist/
           retention-days: 7
 
   notify:

@@ -1,0 +1,21 @@
+# AI assisted development
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/
+mvnw
+mvnw.cmd
+*.log
+logs/
+.idea/
+.vscode/
+*.iml
+.DS_Store
+.git/
+.gitignore
+README.md
+*.md
+.env
+.env.local
+.aws/
+node_modules/
+
