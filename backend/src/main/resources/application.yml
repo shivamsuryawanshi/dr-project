@@ -69,8 +69,9 @@ ftp:
   remote-dir: public_html/uploads
 
 # CORS Configuration
+# CORS Configuration
 cors:
-  allowed-origins: http://localhost:5173,http://localhost:3000
+  allowed-origins: http://localhost:5173,http://localhost:3000,https://medexjob.com,http://medexjob.com,https://www.medexjob.com,http://www.medexjob.com
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
