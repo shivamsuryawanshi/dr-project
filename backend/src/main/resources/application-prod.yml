@@ -24,8 +24,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    username: ${SPRING_MAIL_USERNAME:shivamsuryawanshi51@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:dtyihmrrunpqdydw}
     properties:
       mail:
         smtp:
@@ -52,8 +52,8 @@ jwt:
 
 # Razorpay Configuration
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID:}
-  key-secret: ${RAZORPAY_KEY_SECRET:}
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_S4URMphJWIwUfN}
+  key-secret: ${RAZORPAY_KEY_SECRET:ZFejLMSKd0kBegzvEQZWrsBX}
 
 # File Upload Configuration
 file:
@@ -63,10 +63,10 @@ file:
 
 # FTP Configuration for Hostinger
 ftp:
-  host: ${FTP_HOST:}
+  host: ${FTP_HOST:82.180.143.101}
   port: ${FTP_PORT:21}
-  username: ${FTP_USERNAME:}
-  password: ${FTP_PASSWORD:}
+  username: ${FTP_USERNAME:u284488379}
+  password: ${FTP_PASSWORD:Shivam@3650}
   remote-dir: ${FTP_REMOTE_DIR:public_html/uploads}
 
 # CORS Configuration
