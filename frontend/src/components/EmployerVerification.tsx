@@ -28,7 +28,7 @@ export function EmployerVerification({ onNavigate }: EmployerVerificationProps) 
 
         // If verification is approved, redirect to employer dashboard
         if (employerData.verificationStatus === 'approved') {
-          onNavigate('employer-dashboard');
+          onNavigate('dashboard/employer');
           return;
         }
       } catch (err) {
@@ -45,7 +45,7 @@ export function EmployerVerification({ onNavigate }: EmployerVerificationProps) 
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-gray-600">Loading verification status...</p>
@@ -57,7 +57,7 @@ export function EmployerVerification({ onNavigate }: EmployerVerificationProps) 
   // Show error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="w-8 h-8 mx-auto mb-4 text-red-600" />
           <p className="text-gray-600 mb-4">{error}</p>
@@ -72,7 +72,7 @@ export function EmployerVerification({ onNavigate }: EmployerVerificationProps) 
   // Handle different verification statuses
   if (employer?.verificationStatus === 'approved') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
           <h1 className="text-2xl text-gray-900 mb-2">Verification Approved!</h1>
@@ -85,7 +85,7 @@ export function EmployerVerification({ onNavigate }: EmployerVerificationProps) 
 
   if (employer?.verificationStatus === 'rejected') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 pb-8">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <XCircle className="w-16 h-16 mx-auto mb-4 text-red-600" />
@@ -104,7 +104,7 @@ export function EmployerVerification({ onNavigate }: EmployerVerificationProps) 
 
   // Default case: pending verification
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-[calc(100vh-200px)] bg-gray-50 pb-8">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">
           <Clock className="w-16 h-16 mx-auto mb-4 text-yellow-600" />

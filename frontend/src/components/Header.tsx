@@ -119,15 +119,15 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="relative hover:bg-blue-50 transition-colors"
+                  className="relative hover:bg-blue-50/80 transition-all duration-200"
                   onClick={() => onNavigate('notifications')}
                   title="Notifications"
                 >
-                  <Bell className="w-5 h-5 text-gray-700 hover:text-blue-600 transition-colors" />
+                  <Bell className="w-6 h-6 text-blue-600 hover:text-blue-700 transition-colors stroke-[2] fill-none" />
                   {unreadCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 p-0 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full border-2 border-white shadow-sm">
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[11px] font-bold leading-none rounded-full shadow-[0_2px_6px_rgba(239,68,68,0.4),0_1px_2px_rgba(0,0,0,0.1)] border border-red-600/20">
                       {unreadCount > 99 ? '99+' : unreadCount}
-                    </Badge>
+                    </span>
                   )}
                 </Button>
 

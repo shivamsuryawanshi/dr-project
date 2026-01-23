@@ -70,16 +70,16 @@ function AppContent() {
   };
 
   const getDashboard = () => {
-    if (!isAuthenticated || !user) return <AuthPage mode="login" onNavigate={handleNavigate} />;    
-    if (user.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} />;    
+    if (!isAuthenticated || !user) return <AuthPage mode="login" onNavigate={handleNavigate} />;
+    if (user.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} />;
     if (user.role === 'employer') return <EmployerVerification onNavigate={handleNavigate} />; // Employers land on verification first
-    return <CandidateDashboard onNavigate={handleNavigate} />;    
-  }  
+    return <CandidateDashboard onNavigate={handleNavigate} />;
+  }
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header currentPage={currentPage} onNavigate={handleNavigate} isAuthenticated={isAuthenticated} userRole={user?.role} />
-      <main>
+      <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage onNavigate={handleNavigate} />} />
           <Route path="/home" element={<HomePage onNavigate={handleNavigate} />} />
@@ -96,17 +96,17 @@ function AppContent() {
           <Route path="/privacy-policy" element={<PrivacyPolicyPage onNavigate={handleNavigate} />} />
           <Route path="/terms-conditions" element={<TermsConditionsPage onNavigate={handleNavigate} />} />
           <Route path="/subscription" element={<SubscriptionPage onNavigate={handleNavigate} />} />
-          
+
           {/* Notifications Route */}
-          <Route 
-            path="/notifications" 
+          <Route
+            path="/notifications"
             element={
               isAuthenticated && user ? (
                 <NotificationCenter userId={user.id} userRole={user.role as 'admin' | 'employer' | 'candidate'} />
               ) : (
                 <AuthPage mode="login" onNavigate={handleNavigate} />
               )
-            } 
+            }
           />
 
           {/* Authenticated Routes */}
@@ -119,12 +119,12 @@ function AppContent() {
               <Route path="/dashboard/candidate" element={<CandidateDashboard onNavigate={handleNavigate} />} />
               <Route path="/dashboard/employer" element={<EmployerDashboard onNavigate={handleNavigate} />} />
               <Route path="/verification" element={<EmployerVerification onNavigate={handleNavigate} />} />
-              
+
               {/* Employer Job Posting Route */}
               {user.role === 'employer' && (
                 <Route path="/employer-post-job" element={
-                  <JobPostingForm 
-                    onCancel={() => handleNavigate('dashboard/employer')} 
+                  <JobPostingForm
+                    onCancel={() => handleNavigate('dashboard/employer')}
                     onSave={async (jobData: any) => {
                       try {
                         if (!token) {
@@ -165,7 +165,7 @@ function AppContent() {
                         }
                         alert(`Error creating job: ${errorMessage}`);
                       }
-                    }} 
+                    }}
                   />
                 } />
               )}
@@ -175,8 +175,8 @@ function AppContent() {
               <Route path="/admin-jobs" element={<AdminJobManagementPage onNavigate={handleNavigate} />} />
               <Route path="/admin-news" element={<AdminNewsManagementPage onNavigate={handleNavigate} />} />
               <Route path="/admin-post-job" element={
-                <JobPostingForm 
-                  onCancel={() => handleNavigate('admin-jobs')} 
+                <JobPostingForm
+                  onCancel={() => handleNavigate('admin-jobs')}
                   onSave={async (jobData: any) => {
                     try {
                       if (!token) {
@@ -198,7 +198,7 @@ function AppContent() {
                       console.error("Error creating job:", e);
                       alert(`Error creating job: ${e.message}`);
                     }
-                  }} 
+                  }}
                 />
               } />
               <Route path="/profile" element={<ProfilePage onNavigate={handleNavigate} />} />
@@ -211,7 +211,7 @@ function AppContent() {
         </Routes>
       </main>
       <Footer onNavigate={handleNavigate} />
-    </>
+    </div>
   );
 }
 

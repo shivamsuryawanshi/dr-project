@@ -37,6 +37,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
   const [myApplications, setMyApplications] = useState<ApplicationResponse[]>([]);
   const [employer, setEmployer] = useState<EmployerResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionResponse | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -46,7 +47,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
   const totalApplicationsFromJobs = myJobs.reduce((sum, job) => sum + (job.applications || 0), 0);
   // Use the maximum of both to ensure we show the correct count
   const totalApplications = Math.max(totalApplicationsFromList, totalApplicationsFromJobs);
-  
+
   // Debug logging
   useEffect(() => {
     if (myJobs.length > 0 || myApplications.length > 0) {
@@ -90,13 +91,13 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
 
         // Fetch jobs directly by employer ID using the new endpoint
         const { fetchJobsByEmployer } = await import('../api/jobs');
-        const jobsResponse = await fetchJobsByEmployer(employerData.id, { 
-          status: 'all', 
-          page: 0, 
-          size: 1000 
+        const jobsResponse = await fetchJobsByEmployer(employerData.id, {
+          status: 'all',
+          page: 0,
+          size: 1000
         });
         const employerJobs = jobsResponse.content || [];
-        
+
         console.log('Fetched employer jobs:', employerJobs.length, 'for employer:', employerData.id);
         setMyJobs(employerJobs);
 
@@ -106,18 +107,18 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
             const jobIds = employerJobs.map((job: any) => job.id);
             console.log('📋 Fetching applications for jobs:', jobIds);
             const allApplications: ApplicationResponse[] = [];
-            
+
             // Fetch applications for each job - use large size to get all applications
             for (const jobId of jobIds) {
               try {
                 console.log(`🔍 Fetching applications for job: ${jobId}`);
-                const appsResponse = await fetchApplications({ 
-                  jobId, 
-                  page: 0, 
+                const appsResponse = await fetchApplications({
+                  jobId,
+                  page: 0,
                   size: 1000  // Fetch all applications at once
                 }, token);
                 console.log(`✅ Applications response for job ${jobId}:`, appsResponse);
-                
+
                 if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
                   console.log(`📝 Found ${appsResponse.content.length} applications for job ${jobId}`);
                   allApplications.push(...appsResponse.content);
@@ -132,7 +133,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                 console.error(`❌ Failed to fetch applications for job ${jobId}:`, err);
               }
             }
-            
+
             console.log(`📊 Total applications fetched: ${allApplications.length}`);
             setMyApplications(allApplications);
           } catch (error) {
@@ -163,8 +164,9 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           console.error('Error fetching notifications:', error);
           setNotifications([]);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch employer data:', error);
+        setError(error?.message || 'Failed to load dashboard data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -182,25 +184,25 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           try {
             const employerData = await fetchEmployer(user.id, token);
             setEmployer(employerData);
-            
+
             const { fetchJobsByEmployer } = await import('../api/jobs');
-            const jobsResponse = await fetchJobsByEmployer(employerData.id, { 
-              status: 'all', 
-              page: 0, 
-              size: 1000 
+            const jobsResponse = await fetchJobsByEmployer(employerData.id, {
+              status: 'all',
+              page: 0,
+              size: 1000
             });
             const employerJobs = jobsResponse.content || [];
             setMyJobs(employerJobs);
-            
+
             // Refresh applications
             if (employerJobs.length > 0) {
               const jobIds = employerJobs.map((job: any) => job.id);
               const allApplications: ApplicationResponse[] = [];
               for (const jobId of jobIds) {
                 try {
-                  const appsResponse = await fetchApplications({ 
-                    jobId, 
-                    page: 0, 
+                  const appsResponse = await fetchApplications({
+                    jobId,
+                    page: 0,
                     size: 1000  // Fetch all applications
                   }, token);
                   if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
@@ -230,7 +232,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
         fetchData();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user, token]);
@@ -254,7 +256,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
@@ -263,10 +265,38 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
     );
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-600" />
+          <h1 className="text-2xl text-gray-900 mb-2">Error Loading Dashboard</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-700">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // If employer data is not loaded yet, show loading
+  if (!employer) {
+    return (
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading employer data...</p>
+        </div>
+      </div>
+    );
+  }
+
   // If employer is not verified, show verification required message
   if (employer?.verificationStatus === 'pending') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-yellow-600" />
@@ -285,7 +315,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-[calc(100vh-200px)] bg-gray-50 pb-8">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -306,8 +336,8 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               <p className="text-gray-600">Manage your job postings and applications</p>
             </div>
             <Button
-              className={currentSubscription && currentSubscription.status === 'active' 
-                ? "bg-blue-600 hover:bg-blue-700" 
+              className={currentSubscription && currentSubscription.status === 'active'
+                ? "bg-blue-600 hover:bg-blue-700"
                 : "bg-gray-600 hover:bg-gray-700 cursor-not-allowed"}
               disabled={!currentSubscription || currentSubscription.status !== 'active'}
               onClick={() => {
@@ -319,8 +349,8 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {currentSubscription && currentSubscription.status === 'active' 
-                ? 'Post New Job' 
+              {currentSubscription && currentSubscription.status === 'active'
+                ? 'Post New Job'
                 : 'Post New Job (Subscription Required)'}
             </Button>
           </div>
@@ -341,7 +371,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           <Alert className="mb-8 border-green-200 bg-green-50">
             <CheckCircle className="w-4 h-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              <strong>Active Subscription:</strong> {currentSubscription.plan.name} - 
+              <strong>Active Subscription:</strong> {currentSubscription.plan.name} -
               Posts used: {currentSubscription.jobPostsUsed} / {currentSubscription.jobPostsAllowed}
               {currentSubscription.endDate && ` (Valid until ${new Date(currentSubscription.endDate).toLocaleDateString('en-IN')})`}
             </AlertDescription>
@@ -472,8 +502,8 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                             <TableCell>
                               <Badge className={
                                 job.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
-                                job.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                                'bg-gray-100 text-gray-700 border-gray-200'
+                                  job.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                    'bg-gray-100 text-gray-700 border-gray-200'
                               } variant="outline">
                                 {job.status}
                               </Badge>
@@ -505,33 +535,33 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg text-gray-900">Recent Applications</h3>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={async () => {
                       if (!user || !token || !employer) return;
                       try {
                         console.log('🔄 Manually refreshing applications...');
                         const { fetchJobsByEmployer } = await import('../api/jobs');
-                        const jobsResponse = await fetchJobsByEmployer(employer.id, { 
-                          status: 'all', 
-                          page: 0, 
-                          size: 1000 
+                        const jobsResponse = await fetchJobsByEmployer(employer.id, {
+                          status: 'all',
+                          page: 0,
+                          size: 1000
                         });
                         const employerJobs = jobsResponse.content || [];
-                        
+
                         if (employerJobs.length > 0) {
                           const jobIds = employerJobs.map((job: any) => job.id);
                           const allApplications: ApplicationResponse[] = [];
-                          
+
                           for (const jobId of jobIds) {
                             try {
-                              const appsResponse = await fetchApplications({ 
-                                jobId, 
-                                page: 0, 
+                              const appsResponse = await fetchApplications({
+                                jobId,
+                                page: 0,
                                 size: 1000
                               }, token);
-                              
+
                               if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
                                 allApplications.push(...appsResponse.content);
                               } else if (Array.isArray(appsResponse)) {
@@ -541,7 +571,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                               console.error(`Failed to fetch applications for job ${jobId}:`, err);
                             }
                           }
-                          
+
                           console.log(`✅ Refreshed: ${allApplications.length} applications`);
                           setMyApplications(allApplications);
                           alert(`Applications refreshed! Found ${allApplications.length} applications.`);
@@ -589,7 +619,7 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                             <p>No applications found</p>
                             {myJobs.length > 0 && (
                               <p className="text-xs mt-2 text-gray-400">
-                                You have {myJobs.length} job{myJobs.length > 1 ? 's' : ''} posted. 
+                                You have {myJobs.length} job{myJobs.length > 1 ? 's' : ''} posted.
                                 Applications will appear here when candidates apply.
                               </p>
                             )}
@@ -616,9 +646,9 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                             <TableCell>
                               <Badge className={
                                 application.status === 'shortlisted' ? 'bg-green-100 text-green-700 border-green-200' :
-                                application.status === 'interview' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                                application.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                                'bg-gray-100 text-gray-700 border-gray-200'
+                                  application.status === 'interview' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                    application.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                                      'bg-gray-100 text-gray-700 border-gray-200'
                               } variant="outline">
                                 {application.status}
                               </Badge>
@@ -676,8 +706,8 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg text-gray-900">Recent Notifications</h3>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => onNavigate('notifications')}
                 >
