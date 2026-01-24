@@ -84,7 +84,17 @@ public class JobController {
         if (Boolean.TRUE.equals(featured)) {
             result = jobRepository.findByIsFeaturedTrueAndStatus(statusFilter != null ? statusFilter : Job.JobStatus.ACTIVE, pageable);
         } else if (search != null && !search.isBlank()) {
-            result = jobRepository.searchJobs(search.trim(), statusFilter, pageable);
+            // If both search and location are provided, use combined search method
+            if (location != null && !location.isBlank()) {
+                // Use searchJobsWithLocation when both search and location are provided
+                // This ensures location filtering is mandatory
+                // Trim and normalize location to ensure proper matching
+                String normalizedLocation = location.trim();
+                result = jobRepository.searchJobsWithLocation(search.trim(), normalizedLocation, statusFilter, pageable);
+            } else {
+                // Use searchJobs when only search is provided (no location filter)
+                result = jobRepository.searchJobs(search.trim(), statusFilter, pageable);
+            }
         } else if (sector != null || category != null || location != null || expLevel != null || speciality != null || duty != null) {
             Job.JobSector s = (sector != null && !sector.isBlank()) ? parseSector(sector) : null;
             Job.JobCategory c = (category != null && !category.isBlank()) ? mapCategoryFromLabel(category) : null;

@@ -137,12 +137,28 @@ export function HomePage({ onNavigate }: HomePageProps) {
   }, []);
 
   const handleSearch = () => {
-    onNavigate('jobs');
+    // Build URL with search query and location
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+    if (selectedLocation) {
+      params.set('location', selectedLocation);
+    }
+    const queryString = params.toString();
+    const url = queryString ? `/jobs?${queryString}` : '/jobs';
+    window.location.href = url;
   };
 
   const handleCategoryClick = (category: string) => {
-    // In a real app, this would filter by category
-    onNavigate('jobs');
+    // Map category label to backend category format
+    let categoryParam = category;
+    if (category === 'Nursing') {
+      categoryParam = 'Paramedical / Nursing';
+    }
+    // Navigate to jobs page with category filter
+    const url = `/jobs?category=${encodeURIComponent(categoryParam)}`;
+    window.location.href = url;
   };
 
   return (

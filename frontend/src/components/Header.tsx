@@ -46,16 +46,16 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
   };
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex h-14 sm:h-16 items-center justify-between gap-2">
           {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate('home')}>
-            <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-              <Briefcase className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 min-w-0" onClick={() => onNavigate('home')}>
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex-shrink-0">
+              <Briefcase className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl text-blue-600">MedExJob.com</h1>
-              <p className="text-xs text-gray-500">Medical Excellence Jobs</p>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-xl text-blue-600 font-semibold truncate">MedExJob.com</h1>
+              <p className="text-[10px] sm:text-xs text-gray-500 truncate hidden sm:block">Medical Excellence Jobs</p>
             </div>
           </div>
 
@@ -112,20 +112,21 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="relative hover:bg-blue-50/80 transition-all duration-200"
+                  className="relative hover:bg-blue-50/80 transition-all duration-200 h-9 w-9 sm:h-10 sm:w-10"
                   onClick={() => onNavigate('notifications')}
                   title="Notifications"
+                  aria-label="Notifications"
                 >
-                  <Bell className="w-6 h-6 text-blue-600 hover:text-blue-700 transition-colors stroke-[2] fill-none" />
+                  <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 hover:text-blue-700 transition-colors stroke-[2] fill-none" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[11px] font-bold leading-none rounded-full shadow-[0_2px_6px_rgba(239,68,68,0.4),0_1px_2px_rgba(0,0,0,0.1)] border border-red-600/20">
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 sm:px-1.5 bg-red-500 text-white text-[10px] sm:text-[11px] font-bold leading-none rounded-full shadow-[0_2px_6px_rgba(239,68,68,0.4),0_1px_2px_rgba(0,0,0,0.1)] border border-red-600/20">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -137,28 +138,40 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
                   size="icon"
                   onClick={() => onNavigate('dashboard')}
                   title="Dashboard"
+                  aria-label="Dashboard"
+                  className="h-9 w-9 sm:h-10 sm:w-10"
                 >
-                  <User className="w-5 h-5" />
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
 
-                {/* Logout Button */}
+                {/* Logout Button - Responsive: Icon only on mobile, Icon + Text on larger screens */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-9 sm:h-8 px-2 sm:px-3 gap-1.5 sm:gap-2 min-w-[36px] sm:min-w-auto"
                   title="Logout"
+                  aria-label="Logout"
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
+                  <LogOut className="w-4 h-4 sm:w-4 sm:h-4 sm:mr-0 flex-shrink-0" />
+                  <span className="hidden sm:inline whitespace-nowrap">Logout</span>
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="outline" onClick={() => onNavigate('login')}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => onNavigate('login')}
+                  className="h-9 sm:h-9 px-3 sm:px-4 text-sm"
+                  aria-label="Login"
+                >
                   Login
                 </Button>
-                <Button onClick={() => onNavigate('register')} className="bg-blue-600 hover:bg-blue-700">
+                <Button 
+                  onClick={() => onNavigate('register')} 
+                  className="bg-blue-600 hover:bg-blue-700 h-9 sm:h-9 px-3 sm:px-4 text-sm"
+                  aria-label="Register"
+                >
                   Register
                 </Button>
               </>

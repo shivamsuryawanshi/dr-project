@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -12,6 +13,7 @@ interface JobListingPageProps {
 }
 
 export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
@@ -23,6 +25,30 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
   const [metaCategories, setMetaCategories] = useState<string[]>([]);
   const [metaLocations, setMetaLocations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Read search query, location, and category from URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search');
+    const locationParam = params.get('location');
+    const categoryParam = params.get('category');
+    
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+    if (locationParam) {
+      setFilters(prev => ({
+        ...prev,
+        locations: [locationParam]
+      }));
+    }
+    if (categoryParam) {
+      setFilters(prev => ({
+        ...prev,
+        categories: [categoryParam]
+      }));
+    }
+  }, [location.search]);
 
   useEffect(() => {
     // load meta on mount
@@ -43,22 +69,39 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
         const params: any = {
           search: searchQuery || undefined,
           sector: sector || undefined,
-          category: filters.categories[0],
-          location: filters.locations[0],
+          category: filters.categories[0] || undefined,
+          location: filters.locations[0] || undefined,
           featured: filters.featured || undefined,
           status: 'active',
           size: 50,
         };
+        // Remove undefined values to avoid passing them to API
+        Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+        
+        // Debug: Log params to verify location is being passed
+        console.log('Fetching jobs with params:', params);
+        
         let res = await fetchJobs(params);
         let content = res?.content || [];
         let total = res?.totalElements || 0;
 
-        // Fallback: if no results with status filter, retry without it (handles backend variants)
-        if (content.length === 0) {
+        // Don't retry without status filter if location filter is applied
+        // This ensures location filtering is not bypassed
+        if (content.length === 0 && !params.location) {
           const { status, ...fallbackParams } = params;
           res = await fetchJobs(fallbackParams);
           content = res?.content || [];
           total = res?.totalElements || 0;
+        }
+        
+        // Additional client-side filtering to ensure location matches exactly
+        if (params.location && content.length > 0) {
+          const locationLower = params.location.toLowerCase().trim();
+          content = content.filter((job: any) => {
+            const jobLocation = (job.location || '').toLowerCase().trim();
+            return jobLocation === locationLower || jobLocation.startsWith(locationLower);
+          });
+          total = content.length;
         }
 
         // Normalize job data - ensure sector is always present

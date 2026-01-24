@@ -42,6 +42,15 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
            "AND (:status IS NULL OR j.status = :status)")
     Page<Job> searchJobs(@Param("keyword") String keyword, @Param("status") Job.JobStatus status, Pageable pageable);
     
+    // Search jobs by keyword with location filter (mandatory exact or prefix match)
+    // Location must match exactly or start with the provided location (case-insensitive)
+    // This ensures only jobs from the specified location are returned
+    @Query("SELECT j FROM Job j WHERE (LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (LOWER(TRIM(j.location)) = LOWER(TRIM(:location)) OR LOWER(TRIM(j.location)) LIKE LOWER(CONCAT(TRIM(:location), '%'))) " +
+           "AND (:status IS NULL OR j.status = :status)")
+    Page<Job> searchJobsWithLocation(@Param("keyword") String keyword, @Param("location") String location, @Param("status") Job.JobStatus status, Pageable pageable);
+    
     // Find jobs by multiple criteria
     @Query("SELECT j FROM Job j WHERE " +
            "(:sector IS NULL OR j.sector = :sector) AND " +
