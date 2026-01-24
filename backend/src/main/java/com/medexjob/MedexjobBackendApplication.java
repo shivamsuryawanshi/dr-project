@@ -15,5 +15,6 @@ public class MedexjobBackendApplication {
         System.out.println("🌐 Frontend: https://medexjob.com");
 
 
+
     }
 }
