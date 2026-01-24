@@ -1,4 +1,4 @@
-  import { Shield, TrendingUp, Users, CheckCircle, Award, Target, Heart, Zap } from 'lucide-react';
+  import { Shield, TrendingUp, Users, CheckCircle, Award, Target, Heart, Zap, MapPin } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 
@@ -248,6 +248,45 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                   </li>
                 ))}
               </ul>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Business Details Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <Card className="p-8 md:p-12 hover:shadow-2xl transition-shadow duration-300">
+              <h2 className="text-3xl text-gray-900 mb-8 text-center">Business Information</h2>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Shield className="w-5 h-5 mr-2 text-blue-600" />
+                    Legal Entity
+                  </h3>
+                  <div className="space-y-2 text-gray-700">
+                    <p><strong>Business Name:</strong> [Business/Individual Name]</p>
+                    <p><strong>Legal Structure:</strong> Individual/Sole Proprietor</p>
+                    <p><strong>Registration Number:</strong> [If applicable]</p>
+                    <p><strong>PAN:</strong> [PAN Number if applicable]</p>
+                    <p><strong>GSTIN:</strong> [If applicable]</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <MapPin className="w-5 h-5 mr-2 text-blue-600" />
+                    Registered Address
+                  </h3>
+                  <div className="space-y-2 text-gray-700">
+                    <p>[Business Name/Individual Name]</p>
+                    <p>[Street Address, Building Name]</p>
+                    <p>[Area/Locality]</p>
+                    <p>[City], [State] - [PIN Code]</p>
+                    <p>India</p>
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         </div>

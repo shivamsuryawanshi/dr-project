@@ -18,6 +18,8 @@ import { AboutPage } from './components/AboutPage';
 import { FAQPage } from './components/FAQPage';
 import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 import { TermsConditionsPage } from './components/TermsConditionsPage';
+import { RefundCancellationPage } from './components/RefundCancellationPage';
+import { ContactUsPage } from './components/ContactUsPage';
 import { AdminJobManagementPage } from './components/AdminJobManagementPage';
 import { JobPostingForm } from './components/JobPostingForm';
 import { AdminUsersPage } from './components/AdminUsersPage';
@@ -95,6 +97,8 @@ function AppContent() {
           <Route path="/faq" element={<FAQPage onNavigate={handleNavigate} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage onNavigate={handleNavigate} />} />
           <Route path="/terms-conditions" element={<TermsConditionsPage onNavigate={handleNavigate} />} />
+          <Route path="/refund-cancellation" element={<RefundCancellationPage onNavigate={handleNavigate} />} />
+          <Route path="/contact" element={<ContactUsPage onNavigate={handleNavigate} />} />
           <Route path="/subscription" element={<SubscriptionPage onNavigate={handleNavigate} />} />
 
           {/* Notifications Route */}

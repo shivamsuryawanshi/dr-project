@@ -57,19 +57,27 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                 <ul className="space-y-3">
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Name, email address, phone number</span>
+                    <span className="text-gray-700 leading-relaxed">Name, email address, phone number, date of birth</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Professional qualifications and experience</span>
+                    <span className="text-gray-700 leading-relaxed">Professional qualifications, certifications, and experience</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Resume and work history</span>
+                    <span className="text-gray-700 leading-relaxed">Resume, work history, and educational background</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Account credentials</span>
+                    <span className="text-gray-700 leading-relaxed">Account credentials and authentication information</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Payment information (for employers) processed securely through Razorpay</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Government identification documents (for employer verification)</span>
                   </li>
                 </ul>
               </div>
@@ -106,30 +114,41 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
               <h2 className="text-2xl text-gray-900 font-semibold">How We Use Your Information</h2>
             </div>
             <div className="pl-11">
+              <p className="text-gray-700 leading-relaxed text-lg mb-4">
+                We use your personal information for the following purposes, in compliance with Indian data protection laws:
+              </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-gray-700 leading-relaxed">To provide and maintain our job portal services</span>
+                  <span className="text-gray-700 leading-relaxed">To provide and maintain our job portal services and facilitate employer-candidate connections</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-gray-700 leading-relaxed">To match candidates with suitable job opportunities</span>
+                  <span className="text-gray-700 leading-relaxed">To match candidates with suitable job opportunities based on qualifications and preferences</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-gray-700 leading-relaxed">To communicate with you about your applications and account</span>
+                  <span className="text-gray-700 leading-relaxed">To send you job alerts, application updates, and account notifications via email and SMS (with your consent)</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-gray-700 leading-relaxed">To improve our platform and develop new features</span>
+                  <span className="text-gray-700 leading-relaxed">To process payments for job postings through Razorpay payment gateway</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-gray-700 leading-relaxed">To ensure platform security and prevent fraud</span>
+                  <span className="text-gray-700 leading-relaxed">To verify employer credentials and prevent fraudulent activities</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-gray-700 leading-relaxed">To comply with legal obligations</span>
+                  <span className="text-gray-700 leading-relaxed">To improve our platform, develop new features, and conduct analytics</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed">To ensure platform security, prevent fraud, and protect user data</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed">To comply with legal obligations, court orders, and regulatory requirements in India</span>
                 </li>
               </ul>
             </div>
@@ -173,14 +192,46 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-blue-600 font-bold text-sm">5</span>
               </div>
-              <h2 className="text-2xl text-gray-900 font-semibold">Data Security</h2>
+              <h2 className="text-2xl text-gray-900 font-semibold">Data Security and Storage</h2>
             </div>
-            <div className="pl-11">
+            <div className="pl-11 space-y-4">
               <p className="text-gray-700 leading-relaxed text-lg">
                 We implement appropriate technical and organizational measures to protect your personal information against
-                unauthorized access, alteration, disclosure, or destruction. This includes encryption, secure servers,
-                and regular security assessments.
+                unauthorized access, alteration, disclosure, or destruction, in compliance with Indian data protection standards.
               </p>
+              <div>
+                <h3 className="text-xl text-blue-700 mb-3 font-medium">Security Measures</h3>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">SSL/TLS encryption for data transmission</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Secure servers hosted in India with regular security audits</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Access controls and authentication mechanisms</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Regular security assessments and vulnerability testing</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Payment data is processed through PCI-DSS compliant Razorpay gateway</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xl text-blue-700 mb-3 font-medium">Data Storage</h3>
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  Your personal data is stored on secure servers located in India. We retain your data for as long as 
+                  necessary to provide our services and comply with legal obligations. Data may be stored for up to 
+                  3 years after account deactivation, unless you request earlier deletion.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -227,13 +278,46 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-blue-600 font-bold text-sm">7</span>
               </div>
-              <h2 className="text-2xl text-gray-900 font-semibold">Cookies and Tracking</h2>
+              <h2 className="text-2xl text-gray-900 font-semibold">Consent and Communication</h2>
             </div>
-            <div className="pl-11">
-              <p className="text-gray-700 leading-relaxed text-lg">
-                We use cookies and similar technologies to enhance your experience, analyze usage patterns,
-                and provide personalized content. You can control cookie preferences through your browser settings.
-              </p>
+            <div className="pl-11 space-y-4">
+              <div>
+                <h3 className="text-xl text-blue-700 mb-3 font-medium">Email and SMS Communication</h3>
+                <p className="text-gray-700 leading-relaxed text-lg mb-3">
+                  By using MedExJob.com, you consent to receive:
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Job alerts and application updates via email and SMS</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Account notifications and security alerts</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Marketing communications (you can opt-out anytime)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Payment confirmations and transaction receipts</span>
+                  </li>
+                </ul>
+                <p className="text-gray-700 leading-relaxed text-lg mt-4">
+                  You can withdraw your consent for marketing communications at any time by updating your preferences 
+                  in your account settings or by contacting us. However, transactional and service-related communications 
+                  will continue to be sent as they are essential for platform functionality.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-xl text-blue-700 mb-3 font-medium">Cookies and Tracking</h3>
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  We use cookies and similar technologies to enhance your experience, analyze usage patterns,
+                  and provide personalized content. You can control cookie preferences through your browser settings.
+                  By continuing to use our platform, you consent to our use of cookies as described.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -242,13 +326,31 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-blue-600 font-bold text-sm">8</span>
               </div>
-              <h2 className="text-2xl text-gray-900 font-semibold">Data Retention</h2>
+              <h2 className="text-2xl text-gray-900 font-semibold">Data Retention and Deletion</h2>
             </div>
             <div className="pl-11">
-              <p className="text-gray-700 leading-relaxed text-lg">
+              <p className="text-gray-700 leading-relaxed text-lg mb-4">
                 We retain your personal information for as long as necessary to provide our services and fulfill
-                the purposes outlined in this policy, unless a longer retention period is required by law.
+                the purposes outlined in this policy, unless a longer retention period is required by Indian law.
               </p>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed">Active accounts: Data retained while your account is active</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed">Deactivated accounts: Data retained for up to 3 years for legal compliance</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed">Payment records: Retained for 7 years as per Indian tax laws</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed">You may request data deletion at any time, subject to legal obligations</span>
+                </li>
+              </ul>
             </div>
           </section>
 
@@ -257,12 +359,33 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-blue-600 font-bold text-sm">9</span>
               </div>
-              <h2 className="text-2xl text-gray-900 font-semibold">International Data Transfers</h2>
+              <h2 className="text-2xl text-gray-900 font-semibold">Third-Party Services and Data Sharing</h2>
             </div>
-            <div className="pl-11">
+            <div className="pl-11 space-y-4">
               <p className="text-gray-700 leading-relaxed text-lg">
-                Your information may be transferred to and processed in countries other than your own.
-                We ensure appropriate safeguards are in place to protect your data during such transfers.
+                We may share your information with trusted third-party service providers who assist us in operating our platform:
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed"><strong>Razorpay:</strong> Payment processing (PCI-DSS compliant)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed"><strong>Cloud Hosting:</strong> Secure data storage on servers in India</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed"><strong>Email/SMS Services:</strong> Communication delivery (with your consent)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-gray-700 leading-relaxed"><strong>Analytics:</strong> Platform usage analysis (anonymized data)</span>
+                </li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed text-lg mt-4">
+                All third-party service providers are contractually bound to protect your data and use it only 
+                for specified purposes. We do not sell your personal information to third parties.
               </p>
             </div>
           </section>

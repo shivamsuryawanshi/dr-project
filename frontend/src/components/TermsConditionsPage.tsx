@@ -135,27 +135,53 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-green-600 font-bold text-sm">4</span>
               </div>
-              <h2 className="text-2xl text-gray-900 font-semibold">Job Posting and Applications</h2>
+              <h2 className="text-2xl text-gray-900 font-semibold">Payment Terms and Service Fees</h2>
             </div>
             <div className="pl-11 space-y-6">
+              <div>
+                <h3 className="text-xl text-green-700 mb-4 font-medium">Payment Processing</h3>
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">All payments are processed through Razorpay, our authorized payment gateway partner</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Payments are accepted in Indian Rupees (INR) only</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">Employers are required to pay fees for job postings; candidates use the platform free of charge</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">All service fees are non-refundable as per our Refund & Cancellation Policy</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700 leading-relaxed">By making a payment, you agree to Razorpay's terms and conditions</span>
+                  </li>
+                </ul>
+              </div>
+
               <div>
                 <h3 className="text-xl text-green-700 mb-4 font-medium">For Employers</h3>
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Job postings must be accurate and not discriminatory</span>
+                    <span className="text-gray-700 leading-relaxed">Job postings must be accurate, lawful, and not discriminatory</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">You are responsible for verifying candidate qualifications</span>
+                    <span className="text-gray-700 leading-relaxed">You are responsible for verifying candidate qualifications and conducting background checks</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Subscription fees are non-refundable</span>
+                    <span className="text-gray-700 leading-relaxed">We do not guarantee placement or number of applications for your job postings</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700 leading-relaxed">Violation of posting guidelines may result in account suspension</span>
+                    <span className="text-gray-700 leading-relaxed">Violation of posting guidelines may result in account suspension without refund</span>
                   </li>
                 </ul>
               </div>
@@ -286,12 +312,17 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-green-600 font-bold text-sm">10</span>
               </div>
-              <h2 className="text-2xl text-gray-900 font-semibold">Governing Law</h2>
+              <h2 className="text-2xl text-gray-900 font-semibold">Governing Law and Jurisdiction</h2>
             </div>
             <div className="pl-11">
+              <p className="text-gray-700 leading-relaxed text-lg mb-4">
+                These Terms shall be interpreted and governed by the laws of India, without regard to its conflict of law provisions. 
+                Any disputes arising from these Terms or your use of MedExJob.com shall be subject to the exclusive jurisdiction of 
+                the courts in [City, State], India.
+              </p>
               <p className="text-gray-700 leading-relaxed text-lg">
-                These Terms shall be interpreted and governed by the laws of India, without regard to its conflict of law provisions.
-                Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.
+                Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights. 
+                If any provision of these Terms is found to be unenforceable, the remaining provisions will remain in full effect.
               </p>
             </div>
           </section>
