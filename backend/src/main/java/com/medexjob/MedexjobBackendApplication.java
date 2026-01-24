@@ -14,5 +14,6 @@ public class MedexjobBackendApplication {
         System.out.println("📊 API Base: /api");
         System.out.println("🌐 Frontend: https://medexjob.com");
 
+
     }
 }
