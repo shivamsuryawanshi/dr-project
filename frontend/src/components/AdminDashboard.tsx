@@ -1,5 +1,5 @@
 // AI assisted development
-import { BarChart, Briefcase, Users, Building2, Bell, Settings, Newspaper } from 'lucide-react';
+import { BarChart, Briefcase, Users, Building2, Bell, Settings, Newspaper, DollarSign } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -76,6 +76,12 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       description: 'Create, edit, and delete news updates and announcements.',
       icon: <Newspaper className="w-8 h-8 text-indigo-600" />,
       action: () => onNavigate('admin-news'),
+    },
+    {
+      title: 'Pricing Management',
+      description: 'Manage subscription plan pricing, discounts, and availability.',
+      icon: <DollarSign className="w-8 h-8 text-emerald-600" />,
+      action: () => onNavigate('admin-pricing'),
     },
     {
       title: 'Notifications & Alerts',

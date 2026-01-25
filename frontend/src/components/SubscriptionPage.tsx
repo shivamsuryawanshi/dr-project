@@ -481,14 +481,40 @@ export function SubscriptionPage({ onNavigate }: SubscriptionPageProps) {
                       
                       {/* Price */}
                       <div className="mt-4">
-                        <div className="flex items-baseline justify-center gap-1.5">
-                          <span className={`text-3xl sm:text-4xl font-extrabold ${config.priceColor} leading-none`}>
-                            ₹{plan.price.toLocaleString()}
-                          </span>
-                          <span className="text-sm text-gray-500 font-medium leading-none">
-                            /{plan.duration}
-                          </span>
-                        </div>
+                        {plan.hasDiscount && plan.basePrice && plan.basePrice > plan.price ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="text-lg sm:text-xl text-gray-400 line-through font-semibold">
+                                ₹{plan.basePrice.toLocaleString()}
+                              </span>
+                              <Badge className="bg-red-100 text-red-700 border-red-300 text-xs font-bold px-2 py-0.5">
+                                {plan.discountType === 'PERCENTAGE' 
+                                  ? `${plan.discountValue}% OFF`
+                                  : `₹${plan.discountValue?.toLocaleString()} OFF`}
+                              </Badge>
+                            </div>
+                            <div className="flex items-baseline justify-center gap-1.5">
+                              <span className={`text-3xl sm:text-4xl font-extrabold ${config.priceColor} leading-none`}>
+                                ₹{plan.price.toLocaleString()}
+                              </span>
+                              <span className="text-sm text-gray-500 font-medium leading-none">
+                                /{plan.duration}
+                              </span>
+                            </div>
+                            <p className="text-xs text-green-600 font-semibold text-center">
+                              Save ₹{(plan.basePrice - plan.price).toLocaleString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-baseline justify-center gap-1.5">
+                            <span className={`text-3xl sm:text-4xl font-extrabold ${config.priceColor} leading-none`}>
+                              ₹{plan.price.toLocaleString()}
+                            </span>
+                            <span className="text-sm text-gray-500 font-medium leading-none">
+                              /{plan.duration}
+                            </span>
+                          </div>
+                        )}
                         {index === plans.length - 1 && plan.duration === 'yearly' && (
                           <p className="text-xs text-gray-500 mt-2 font-medium text-center">
                             Best Value

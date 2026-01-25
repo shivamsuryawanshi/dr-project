@@ -48,11 +48,24 @@ function StatCard({ icon: Icon, end, label, suffix = '' }: { icon: any, end: num
   
   return (
     <div className="text-center transform hover:scale-105 transition-transform duration-300">
-      <div className="flex items-center justify-center mb-2">
-        <Icon className="w-8 h-8 text-blue-600 mr-2" />
-        <div className="text-4xl text-blue-600">{count.toLocaleString()}{suffix}</div>
+      <div className="flex flex-col items-center justify-center mb-3">
+        {/* Icon with explicit styling for visibility */}
+        <div className="mb-3 flex items-center justify-center">
+          <Icon 
+            className="w-12 h-12 md:w-14 md:h-14 text-blue-600 flex-shrink-0" 
+            strokeWidth={2.5}
+            fill="none"
+            stroke="currentColor"
+            style={{ color: '#2563EB' }}
+          />
+        </div>
+        {/* Number */}
+        <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-blue-600 mb-1">
+          {count.toLocaleString()}{suffix}
+        </div>
       </div>
-      <div className="text-gray-600">{label}</div>
+      {/* Label */}
+      <div className="text-gray-600 text-sm md:text-base font-medium">{label}</div>
     </div>
   );
 }
@@ -243,7 +256,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Animated Stats Section */}
       <section className="py-16 bg-white border-b relative overflow-hidden">
         {/* Decorative background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none"></div>
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -396,116 +409,337 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </div>
       </section>
 
-      {/* ================= PROFESSIONAL LATEST NEWS ================= */}
+      {/* ================= PREMIUM EDITORIAL NEWS SECTION ================= */}
       {newsUpdates.length > 0 && (
-        <section className="relative py-20 bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
-          <div className="absolute -left-20 top-10 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-40" />
-          <div className="absolute -right-24 bottom-10 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-40" />
+        <section className="relative py-20 bg-gradient-to-br from-white via-gray-50/50 to-white overflow-hidden">
+          {/* Subtle background patterns */}
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200/20 rounded-full blur-3xl" />
+          </div>
 
           <div className="container mx-auto px-4 relative z-10">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
-                  </span>
-                  Fresh updates
+            {/* Premium Editorial Header */}
+            <div className="mb-12">
+              <div className="mb-8">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-blue-700 bg-blue-50 px-4 py-2 rounded-full border-2 border-blue-200">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
+                    </span>
+                    Breaking News
+                  </div>
+                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
+                    Latest News & Updates
+                  </h2>
+                  <p className="text-lg text-gray-600 max-w-2xl">
+                    Stay informed with the latest medical notifications, exam updates, and industry news
+                  </p>
                 </div>
-                <h2 className="text-3xl font-semibold text-gray-900">Latest News & Updates</h2>
-                <p className="text-gray-600">Official medical notifications, exams, and policy updates</p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  className="border-slate-300 text-gray-700 hover:bg-gray-900 hover:text-white"
-                  onClick={() => onNavigate('news')}
-                >
-                  View All News <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
             </div>
 
-            {/* News Grid */}
+            {/* Premium Editorial News Grid - 1 Full Width Breaking + 2x2 Grid */}
             {newsUpdates.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-6">
                 {(() => {
-                  const cardMeta: Record<string, { label: string; badge: string; ring: string; bg: string; hover: string; sub: string; icon: any; iconBg: string; iconColor: string; iconRing: string; border: string; hoverBorder: string; accent: string }> = {
-                  GOVT: { label: 'Government', badge: 'bg-blue-100 text-blue-800 border-blue-200', ring: 'ring-blue-100', bg: 'from-blue-50 to-white', hover: 'hover:shadow-[0_20px_48px_-28px_rgba(59,130,246,0.45)]', sub: 'Govt notice', icon: Landmark, iconBg: 'from-blue-500/25 via-blue-400/15 to-blue-300/15', iconColor: 'text-blue-700', iconRing: 'ring-blue-200/70', border: 'border-blue-200', hoverBorder: 'hover:border-blue-300', accent: 'from-blue-500 to-blue-300' },
-                  EXAM: { label: 'Exam', badge: 'bg-purple-100 text-purple-800 border-purple-200', ring: 'ring-purple-100', bg: 'from-purple-50 to-white', hover: 'hover:shadow-[0_20px_48px_-28px_rgba(126,34,206,0.45)]', sub: 'Exam update', icon: GraduationCap, iconBg: 'from-purple-500/25 via-purple-400/15 to-purple-300/15', iconColor: 'text-purple-700', iconRing: 'ring-purple-200/70', border: 'border-purple-200', hoverBorder: 'hover:border-purple-300', accent: 'from-purple-500 to-purple-300' },
-                  PRIVATE: { label: 'Private', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200', ring: 'ring-emerald-100', bg: 'from-emerald-50 to-white', hover: 'hover:shadow-[0_20px_48px_-28px_rgba(16,185,129,0.45)]', sub: 'Private sector', icon: BriefcaseIcon, iconBg: 'from-emerald-500/25 via-emerald-400/15 to-emerald-300/15', iconColor: 'text-emerald-700', iconRing: 'ring-emerald-200/70', border: 'border-emerald-200', hoverBorder: 'hover:border-emerald-300', accent: 'from-emerald-500 to-emerald-300' },
-                  DEADLINE: { label: 'Deadline', badge: 'bg-amber-100 text-amber-800 border-amber-200', ring: 'ring-amber-100', bg: 'from-amber-50 to-white', hover: 'hover:shadow-[0_20px_48px_-28px_rgba(245,158,11,0.45)]', sub: 'Deadline alert', icon: AlarmClock, iconBg: 'from-amber-500/25 via-amber-400/15 to-amber-300/15', iconColor: 'text-amber-700', iconRing: 'ring-amber-200/70', border: 'border-amber-200', hoverBorder: 'hover:border-amber-300', accent: 'from-amber-500 to-amber-300' },
-                  UPDATE: { label: 'Update', badge: 'bg-slate-100 text-slate-800 border-slate-200', ring: 'ring-slate-100', bg: 'from-slate-50 to-white', hover: 'hover:shadow-[0_20px_48px_-28px_rgba(51,65,85,0.35)]', sub: 'General update', icon: Sparkles, iconBg: 'from-slate-500/25 via-slate-400/15 to-slate-300/15', iconColor: 'text-slate-700', iconRing: 'ring-slate-200/70', border: 'border-slate-200', hoverBorder: 'hover:border-slate-300', accent: 'from-slate-500 to-slate-300' },
-                };
-                const formatDate = (dateStr: string) => {
-                  if (!dateStr) return '';
-                  const d = new Date(dateStr);
-                  if (Number.isNaN(d.getTime())) return dateStr;
-                  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-                };
+                  // Separate breaking news and regular news
+                  const breakingNews = newsUpdates.filter(update => update.breaking).slice(0, 1); // Only first breaking news
+                  const regularNews = newsUpdates.filter(update => !update.breaking).slice(0, 4); // Only 4 regular news
+                  
+                  // Premium Editorial Color System - News-grade palettes
+                  const getCategoryColors = (type: string, isBreaking: boolean) => {
+                    if (isBreaking) {
+                      return {
+                        bg: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 50%, #fecaca 100%)',
+                        border: '#ef4444',
+                        accent: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+                        badge: 'bg-red-600 text-white',
+                        badgeText: 'Breaking',
+                        iconColor: '#dc2626',
+                        hoverShadow: '0 25px 50px -12px rgba(220, 38, 38, 0.4)',
+                        ribbon: true
+                      };
+                    }
+                    
+                    const colorMap: Record<string, any> = {
+                      GOVT: {
+                        bg: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%)',
+                        border: '#1e40af',
+                        accent: 'linear-gradient(90deg, #1e3a8a, #1e40af)',
+                        badge: 'bg-blue-900 text-white',
+                        badgeText: 'Government',
+                        iconColor: '#1e40af',
+                        hoverShadow: '0 25px 50px -12px rgba(30, 64, 175, 0.3)'
+                      },
+                      EXAM: {
+                        bg: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%)',
+                        border: '#6b21a8',
+                        accent: 'linear-gradient(90deg, #7c3aed, #6b21a8)',
+                        badge: 'bg-purple-900 text-white',
+                        badgeText: 'Exam',
+                        iconColor: '#7c3aed',
+                        hoverShadow: '0 25px 50px -12px rgba(107, 33, 168, 0.3)'
+                      },
+                      PRIVATE: {
+                        bg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%)',
+                        border: '#059669',
+                        accent: 'linear-gradient(90deg, #10b981, #059669)',
+                        badge: 'bg-emerald-700 text-white',
+                        badgeText: 'Vacancies',
+                        iconColor: '#059669',
+                        hoverShadow: '0 25px 50px -12px rgba(5, 150, 105, 0.3)'
+                      },
+                      DEADLINE: {
+                        bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%)',
+                        border: '#d97706',
+                        accent: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                        badge: 'bg-amber-600 text-white',
+                        badgeText: 'Deadline',
+                        iconColor: '#d97706',
+                        hoverShadow: '0 25px 50px -12px rgba(217, 119, 6, 0.3)'
+                      },
+                      UPDATE: {
+                        bg: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+                        border: '#475569',
+                        accent: 'linear-gradient(90deg, #64748b, #475569)',
+                        badge: 'bg-slate-700 text-white',
+                        badgeText: 'Update',
+                        iconColor: '#475569',
+                        hoverShadow: '0 25px 50px -12px rgba(71, 85, 105, 0.25)'
+                      }
+                    };
+                    
+                    return colorMap[type] || colorMap.UPDATE;
+                  };
 
-                return newsUpdates.map((update, index) => {
-                  const meta = cardMeta[update.type] ?? cardMeta.UPDATE;
-                  const Icon = meta.icon;
+                  const formatDate = (dateStr: string) => {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    if (Number.isNaN(d.getTime())) return dateStr;
+                    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                  };
+
+                  const getIcon = (type: string) => {
+                    const iconMap: Record<string, any> = {
+                      GOVT: Landmark,
+                      EXAM: GraduationCap,
+                      PRIVATE: BriefcaseIcon,
+                      DEADLINE: AlarmClock,
+                      UPDATE: Sparkles
+                    };
+                    return iconMap[type] || Sparkles;
+                  };
+
                   return (
-                    <Card
-                      key={update.id}
-                      className={`relative overflow-hidden p-5 md:p-6 bg-gradient-to-br ${meta.bg} border ${meta.border} rounded-2xl transition-all duration-300 cursor-pointer group ring-1 ${meta.ring} ${meta.hover} hover:-translate-y-2 ${meta.hoverBorder} hover:shadow-[0_28px_60px_-35px_rgba(15,23,42,0.45)]`}
-                      style={{ animationDelay: `${index * 0.04}s` }}
-                      onClick={() => onNavigate('news')}
-                    >
-                      <div className="absolute inset-0 pointer-events-none opacity-80">
-                        <div className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${meta.accent} opacity-90`} />
-                        <div className="absolute -right-10 -top-14 w-32 h-32 bg-white/60 blur-3xl" />
-                        <div className="absolute right-4 top-4 w-12 h-12 rounded-full bg-white/60" />
-                        <div className="absolute left-0 bottom-0 h-[3px] w-full bg-gradient-to-r from-transparent via-sky-300/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <div className="absolute -left-8 -bottom-12 w-40 h-40 bg-gradient-to-br from-blue-200/40 via-emerald-200/40 to-amber-200/40 rounded-full blur-3xl rotate-[-8deg]" />
-                        <div className="absolute -right-6 bottom-6 w-28 h-28 bg-[radial-gradient(circle_at_30%_30%,rgba(59,130,246,0.25),transparent_55%),radial-gradient(circle_at_70%_70%,rgba(16,185,129,0.25),transparent_55%)] opacity-70" />
-                      </div>
+                    <>
+                      {/* Full Width Breaking News Card */}
+                      {breakingNews.length > 0 && breakingNews.map((update) => {
+                        const colors = getCategoryColors(update.type, true);
+                        const Icon = getIcon(update.type);
+                        
+                        return (
+                          <Card
+                            key={update.id}
+                            className="relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer group w-full hover:-translate-y-1 hover:shadow-2xl"
+                            style={{
+                              background: colors.bg,
+                              borderColor: colors.border,
+                              boxShadow: `0 4px 6px -1px ${colors.border}20, 0 2px 4px -2px ${colors.border}20`
+                            }}
+                            onClick={() => onNavigate('news')}
+                          >
+                            {/* Breaking News Ribbon */}
+                            <div className="absolute top-0 right-0 z-20">
+                              <div className="relative">
+                                <div 
+                                  className="px-6 py-1 text-xs font-bold text-white shadow-lg transform rotate-45 translate-x-6 -translate-y-1"
+                                  style={{ background: colors.accent }}
+                                >
+                                  BREAKING
+                                </div>
+                                <div className="absolute top-0 right-0 w-0 h-0 border-l-[12px] border-l-transparent border-t-[12px]" style={{ borderTopColor: colors.border }} />
+                              </div>
+                            </div>
 
-                      <div className="relative space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <span className={`inline-flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br ${meta.iconBg} border border-white/60 shadow-sm ring-1 ${meta.iconRing}`}>
-                              <Icon className={`w-5 h-5 ${meta.iconColor}`} />
-                            </span>
-                            <Badge variant="outline" className={`${meta.badge} px-3 py-1 text-xs font-semibold`}>{meta.label}</Badge>
-                            <span className="hidden md:inline-flex items-center text-[11px] text-slate-600 bg-white/80 border border-white/60 rounded-full px-3 py-1 shadow-sm">{meta.sub}</span>
-                          </div>
-                          {update.breaking && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-100 shadow-sm">
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-70" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-                              </span>
-                              Breaking
-                            </span>
-                          )}
-                        </div>
+                            {/* Colorful Left Border Accent */}
+                            <div 
+                              className="absolute left-0 top-0 bottom-0 w-2 opacity-90"
+                              style={{ background: colors.accent }}
+                            />
 
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-slate-600 bg-white/80 border border-white/60 rounded-full px-3 py-1.5 w-fit shadow-sm">
-                          <Calendar className="w-4 h-4 text-gray-500" />
-                          {formatDate(update.date)}
-                        </div>
+                            {/* Decorative Background Elements */}
+                            <div className="absolute inset-0 pointer-events-none opacity-30">
+                              <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full blur-3xl" style={{ background: colors.accent }} />
+                              <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full blur-2xl" style={{ background: colors.accent }} />
+                            </div>
 
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-blue-700 transition-colors line-clamp-2">{update.title}</h3>
-                          <p className="text-sm text-slate-600 line-clamp-2">Stay current on critical medical updates and notices.</p>
-                        </div>
+                            <div className="relative p-6 md:p-8 lg:p-10">
+                              <div className="space-y-4">
+                                {/* Header with Category Badge */}
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-center gap-3 flex-wrap">
+                                    <div 
+                                      className="flex items-center justify-center w-12 h-12 rounded-xl shadow-md"
+                                      style={{ background: colors.accent }}
+                                    >
+                                      <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                                    </div>
+                                    <Badge 
+                                      className={`${colors.badge} px-4 py-1.5 text-xs font-bold uppercase tracking-wider border-0 shadow-sm`}
+                                    >
+                                      {colors.badgeText}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="relative flex h-3 w-3">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600" />
+                                    </span>
+                                  </div>
+                                </div>
 
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="text-xs text-slate-500">Tap to view full story</span>
-                          <Button variant="ghost" className="h-9 px-3 text-blue-700 hover:text-white hover:bg-blue-600 transition-colors gap-1">
-                            View →
-                          </Button>
+                                {/* Publication Date */}
+                                <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                  <Calendar className="w-4 h-4" style={{ color: colors.iconColor }} />
+                                  <span>{formatDate(update.date)}</span>
+                                </div>
+
+                                {/* Headline - Editorial Typography */}
+                                <div className="space-y-3">
+                                  <h3 
+                                    className="font-bold text-gray-900 group-hover:opacity-80 transition-opacity leading-tight text-2xl md:text-3xl lg:text-4xl"
+                                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                                  >
+                                    {update.title}
+                                  </h3>
+                                  <p className="text-sm md:text-base text-gray-600 leading-relaxed line-clamp-3">
+                                    Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
+                                  </p>
+                                </div>
+
+                                {/* CTA Footer */}
+                                <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
+                                  <span className="text-xs text-gray-500 font-medium">Tap to read full story</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    className="h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all"
+                                    style={{ color: colors.iconColor }}
+                                  >
+                                    View Story
+                                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Hover Effect Overlay */}
+                            <div 
+                              className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
+                              style={{ background: colors.accent }}
+                            />
+                          </Card>
+                        );
+                      })}
+
+                      {/* 2x2 Grid for Regular News (4 cards) */}
+                      {regularNews.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {regularNews.map((update) => {
+                            const colors = getCategoryColors(update.type, false);
+                            const Icon = getIcon(update.type);
+                            
+                            return (
+                              <Card
+                                key={update.id}
+                                className="relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-2xl"
+                                style={{
+                                  background: colors.bg,
+                                  borderColor: colors.border,
+                                  boxShadow: `0 4px 6px -1px ${colors.border}20, 0 2px 4px -2px ${colors.border}20`
+                                }}
+                                onClick={() => onNavigate('news')}
+                              >
+                                {/* Colorful Left Border Accent */}
+                                <div 
+                                  className="absolute left-0 top-0 bottom-0 w-2 opacity-90"
+                                  style={{ background: colors.accent }}
+                                />
+
+                                {/* Decorative Background Elements */}
+                                <div className="absolute inset-0 pointer-events-none opacity-30">
+                                  <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full blur-3xl" style={{ background: colors.accent }} />
+                                  <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full blur-2xl" style={{ background: colors.accent }} />
+                                </div>
+
+                                <div className="relative p-6 md:p-8">
+                                  <div className="space-y-4">
+                                    {/* Header with Category Badge */}
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div className="flex items-center gap-3 flex-wrap">
+                                        <div 
+                                          className="flex items-center justify-center w-12 h-12 rounded-xl shadow-md"
+                                          style={{ background: colors.accent }}
+                                        >
+                                          <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                                        </div>
+                                        <Badge 
+                                          className={`${colors.badge} px-4 py-1.5 text-xs font-bold uppercase tracking-wider border-0 shadow-sm`}
+                                        >
+                                          {colors.badgeText}
+                                        </Badge>
+                                      </div>
+                                    </div>
+
+                                    {/* Publication Date */}
+                                    <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                      <Calendar className="w-4 h-4" style={{ color: colors.iconColor }} />
+                                      <span>{formatDate(update.date)}</span>
+                                    </div>
+
+                                    {/* Headline - Editorial Typography */}
+                                    <div className="space-y-3">
+                                      <h3 
+                                        className="font-bold text-gray-900 group-hover:opacity-80 transition-opacity leading-tight text-xl md:text-2xl"
+                                        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                                      >
+                                        {update.title}
+                                      </h3>
+                                      <p className="text-sm md:text-base text-gray-600 leading-relaxed line-clamp-3">
+                                        Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
+                                      </p>
+                                    </div>
+
+                                    {/* CTA Footer */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
+                                      <span className="text-xs text-gray-500 font-medium">Tap to read full story</span>
+                                      <Button 
+                                        variant="ghost" 
+                                        className="h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all"
+                                        style={{ color: colors.iconColor }}
+                                      >
+                                        View Story
+                                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Hover Effect Overlay */}
+                                <div 
+                                  className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
+                                  style={{ background: colors.accent }}
+                                />
+                              </Card>
+                            );
+                          })}
                         </div>
-                      </div>
-                    </Card>
+                      )}
+                    </>
                   );
-                });
-              })()}
+                })()}
               </div>
             ) : (
               <Card className="p-12 text-center">

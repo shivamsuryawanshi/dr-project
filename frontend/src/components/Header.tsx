@@ -48,22 +48,29 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
     <header className="sticky top-0 z-50 w-full border-b bg-white">
       <div className="container mx-auto px-3 sm:px-4">
         <div className="flex h-14 sm:h-16 items-center justify-between gap-2">
-          {/* Logo */}
-          <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0 min-w-0" onClick={() => onNavigate('home')}>
-            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex-shrink-0">
-              <Briefcase className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-xl text-blue-600 font-semibold truncate">MedExJob.com</h1>
-              <p className="text-[10px] sm:text-xs text-gray-500 truncate hidden sm:block">Medical Excellence Jobs</p>
-            </div>
+          {/* Logo - MEDEXJOB Wordmark */}
+          <div 
+            className="flex items-center cursor-pointer flex-shrink-0 px-2 sm:px-3 hover:opacity-95 transition-opacity"
+            onClick={() => onNavigate('home')}
+            aria-label="MedExJob Home"
+          >
+            <h1 
+              className="text-[20px] sm:text-[24px] md:text-[28px] lg:text-[32px] font-bold leading-none tracking-tight"
+              style={{
+                fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                letterSpacing: '-0.02em'
+              }}
+            >
+              <span style={{ color: '#2A3F6B' }}>MEDEX</span>
+              <span style={{ color: '#4299D4' }}>JOB</span>
+            </h1>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-6 flex-wrap">
             <button
               onClick={() => onNavigate('home')}
-              className={`transition-colors ${
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${
                 currentPage === 'home' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
@@ -71,7 +78,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             </button>
             <button
               onClick={() => onNavigate('jobs')}
-              className={`transition-colors ${
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${
                 currentPage === 'jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
@@ -79,7 +86,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             </button>
             <button
               onClick={() => onNavigate('govt-jobs')}
-              className={`transition-colors ${
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${
                 currentPage === 'govt-jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
@@ -87,7 +94,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             </button>
             <button
               onClick={() => onNavigate('private-jobs')}
-              className={`transition-colors ${
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${
                 currentPage === 'private-jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
@@ -95,7 +102,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             </button>
             <button
               onClick={() => onNavigate('news')}
-              className={`transition-colors ${
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${
                 currentPage === 'news' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
@@ -103,7 +110,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             </button>
             <button
               onClick={() => onNavigate('about')}
-              className={`transition-colors ${
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${
                 currentPage === 'about' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >

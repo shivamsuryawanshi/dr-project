@@ -32,6 +32,7 @@ import { SubscriptionPage } from './components/SubscriptionPage';
 import { EmployerVerification } from './components/EmployerVerification';
 import { NewsPage } from './components/NewsPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
+import { AdminPricingManagement } from './components/AdminPricingManagement';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -178,6 +179,7 @@ function AppContent() {
               <Route path="/dashboard/admin" element={<AdminDashboard onNavigate={handleNavigate} />} />
               <Route path="/admin-jobs" element={<AdminJobManagementPage onNavigate={handleNavigate} />} />
               <Route path="/admin-news" element={<AdminNewsManagementPage onNavigate={handleNavigate} />} />
+              <Route path="/admin-pricing" element={<AdminPricingManagement onNavigate={handleNavigate} />} />
               <Route path="/admin-post-job" element={
                 <JobPostingForm
                   onCancel={() => handleNavigate('admin-jobs')}

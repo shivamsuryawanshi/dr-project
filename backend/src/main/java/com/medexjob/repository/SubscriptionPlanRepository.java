@@ -14,6 +14,12 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
     // Find active plans
     List<SubscriptionPlan> findByIsActiveTrueOrderByDisplayOrderAsc();
 
+    // Find all plans ordered by display order
+    List<SubscriptionPlan> findAllByOrderByDisplayOrderAsc();
+    
+    // Fallback: Find all plans (for manual sorting if needed)
+    List<SubscriptionPlan> findAll();
+
     // Find plan by name
     java.util.Optional<SubscriptionPlan> findByName(String name);
 }

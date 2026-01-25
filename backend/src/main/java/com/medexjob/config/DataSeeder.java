@@ -234,7 +234,10 @@ public class DataSeeder implements CommandLineRunner {
         // Plan 1: Basic - Per Post
         SubscriptionPlan plan1 = new SubscriptionPlan();
         plan1.setName("Basic Plan");
-        plan1.setPrice(new java.math.BigDecimal("999.00"));
+        java.math.BigDecimal price1 = new java.math.BigDecimal("999.00");
+        plan1.setPrice(price1);
+        plan1.setBasePrice(price1); // Initialize basePrice
+        plan1.setFinalPrice(price1); // Initialize finalPrice
         plan1.setDuration("per post");
         plan1.setJobPostsAllowed(1);
         plan1.setFeatures("Access to verified medical professionals,Basic application management,Email notifications for new applications,24/7 customer support");
@@ -245,7 +248,10 @@ public class DataSeeder implements CommandLineRunner {
         // Plan 2: Monthly Plan
         SubscriptionPlan plan2 = new SubscriptionPlan();
         plan2.setName("Monthly Plan");
-        plan2.setPrice(new java.math.BigDecimal("4999.00"));
+        java.math.BigDecimal price2 = new java.math.BigDecimal("4999.00");
+        plan2.setPrice(price2);
+        plan2.setBasePrice(price2); // Initialize basePrice
+        plan2.setFinalPrice(price2); // Initialize finalPrice
         plan2.setDuration("monthly");
         plan2.setJobPostsAllowed(10);
         plan2.setFeatures("Access to verified medical professionals,Basic application management,Email notifications for new applications,24/7 customer support,Priority approval,Advanced analytics");
@@ -256,7 +262,10 @@ public class DataSeeder implements CommandLineRunner {
         // Plan 3: Yearly Plan
         SubscriptionPlan plan3 = new SubscriptionPlan();
         plan3.setName("Yearly Plan");
-        plan3.setPrice(new java.math.BigDecimal("49999.00"));
+        java.math.BigDecimal price3 = new java.math.BigDecimal("49999.00");
+        plan3.setPrice(price3);
+        plan3.setBasePrice(price3); // Initialize basePrice
+        plan3.setFinalPrice(price3); // Initialize finalPrice
         plan3.setDuration("yearly");
         plan3.setJobPostsAllowed(120);
         plan3.setFeatures("Access to verified medical professionals,Basic application management,Email notifications for new applications,24/7 customer support,Priority approval,Advanced analytics,Featured jobs,Dedicated support");

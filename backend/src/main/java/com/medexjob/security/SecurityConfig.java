@@ -115,6 +115,8 @@ public class SecurityConfig {
                             String path = request.getRequestURI();
                             return path.startsWith("/api/employers");
                         }).authenticated()
+                        // Admin endpoints - require ADMIN role
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/analytics/**").permitAll()
                         .requestMatchers("/api/actuator/**").permitAll()
                         .requestMatchers("/api/health").permitAll()

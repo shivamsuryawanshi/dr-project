@@ -5,9 +5,16 @@ export interface SubscriptionPlanResponse {
   id: string;
   name: string;
   price: number;
+  basePrice?: number;
+  finalPrice?: number;
+  discountType?: 'PERCENTAGE' | 'FIXED' | null;
+  discountValue?: number | null;
+  hasDiscount?: boolean;
   duration: string;
   jobPostsAllowed: number;
   features: string[];
+  isActive?: boolean;
+  displayOrder?: number;
 }
 
 export interface SubscriptionResponse {
@@ -188,6 +195,163 @@ export async function getPaymentHistory(
 
   if (!res.ok) {
     throw new Error(`Failed to fetch payment history (${res.status})`);
+  }
+
+  return res.json();
+}
+
+// Admin Pricing Management API
+export interface AdminPlanPricing {
+  id: string;
+  name: string;
+  basePrice: number;
+  price: number;
+  finalPrice: number;
+  discountType?: 'PERCENTAGE' | 'FIXED' | null;
+  discountValue?: number | null;
+  duration: string;
+  jobPostsAllowed: number;
+  features: string[];
+  isActive: boolean;
+  displayOrder?: number;
+  status?: 'active' | 'inactive';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdatePlanPricingRequest {
+  basePrice?: number;
+  discountType?: 'PERCENTAGE' | 'FIXED' | null;
+  discountValue?: number | null;
+  isActive?: boolean;
+  features?: string;
+  jobPostsAllowed?: number;
+  duration?: string;
+}
+
+export async function fetchAdminPlans(token: string): Promise<AdminPlanPricing[]> {
+  try {
+    const endpoint = `${API_BASE}/admin/pricing/plans`;
+    console.log('Fetching admin plans from:', endpoint);
+    
+    const res = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Handle network errors
+    if (!res.ok) {
+      let errorData;
+      try {
+        errorData = await res.json();
+      } catch (parseError) {
+        // If response is not JSON, create error object
+        errorData = {
+          error: `HTTP ${res.status}`,
+          message: res.status === 404 
+            ? 'Admin pricing endpoint not found. Please verify backend is running and endpoint is configured correctly.'
+            : res.status === 403
+            ? 'Access denied. Admin privileges required.'
+            : res.status === 401
+            ? 'Authentication failed. Please login again.'
+            : `Server error: ${res.statusText || 'Unknown error'}`
+        };
+      }
+      
+      const errorMessage = errorData.message || errorData.error || `Failed to fetch plans (${res.status})`;
+      const error = new Error(errorMessage);
+      (error as any).status = res.status;
+      (error as any).response = errorData;
+      throw error;
+    }
+
+    const data = await res.json();
+
+    // Validate response structure
+    if (!data || typeof data !== 'object') {
+      console.warn('Invalid response format, returning empty array');
+      return [];
+    }
+
+    // Check if response has error flag (backend returned 200 with error info)
+    if (data.error === true) {
+      console.error('Backend returned error:', data.message || data.details);
+      // Still return empty array so UI can show empty state
+      return [];
+    }
+
+    // Return plans array (could be empty)
+    const plans = data.plans;
+    if (!Array.isArray(plans)) {
+      console.warn('Plans is not an array, returning empty array');
+      return [];
+    }
+
+    return plans;
+  } catch (err: any) {
+    console.error('Error fetching admin plans:', err);
+    // Re-throw with proper error information
+    if (err.status) {
+      throw err;
+    }
+    throw new Error(err.message || 'Failed to fetch subscription plans');
+  }
+}
+
+export async function updatePlanPricing(
+  planId: string,
+  updates: UpdatePlanPricingRequest,
+  token: string
+): Promise<{ message: string; plan: AdminPlanPricing }> {
+  const res = await fetch(`${API_BASE}/admin/pricing/plans/${planId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to update plan pricing (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function removePlanDiscount(planId: string, token: string): Promise<{ message: string; plan: AdminPlanPricing }> {
+  const res = await fetch(`${API_BASE}/admin/pricing/plans/${planId}/discount`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to remove discount (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function togglePlanStatus(planId: string, token: string): Promise<{ message: string; plan: AdminPlanPricing }> {
+  const res = await fetch(`${API_BASE}/admin/pricing/plans/${planId}/toggle-status`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to toggle plan status (${res.status})`);
   }
 
   return res.json();

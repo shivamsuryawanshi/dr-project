@@ -20,18 +20,58 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
     (job as any).city,
     (job as any).state
   ].filter(Boolean).join(', ');
+
+  // All cards use the same vibrant yellow-orange-pink gradient scheme (like Featured jobs)
+  const getCardColors = () => {
+    // All cards get the same colorful yellow-orange-pink gradient
+    return {
+      gradientBg: 'linear-gradient(to bottom right, #fef9c3, #fed7aa, #fce7f3)',
+      borderColor: '#fde047',
+      accentGradient: 'linear-gradient(to right, #facc15, #fb923c, #f472b6)',
+      shadowColor: 'rgba(253, 224, 71, 0.3)',
+      patternBg: 'linear-gradient(to bottom right, rgba(254, 249, 195, 0.3), rgba(254, 215, 170, 0.2), rgba(252, 231, 243, 0.3))'
+    };
+  };
+
+  const colors = getCardColors();
   
   return (
     <Card
-      className={`relative h-full cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 md:p-6 shadow-sm transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl focus-visible:-translate-y-2 focus-visible:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-200 group`}
+      className="relative h-full cursor-pointer overflow-hidden rounded-2xl border-2 p-5 md:p-6 shadow-md transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-xl focus-visible:-translate-y-2 focus-visible:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-200 group"
+      style={{
+        background: colors.gradientBg,
+        borderColor: colors.borderColor,
+        boxShadow: `0 4px 6px -1px ${colors.shadowColor}, 0 2px 4px -2px ${colors.shadowColor}`
+      }}
     >
+      {/* Colorful top accent bar */}
       <div
-        className={`${
-          isGovernment ? 'bg-blue-500' : 'bg-emerald-500'
-        } pointer-events-none absolute inset-x-0 top-0 h-1 origin-left scale-x-100 transform transition-transform duration-300 group-hover:scale-x-110`}
+        className="pointer-events-none absolute inset-x-0 top-0 h-2 origin-left scale-x-100 transform transition-transform duration-300 group-hover:scale-x-110"
+        style={{ background: colors.accentGradient }}
       />
-      <div className="absolute inset-0 pointer-events-none opacity-70">
-        <div className="absolute right-6 top-8 h-16 w-16 rounded-full bg-slate-100/50 blur-lg transition-opacity duration-300 group-hover:opacity-90" />
+      
+      {/* Colorful left border accent */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1.5 opacity-80 group-hover:opacity-100 transition-opacity"
+        style={{ background: colors.accentGradient }}
+      />
+      
+      {/* Decorative colorful background pattern */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-40 transition-opacity duration-300 group-hover:opacity-60"
+        style={{ background: colors.patternBg }}
+      />
+      
+      {/* Colorful decorative circles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div 
+          className="absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl transition-opacity duration-300 group-hover:opacity-70"
+          style={{ background: colors.patternBg }}
+        />
+        <div 
+          className="absolute -left-6 -bottom-6 h-24 w-24 rounded-full blur-xl transition-opacity duration-300 group-hover:opacity-60"
+          style={{ background: colors.patternBg }}
+        />
       </div>
 
       <div className="relative flex h-full flex-col gap-4">
@@ -101,34 +141,34 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
           )}
         </div>
 
-        {/* Meta pills */}
+        {/* Meta pills - Colorful */}
         <div className="flex flex-wrap gap-3 text-sm text-gray-700">
-          <span className="inline-flex items-center gap-2 bg-white/80 border border-white/60 rounded-full px-3 py-1 shadow-sm">
-            <MapPin className="w-4 h-4 text-slate-600" />
+          <span className="inline-flex items-center gap-2 bg-blue-100/90 border border-blue-200 text-blue-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-blue-200 transition-colors">
+            <MapPin className="w-4 h-4 text-blue-600" />
             {locationText || 'Location'}
           </span>
-          <span className="inline-flex items-center gap-2 bg-white/80 border border-white/60 rounded-full px-3 py-1 shadow-sm">
-            <Briefcase className="w-4 h-4 text-slate-600" />
+          <span className="inline-flex items-center gap-2 bg-purple-100/90 border border-purple-200 text-purple-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-purple-200 transition-colors">
+            <Briefcase className="w-4 h-4 text-purple-600" />
             {job.numberOfPosts} Post{job.numberOfPosts > 1 ? 's' : ''}
           </span>
-          <span className="inline-flex items-center gap-2 bg-white/80 border border-white/60 rounded-full px-3 py-1 shadow-sm">
-            <Calendar className="w-4 h-4 text-slate-600" />
+          <span className="inline-flex items-center gap-2 bg-orange-100/90 border border-orange-200 text-orange-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-orange-200 transition-colors">
+            <Calendar className="w-4 h-4 text-orange-600" />
             Apply by {new Date(job.lastDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
-          <span className="inline-flex items-center gap-2 bg-white/80 border border-white/60 rounded-full px-3 py-1 shadow-sm">
-            <Gift className="w-4 h-4 text-slate-600" />
+          <span className="inline-flex items-center gap-2 bg-indigo-100/90 border border-indigo-200 text-indigo-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-indigo-200 transition-colors">
+            <Gift className="w-4 h-4 text-indigo-600" />
             Qualification: {job.qualification}
           </span>
         </div>
 
-        {/* Salary & Experience */}
+        {/* Salary & Experience - More colorful */}
         <div className="flex flex-wrap items-center gap-3 text-sm">
           {job.salary && (
-            <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 border border-green-100 rounded-full px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 text-green-700 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300 rounded-full px-4 py-1.5 font-semibold shadow-sm hover:shadow-md transition-shadow">
               💰 {job.salary}
             </span>
           )}
-          <span className="inline-flex items-center gap-1 text-slate-700 bg-white/80 border border-white/60 rounded-full px-3 py-1">
+          <span className="inline-flex items-center gap-1.5 text-teal-700 bg-gradient-to-r from-teal-100 to-cyan-100 border-2 border-teal-300 rounded-full px-4 py-1.5 font-semibold shadow-sm hover:shadow-md transition-shadow">
             📊 Experience: {job.experience}
           </span>
         </div>
@@ -147,7 +187,10 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
           <Button 
             size="sm" 
             onClick={() => onViewDetails(job.id)}
-            className="inline-flex min-w-[140px] items-center justify-center gap-2 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+            className="inline-flex min-w-[140px] items-center justify-center gap-2 text-white shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 hover:from-yellow-600 hover:via-orange-600 hover:to-pink-600"
+            style={{
+              background: 'linear-gradient(to right, #eab308, #f97316, #ec4899)'
+            }}
           >
             View Details
             <ArrowUpRight className="w-4 h-4" />

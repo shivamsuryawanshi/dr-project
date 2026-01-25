@@ -378,7 +378,7 @@ public class SubscriptionController {
             }
 
             SubscriptionPlan plan = planOpt.get();
-            BigDecimal amount = plan.getPrice();
+            BigDecimal amount = plan.getFinalPrice() != null ? plan.getFinalPrice() : plan.getPrice();
 
             // Create payment record
             Payment payment = new Payment(user.getId(), amount);
@@ -553,7 +553,24 @@ public class SubscriptionController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", plan.getId().toString());
         response.put("name", plan.getName());
-        response.put("price", plan.getPrice().doubleValue());
+        
+        // Price information with discount support
+        BigDecimal basePrice = plan.getBasePrice() != null ? plan.getBasePrice() : plan.getPrice();
+        BigDecimal finalPrice = plan.getFinalPrice() != null ? plan.getFinalPrice() : plan.getPrice();
+        
+        response.put("basePrice", basePrice.doubleValue());
+        response.put("price", finalPrice.doubleValue()); // Final price after discount
+        response.put("finalPrice", finalPrice.doubleValue());
+        
+        // Discount information
+        if (plan.getDiscountType() != null && plan.getDiscountValue() != null && plan.getDiscountValue().compareTo(BigDecimal.ZERO) > 0) {
+            response.put("discountType", plan.getDiscountType());
+            response.put("discountValue", plan.getDiscountValue().doubleValue());
+            response.put("hasDiscount", true);
+        } else {
+            response.put("hasDiscount", false);
+        }
+        
         response.put("duration", plan.getDuration());
         response.put("jobPostsAllowed", plan.getJobPostsAllowed());
         if (plan.getFeatures() != null) {

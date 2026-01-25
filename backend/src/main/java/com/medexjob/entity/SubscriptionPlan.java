@@ -31,6 +31,18 @@ public class SubscriptionPlan {
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "base_price", precision = 10, scale = 2)
+    private BigDecimal basePrice; // Original price before discount
+
+    @Column(name = "discount_type", length = 20)
+    private String discountType; // "PERCENTAGE" or "FIXED" or null
+
+    @Column(name = "discount_value", precision = 10, scale = 2)
+    private BigDecimal discountValue; // Discount amount (percentage or fixed)
+
+    @Column(name = "final_price", precision = 10, scale = 2)
+    private BigDecimal finalPrice; // Computed price after discount
+
     @NotBlank
     @Column(name = "duration", nullable = false, length = 50)
     private String duration; // "per post", "monthly", "yearly"
@@ -63,9 +75,24 @@ public class SubscriptionPlan {
     public SubscriptionPlan(String name, BigDecimal price, String duration, Integer jobPostsAllowed) {
         this.name = name;
         this.price = price;
+        this.basePrice = price; // Initialize base price same as price
+        this.finalPrice = price; // Initialize final price same as price
         this.duration = duration;
         this.jobPostsAllowed = jobPostsAllowed;
         this.isActive = true;
+    }
+
+    /**
+     * PostLoad callback to ensure basePrice is initialized for existing records
+     */
+    @PostLoad
+    private void initializeBasePrice() {
+        if (basePrice == null && price != null) {
+            basePrice = price;
+        }
+        if (finalPrice == null) {
+            calculateFinalPrice();
+        }
     }
 
     // Getters and Setters
@@ -91,6 +118,80 @@ public class SubscriptionPlan {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+        // If basePrice is not set, set it to price
+        if (this.basePrice == null) {
+            this.basePrice = price;
+        }
+        // Recalculate final price if discount exists
+        calculateFinalPrice();
+    }
+
+    public BigDecimal getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(BigDecimal basePrice) {
+        this.basePrice = basePrice;
+        calculateFinalPrice();
+    }
+
+    public String getDiscountType() {
+        return discountType;
+    }
+
+    public void setDiscountType(String discountType) {
+        this.discountType = discountType;
+        calculateFinalPrice();
+    }
+
+    public BigDecimal getDiscountValue() {
+        return discountValue;
+    }
+
+    public void setDiscountValue(BigDecimal discountValue) {
+        this.discountValue = discountValue;
+        calculateFinalPrice();
+    }
+
+    public BigDecimal getFinalPrice() {
+        return finalPrice != null ? finalPrice : price;
+    }
+
+    public void setFinalPrice(BigDecimal finalPrice) {
+        this.finalPrice = finalPrice;
+    }
+
+    /**
+     * Calculate final price based on base price and discount
+     */
+    public void calculateFinalPrice() {
+        if (basePrice == null) {
+            basePrice = price;
+        }
+        
+        if (discountType == null || discountValue == null || discountValue.compareTo(BigDecimal.ZERO) == 0) {
+            // No discount
+            this.finalPrice = basePrice;
+            this.price = basePrice;
+        } else {
+            BigDecimal discount = BigDecimal.ZERO;
+            if ("PERCENTAGE".equalsIgnoreCase(discountType)) {
+                // Percentage discount
+                discount = basePrice.multiply(discountValue).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+            } else if ("FIXED".equalsIgnoreCase(discountType)) {
+                // Fixed amount discount
+                discount = discountValue;
+            }
+            
+            // Calculate final price (base price - discount)
+            this.finalPrice = basePrice.subtract(discount);
+            // Ensure final price is not negative
+            if (this.finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                this.finalPrice = BigDecimal.ZERO;
+            }
+            // Update price to final price
+            this.price = this.finalPrice;
+        }
     }
 
     public String getDuration() {
