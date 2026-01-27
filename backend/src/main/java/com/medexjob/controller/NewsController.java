@@ -5,7 +5,10 @@ import com.medexjob.entity.NewsUpdate;
 import com.medexjob.repository.NewsUpdateRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.PostConstruct;
 import java.time.LocalDate;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/news")
 public class NewsController {
 
+    private static final Logger logger = LoggerFactory.getLogger(NewsController.class);
     private final NewsUpdateRepository newsUpdateRepository;
 
     public NewsController(NewsUpdateRepository newsUpdateRepository) {
@@ -53,8 +57,27 @@ public class NewsController {
         return ResponseEntity.ok(updates);
     }
 
+    // Get homepage news (only news marked to show on homepage)
+    @GetMapping("/homepage")
+    public ResponseEntity<List<Map<String, Object>>> getHomepageNews() {
+        List<NewsUpdate> updates = newsUpdateRepository.findByShowOnHomepageTrueOrderByDateDescCreatedAtDesc();
+        List<Map<String, Object>> response = updates.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    // Get single news by ID (for full story page)
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> getNewsById(@PathVariable("id") UUID id) {
+        return newsUpdateRepository.findById(id)
+                .map(news -> ResponseEntity.ok(toResponse(news)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     // Admin: Get all news updates
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getAllNews() {
         List<NewsUpdate> updates = newsUpdateRepository.findAll(Sort.by(Sort.Direction.DESC, "date", "createdAt"));
         List<Map<String, Object>> response = updates.stream()
@@ -65,18 +88,50 @@ public class NewsController {
 
     // Admin: Create News
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> create(@RequestBody NewsRequest req) {
-        NewsUpdate news = new NewsUpdate();
-        news.setTitle(req.title());
-        news.setType(parseNewsType(req.type()));
-        news.setDate(parseDate(req.date()));
-        news.setBreaking(Optional.ofNullable(req.breaking()).orElse(false));
-        NewsUpdate saved = newsUpdateRepository.save(news);
-        return ResponseEntity.ok(toResponse(saved));
+        try {
+            logger.info("Creating news with title: {}", req.title());
+            logger.debug("News request: title={}, type={}, date={}, breaking={}, showOnHomepage={}, fullStory length={}", 
+                req.title(), req.type(), req.date(), req.breaking(), req.showOnHomepage(), 
+                req.fullStory() != null ? req.fullStory().length() : 0);
+            
+            if (req.title() == null || req.title().trim().isEmpty()) {
+                logger.warn("News creation failed: Title is empty");
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Title is required");
+                error.put("message", "Title cannot be empty");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            NewsUpdate news = new NewsUpdate();
+            news.setTitle(req.title().trim());
+            news.setType(parseNewsType(req.type()));
+            news.setDate(parseDate(req.date()));
+            news.setBreaking(Optional.ofNullable(req.breaking()).orElse(false));
+            if (req.fullStory() != null && !req.fullStory().trim().isEmpty()) {
+                news.setFullStory(req.fullStory().trim());
+            } else {
+                news.setFullStory(null);
+            }
+            // Ensure showOnHomepage is always set (not null)
+            Boolean showOnHomepageValue = Optional.ofNullable(req.showOnHomepage()).orElse(false);
+            news.setShowOnHomepage(showOnHomepageValue);
+            NewsUpdate saved = newsUpdateRepository.save(news);
+            logger.info("News created successfully with ID: {}", saved.getId());
+            return ResponseEntity.ok(toResponse(saved));
+        } catch (Exception e) {
+            logger.error("Error creating news: {}", e.getMessage(), e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to create news");
+            error.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
     }
 
     // Admin: Update News
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> update(@PathVariable("id") UUID id, @RequestBody NewsRequest req) {
         return newsUpdateRepository.findById(id)
                 .map(existing -> {
@@ -84,6 +139,8 @@ public class NewsController {
                     if (req.type() != null) existing.setType(parseNewsType(req.type()));
                     if (req.date() != null) existing.setDate(parseDate(req.date()));
                     if (req.breaking() != null) existing.setBreaking(req.breaking());
+                    if (req.fullStory() != null) existing.setFullStory(req.fullStory());
+                    if (req.showOnHomepage() != null) existing.setShowOnHomepage(req.showOnHomepage());
                     NewsUpdate saved = newsUpdateRepository.save(existing);
                     return ResponseEntity.ok(toResponse(saved));
                 })
@@ -92,6 +149,7 @@ public class NewsController {
 
     // Admin: Delete News
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
         if (!newsUpdateRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -129,6 +187,10 @@ public class NewsController {
         map.put("type", news.getType().name());
         map.put("date", news.getDate().toString());
         map.put("breaking", news.isBreaking());
+        if (news.getFullStory() != null) {
+            map.put("fullStory", news.getFullStory());
+        }
+        map.put("showOnHomepage", news.isShowOnHomepage());
         if (news.getCreatedAt() != null) {
             map.put("createdAt", news.getCreatedAt().toString());
         }
@@ -139,6 +201,8 @@ public class NewsController {
             String title,
             String type,
             String date,
-            Boolean breaking
+            Boolean breaking,
+            String fullStory,
+            Boolean showOnHomepage
     ) {}
 }

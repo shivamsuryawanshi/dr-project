@@ -34,7 +34,7 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
     };
 
     fetchUnreadCount();
-    
+
     // Refresh count every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
@@ -46,15 +46,15 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
   };
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white">
-      <div className="container mx-auto px-3 sm:px-4">
-        <div className="flex h-14 sm:h-16 items-center justify-between gap-2">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-0">
+        <div className="flex h-auto sm:h-16 items-center justify-between gap-2">
           {/* Logo - MEDEXJOB Wordmark */}
-          <div 
+          <div
             className="flex items-center cursor-pointer flex-shrink-0 px-2 sm:px-3 hover:opacity-95 transition-opacity"
             onClick={() => onNavigate('home')}
             aria-label="MedExJob Home"
           >
-            <h1 
+            <h1
               className="text-[20px] sm:text-[24px] md:text-[28px] lg:text-[32px] font-bold leading-none tracking-tight"
               style={{
                 fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -70,49 +70,43 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
           <nav className="hidden md:flex items-center gap-4 lg:gap-6 flex-wrap">
             <button
               onClick={() => onNavigate('home')}
-              className={`text-sm font-medium transition-colors whitespace-nowrap ${
-                currentPage === 'home' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'home' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
             >
               Home
             </button>
             <button
               onClick={() => onNavigate('jobs')}
-              className={`text-sm font-medium transition-colors whitespace-nowrap ${
-                currentPage === 'jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
             >
               All Jobs
             </button>
             <button
               onClick={() => onNavigate('govt-jobs')}
-              className={`text-sm font-medium transition-colors whitespace-nowrap ${
-                currentPage === 'govt-jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'govt-jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
             >
               Government Jobs
             </button>
             <button
               onClick={() => onNavigate('private-jobs')}
-              className={`text-sm font-medium transition-colors whitespace-nowrap ${
-                currentPage === 'private-jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'private-jobs' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
             >
               Private Jobs
             </button>
             <button
               onClick={() => onNavigate('news')}
-              className={`text-sm font-medium transition-colors whitespace-nowrap ${
-                currentPage === 'news' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'news' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
             >
               News
             </button>
             <button
               onClick={() => onNavigate('about')}
-              className={`text-sm font-medium transition-colors whitespace-nowrap ${
-                currentPage === 'about' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'about' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
             >
               About
             </button>
@@ -123,9 +117,9 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="relative hover:bg-blue-50/80 transition-all duration-200 h-9 w-9 sm:h-10 sm:w-10"
                   onClick={() => onNavigate('notifications')}
                   title="Notifications"
@@ -166,16 +160,16 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
               </>
             ) : (
               <>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => onNavigate('login')}
                   className="h-9 sm:h-9 px-3 sm:px-4 text-sm"
                   aria-label="Login"
                 >
                   Login
                 </Button>
-                <Button 
-                  onClick={() => onNavigate('register')} 
+                <Button
+                  onClick={() => onNavigate('register')}
                   className="bg-blue-600 hover:bg-blue-700 h-9 sm:h-9 px-3 sm:px-4 text-sm"
                   aria-label="Register"
                 >

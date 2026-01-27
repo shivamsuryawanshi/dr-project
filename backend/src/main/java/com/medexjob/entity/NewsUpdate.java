@@ -42,11 +42,18 @@ public class NewsUpdate {
     @Column(name = "is_breaking", nullable = false)
     private boolean breaking = false;
 
+    @Column(name = "full_story", columnDefinition = "TEXT")
+    private String fullStory;
+
+    @Column(name = "show_on_homepage", nullable = false, columnDefinition = "BOOLEAN DEFAULT 0")
+    private Boolean showOnHomepage = false;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public NewsUpdate() {
+        this.showOnHomepage = false; // Ensure default value
     }
 
     public NewsUpdate(String title, NewsType type, LocalDate date, boolean breaking) {
@@ -54,6 +61,7 @@ public class NewsUpdate {
         this.type = type;
         this.date = date;
         this.breaking = breaking;
+        this.showOnHomepage = false; // Ensure default value
     }
 
     public UUID getId() {
@@ -94,6 +102,22 @@ public class NewsUpdate {
 
     public void setBreaking(boolean breaking) {
         this.breaking = breaking;
+    }
+
+    public String getFullStory() {
+        return fullStory;
+    }
+
+    public void setFullStory(String fullStory) {
+        this.fullStory = fullStory;
+    }
+
+    public Boolean isShowOnHomepage() {
+        return showOnHomepage;
+    }
+
+    public void setShowOnHomepage(Boolean showOnHomepage) {
+        this.showOnHomepage = showOnHomepage != null ? showOnHomepage : false;
     }
 
     public LocalDateTime getCreatedAt() {

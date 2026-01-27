@@ -31,6 +31,7 @@ import { NotificationCenter } from './components/NotificationCenter';
 import { SubscriptionPage } from './components/SubscriptionPage';
 import { EmployerVerification } from './components/EmployerVerification';
 import { NewsPage } from './components/NewsPage';
+import { NewsDetailPage } from './components/NewsDetailPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { AdminPricingManagement } from './components/AdminPricingManagement';
 
@@ -93,6 +94,7 @@ function AppContent() {
           <Route path="/govt-jobs" element={<JobListingPage onNavigate={handleNavigate} sector="government" />} />
           <Route path="/private-jobs" element={<JobListingPage onNavigate={handleNavigate} sector="private" />} />
           <Route path="/news" element={<NewsPage onNavigate={handleNavigate} />} />
+          <Route path="/news/:newsId" element={<NewsDetailPage onNavigate={handleNavigate} />} />
           <Route path="/job-detail/:jobId" element={<JobDetailPage onNavigate={handleNavigate} />} />
           <Route path="/about" element={<AboutPage onNavigate={handleNavigate} />} />
           <Route path="/faq" element={<FAQPage onNavigate={handleNavigate} />} />

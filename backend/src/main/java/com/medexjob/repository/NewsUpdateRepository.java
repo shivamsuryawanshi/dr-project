@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface NewsUpdateRepository extends JpaRepository<NewsUpdate, UUID> {
     List<NewsUpdate> findTop10ByOrderByDateDescCreatedAtDesc();
+    List<NewsUpdate> findByShowOnHomepageTrueOrderByDateDescCreatedAtDesc();
 }

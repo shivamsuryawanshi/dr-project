@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Search, Calendar, Newspaper, Filter, RefreshCw, Landmark, Briefcase, GraduationCap, Timer, Sparkles } from 'lucide-react';
+import { Search, Calendar, Newspaper, Filter, RefreshCw, Landmark, Briefcase, GraduationCap, Timer, Sparkles, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface NewsPageProps {
@@ -264,6 +264,7 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
                     key={update.id}
                     className={`relative overflow-hidden p-5 md:p-6 ${colors.bg} ${colors.hoverBg} ${colors.border} hover:shadow-2xl ${colors.hover} ${colors.glow} hover:-translate-y-1 transition-all duration-300 cursor-pointer group rounded-2xl ring-1 ${colors.ring} max-w-5xl mx-auto`}
                     style={{ animationDelay: `${index * 0.05}s` }}
+                    onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
                   >
                     <div className="absolute inset-0 pointer-events-none opacity-60">
                       <div className="absolute -right-10 -top-16 w-40 h-40 bg-white/50 blur-3xl" />
@@ -296,15 +297,38 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
                       </div>
                     </div>
 
-                    <div className="relative mt-2">
-                      <div className="space-y-2 min-w-0">
-                        <h3 className="text-lg font-semibold text-slate-900 group-hover:text-slate-950 transition-colors line-clamp-2">
+                    <div className="relative mt-4">
+                      <div className="space-y-3 min-w-0">
+                        <h3 
+                          className="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-slate-950 transition-colors leading-tight"
+                          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                        >
                           {update.title}
                         </h3>
-                        <p className="text-sm text-slate-600 line-clamp-2">Latest bulletin for medical professionals.</p>
-                        <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                          <span className="inline-flex items-center gap-1 bg-white/70 px-2.5 py-1 rounded-full border border-white/60">Category: {label}</span>
-                          <span className="inline-flex items-center gap-1 bg-white/70 px-2.5 py-1 rounded-full border border-white/60">Status: Active</span>
+                        <p className="text-sm md:text-base text-slate-600 leading-relaxed line-clamp-3">
+                          Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
+                        </p>
+                        
+                        {/* CTA Footer */}
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-200/50">
+                          <span className="text-xs text-gray-500 font-medium">
+                            {update.fullStory ? 'Tap to read full story' : 'View on news page'}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            className={`h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all ${meta.accent}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (update.fullStory) {
+                                onNavigate(`news/${update.id}`);
+                              } else {
+                                onNavigate('news');
+                              }
+                            }}
+                          >
+                            {update.fullStory ? 'View Full Story' : 'View Story'}
+                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
                         </div>
                       </div>
                     </div>

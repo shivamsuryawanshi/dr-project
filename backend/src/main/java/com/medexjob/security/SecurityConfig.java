@@ -79,6 +79,9 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/jobs/employer/**").authenticated() // Employer jobs require auth
                                 .requestMatchers(HttpMethod.GET, "/api/jobs/**").permitAll() // Public job listings
                                 .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/news").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/news/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/news/**").hasRole("ADMIN")
                                 // Job posting requires authentication (controller validates subscription)
                                 .requestMatchers(HttpMethod.POST, "/api/jobs").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/jobs/**").hasRole("ADMIN")

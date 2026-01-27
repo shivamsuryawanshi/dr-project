@@ -6,6 +6,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { fetchAllNews, createNews, updateNews, deleteNews, PulseUpdate, NewsPayload, PulseType } from '../api/news';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +27,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
     type: 'UPDATE',
     date: new Date().toISOString().split('T')[0],
     breaking: false,
+    fullStory: '',
+    showOnHomepage: false,
   });
 
   const loadNews = async () => {
@@ -52,6 +55,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
       type: 'UPDATE',
       date: new Date().toISOString().split('T')[0],
       breaking: false,
+      fullStory: '',
+      showOnHomepage: false,
     });
     setEditingNews(null);
     setShowForm(true);
@@ -64,6 +69,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
       type: newsItem.type,
       date: newsItem.date,
       breaking: newsItem.breaking || false,
+      fullStory: newsItem.fullStory || '',
+      showOnHomepage: newsItem.showOnHomepage || false,
     });
     setShowForm(true);
   };
@@ -98,8 +105,22 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
       setEditingNews(null);
       loadNews();
     } catch (e: any) {
-      alert(`Error saving news: ${e.message}`);
+      let errorMessage = 'Failed to save news. Please try again.';
+      if (e.response?.data) {
+        if (e.response.data.error) {
+          errorMessage = e.response.data.error;
+        } else if (e.response.data.message) {
+          errorMessage = e.response.data.message;
+        } else if (e.response.data.errors) {
+          const errors = e.response.data.errors;
+          errorMessage = typeof errors === 'object' ? Object.values(errors)[0] as string : String(errors);
+        }
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      alert(`Error saving news: ${errorMessage}`);
       console.error('Error saving news:', e);
+      console.error('Error response:', e.response?.data);
     }
   };
 
@@ -111,6 +132,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
       type: 'UPDATE',
       date: new Date().toISOString().split('T')[0],
       breaking: false,
+      fullStory: '',
+      showOnHomepage: false,
     });
   };
 
@@ -225,17 +248,47 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="breaking"
-                  checked={formData.breaking}
-                  onChange={(e) => setFormData({ ...formData, breaking: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
+              <div>
+                <Label htmlFor="fullStory">Full Story Content</Label>
+                <Textarea
+                  id="fullStory"
+                  value={formData.fullStory || ''}
+                  onChange={(e) => setFormData({ ...formData, fullStory: e.target.value })}
+                  placeholder="Enter the full story content (HTML supported)"
+                  className="mt-1 min-h-[200px]"
+                  rows={10}
                 />
-                <Label htmlFor="breaking" className="cursor-pointer">
-                  Mark as Breaking News
-                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  You can use HTML tags for formatting. This content will be displayed on the full story page.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="breaking"
+                    checked={formData.breaking}
+                    onChange={(e) => setFormData({ ...formData, breaking: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <Label htmlFor="breaking" className="cursor-pointer">
+                    Mark as Breaking News
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="showOnHomepage"
+                    checked={formData.showOnHomepage}
+                    onChange={(e) => setFormData({ ...formData, showOnHomepage: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <Label htmlFor="showOnHomepage" className="cursor-pointer">
+                    Show on Homepage
+                  </Label>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

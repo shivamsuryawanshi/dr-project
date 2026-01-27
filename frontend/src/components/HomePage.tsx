@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { JobCard } from './JobCard';
 // AI assisted development
 import { fetchJobs, fetchJobsMeta } from '../api/jobs';
-import { fetchPulseUpdates, PulseUpdate } from '../api/news';
+import { fetchHomepageNews, PulseUpdate } from '../api/news';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { JobCategoryButtons } from './JobCategoryButtons';
 
 interface HomePageProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -78,7 +77,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [privateJobs, setPrivateJobs] = useState<any[]>([]);
   const [newsUpdates, setNewsUpdates] = useState<PulseUpdate[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
-  // Category buttons now provided by JobCategoryButtons component
 
   useEffect(() => {
     // Load featured, latest, government, private jobs and news
@@ -90,7 +88,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
           fetchJobs({ sector: 'government', size: 10, status: 'active' }).then(r => r.content ?? []), // Fetch more to ensure we get 3 after filtering
           fetchJobs({ sector: 'private', size: 10, status: 'active' }).then(r => r.content ?? []), // Fetch more to ensure we get 3 after filtering
           fetchJobsMeta(),
-          fetchPulseUpdates(),
+          fetchHomepageNews(),
         ]);
 
         // Combine featured and latest jobs, removing duplicates, limit to 6
@@ -163,17 +161,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
     window.location.href = url;
   };
 
-  const handleCategoryClick = (category: string) => {
-    // Map category label to backend category format
-    let categoryParam = category;
-    if (category === 'Nursing') {
-      categoryParam = 'Paramedical / Nursing';
-    }
-    // Navigate to jobs page with category filter
-    const url = `/jobs?category=${encodeURIComponent(categoryParam)}`;
-    window.location.href = url;
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Better Visible Background */}
@@ -243,11 +230,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   Search Jobs
                 </Button>
               </div>
-            </div>
-
-            {/* Category Buttons */}
-            <div className="mt-6 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-              <JobCategoryButtons onCategoryClick={handleCategoryClick} />
             </div>
           </div>
         </div>
@@ -549,7 +531,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                               borderColor: colors.border,
                               boxShadow: `0 4px 6px -1px ${colors.border}20, 0 2px 4px -2px ${colors.border}20`
                             }}
-                            onClick={() => onNavigate('news')}
+                            onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
                           >
                             {/* Breaking News Ribbon */}
                             <div className="absolute top-0 right-0 z-20">
@@ -622,13 +604,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
                                 {/* CTA Footer */}
                                 <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
-                                  <span className="text-xs text-gray-500 font-medium">Tap to read full story</span>
+                                  <span className="text-xs text-gray-500 font-medium">
+                                    {update.fullStory ? 'Tap to read full story' : 'View on news page'}
+                                  </span>
                                   <Button 
                                     variant="ghost" 
                                     className="h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all"
                                     style={{ color: colors.iconColor }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (update.fullStory) {
+                                        onNavigate(`news/${update.id}`);
+                                      } else {
+                                        onNavigate('news');
+                                      }
+                                    }}
                                   >
-                                    View Story
+                                    {update.fullStory ? 'View Full Story' : 'View Story'}
                                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                   </Button>
                                 </div>
@@ -655,6 +647,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                               <Card
                                 key={update.id}
                                 className="relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-2xl"
+                                onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
                                 style={{
                                   background: colors.bg,
                                   borderColor: colors.border,
@@ -714,13 +707,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
                                     {/* CTA Footer */}
                                     <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
-                                      <span className="text-xs text-gray-500 font-medium">Tap to read full story</span>
+                                      <span className="text-xs text-gray-500 font-medium">
+                                        {update.fullStory ? 'Tap to read full story' : 'View on news page'}
+                                      </span>
                                       <Button 
                                         variant="ghost" 
                                         className="h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all"
                                         style={{ color: colors.iconColor }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (update.fullStory) {
+                                            onNavigate(`news/${update.id}`);
+                                          } else {
+                                            onNavigate('news');
+                                          }
+                                        }}
                                       >
-                                        View Story
+                                        {update.fullStory ? 'View Full Story' : 'View Story'}
                                         <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                       </Button>
                                     </div>
