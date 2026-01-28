@@ -51,6 +51,20 @@ public class FileUploadService {
     @Value("${file.use-ftp:true}")
     private boolean useFtp;
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        logger.info("==============================================");
+        logger.info("FileUploadService Configuration:");
+        logger.info("  FTP Enabled: {}", useFtp);
+        logger.info("  FTP Host: {}", ftpHost);
+        logger.info("  FTP Port: {}", ftpPort);
+        logger.info("  FTP Username: {}", ftpUsername);
+        logger.info("  FTP Remote Dir: {}", ftpRemoteDir);
+        logger.info("  Base URL: {}", baseUrl);
+        logger.info("  Local Upload Dir: {}", localUploadDir);
+        logger.info("==============================================");
+    }
+
     // Allowed file types
     private static final List<String> ALLOWED_TYPES = Arrays.asList(
         "application/pdf",

@@ -105,12 +105,12 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <h1 className="text-3xl text-gray-900 mb-2">Admin Dashboard</h1>
             <p className="text-gray-600">Welcome, Administrator! Manage your MedExJob.com platform here.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-2">
             {/* Notifications Badge */}
             <Button 
               variant="outline" 
               onClick={() => onNavigate('notifications')}
-              className="relative hover:border-blue-300 transition-all duration-200"
+              className="relative hover:border-blue-300 transition-all duration-200 w-full justify-center"
             >
               <Bell className="w-5 h-5 mr-2 text-blue-600 stroke-[2] fill-none" />
               Notifications
@@ -120,7 +120,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 </span>
               )}
             </Button>
-            <Button variant="outline" onClick={() => onNavigate('home')}>
+            <Button variant="outline" onClick={() => onNavigate('home')} className="w-full justify-center">
               Back to Home
             </Button>
           </div>
