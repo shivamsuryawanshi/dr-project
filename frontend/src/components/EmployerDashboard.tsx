@@ -444,6 +444,17 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           </Card>
         </div>
 
+        {/* Manage Applications Button */}
+        <div className="mb-8">
+          <Button 
+            className="bg-gray-900 hover:bg-gray-800 text-white"
+            onClick={() => onNavigate('employer-manage-applications')}
+          >
+            <Briefcase className="w-4 h-4 mr-2" />
+            Go to Manage Applications
+          </Button>
+        </div>
+
         {/* Manage Applications Card */}
         <Card className="p-6 mb-8 border-2 border-purple-200 hover:border-purple-300 transition-colors cursor-pointer" onClick={() => onNavigate('employer-manage-applications')}>
           <div className="flex items-center gap-4">
@@ -454,29 +465,28 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
               <h3 className="text-xl font-bold text-gray-900 mb-1">Manage Applications</h3>
               <p className="text-gray-600">Review and manage job applications from candidates.</p>
             </div>
-            <Button className="bg-gray-900 hover:bg-gray-800 text-white">
-              Go to Manage Applications
-            </Button>
           </div>
         </Card>
 
         {/* Main Content */}
         <Tabs defaultValue="subscription" className="w-full">
-          <TabsList>
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
-            <TabsTrigger value="jobs">My Jobs</TabsTrigger>
-            <TabsTrigger value="applications">Applications</TabsTrigger>
-            <TabsTrigger value="notifications">
-              Notifications
-              {notifications.filter((n: any) => !n.read).length > 0 && (
-                <Badge className="ml-2 bg-red-500 text-white">
-                  {notifications.filter((n: any) => !n.read).length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="analytics" onClick={() => onNavigate('analytics')}>Analytics</TabsTrigger>
-            <TabsTrigger value="verification">Verification</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-max min-w-full sm:w-auto">
+              <TabsTrigger value="subscription" className="whitespace-nowrap">Subscription</TabsTrigger>
+              <TabsTrigger value="jobs" className="whitespace-nowrap">My Jobs</TabsTrigger>
+              <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
+              <TabsTrigger value="notifications" className="whitespace-nowrap">
+                Notifications
+                {notifications.filter((n: any) => !n.read).length > 0 && (
+                  <Badge className="ml-2 bg-red-500 text-white">
+                    {notifications.filter((n: any) => !n.read).length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap" onClick={() => onNavigate('analytics')}>Analytics</TabsTrigger>
+              <TabsTrigger value="verification" className="whitespace-nowrap">Verification</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="jobs" className="mt-6">
             <Card>

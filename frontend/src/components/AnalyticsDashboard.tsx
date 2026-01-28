@@ -189,11 +189,13 @@ export function AnalyticsDashboard({ userRole, userId }: AnalyticsDashboardProps
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="jobs">Jobs Performance</TabsTrigger>
-            <TabsTrigger value="users">Users & Engagement</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-max min-w-full sm:w-auto">
+              <TabsTrigger value="overview" className="whitespace-nowrap text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="jobs" className="whitespace-nowrap text-xs sm:text-sm">Jobs Performance</TabsTrigger>
+              <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm">Users & Engagement</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="mt-6">
             <div className="grid lg:grid-cols-2 gap-6">
@@ -259,27 +261,28 @@ export function AnalyticsDashboard({ userRole, userId }: AnalyticsDashboardProps
               <h3 className="text-lg text-gray-900 mb-6">Top Performing Jobs</h3>
               <div className="space-y-4">
                 {topPerformingJobs.map((job, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
+                  <div key={index} className="relative p-4 bg-gray-50 rounded-lg">
+                    {/* Rank Badge - Top Right Corner */}
+                    <Badge className="absolute top-2 right-2 bg-green-100 text-green-700 border-green-200 text-xs px-2 py-0.5">
+                      #{index + 1}
+                    </Badge>
+                    <div className="pr-12">
                       <h4 className="text-gray-900 font-medium">{job.title}</h4>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-1">
                         <span className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           {job.views} views
                         </span>
                         <span className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
+                          <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           {job.applications} applications
                         </span>
                         <span className="flex items-center gap-1">
-                          <MousePointer className="w-4 h-4" />
+                          <MousePointer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           {job.conversion}% conversion
                         </span>
                       </div>
                     </div>
-                    <Badge className="bg-green-100 text-green-700 border-green-200">
-                      #{index + 1}
-                    </Badge>
                   </div>
                 ))}
               </div>
