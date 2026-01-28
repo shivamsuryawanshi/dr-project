@@ -1,0 +1,63 @@
+# ============================================
+# MedExJob.com - Uploads Directory Configuration
+# Location: public_html/uploads/.htaccess
+# ============================================
+
+# Enable CORS for resume downloads from any origin
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+    Header set Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization"
+    Header set Access-Control-Max-Age "86400"
+</IfModule>
+
+# Handle OPTIONS preflight requests
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>
+
+# Force download for resume/document files
+<FilesMatch "\.(pdf|doc|docx)$">
+    <IfModule mod_headers.c>
+        Header set Content-Disposition "attachment"
+        Header set X-Content-Type-Options "nosniff"
+    </IfModule>
+</FilesMatch>
+
+# Set correct MIME types
+<IfModule mod_mime.c>
+    AddType application/pdf .pdf
+    AddType application/msword .doc
+    AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+</IfModule>
+
+# Prevent directory listing (security)
+Options -Indexes
+
+# Deny access to hidden files (like .htaccess itself)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Allow only specific file types for security
+<FilesMatch "\.(?!(pdf|doc|docx|png|jpg|jpeg|gif|webp)$)[^.]*$">
+    Require all denied
+</FilesMatch>
+
+# Prevent script execution in uploads folder (security)
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|aspx|cgi|sh|exe|bat|cmd)$">
+    Require all denied
+</FilesMatch>
+
+# Cache control for static files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType application/pdf "access plus 1 week"
+</IfModule>
+
