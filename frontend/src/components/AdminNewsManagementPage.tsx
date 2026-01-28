@@ -333,11 +333,12 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
                       {item.createdAt && ` • Created: ${formatDate(item.createdAt)}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex flex-col items-end gap-2 ml-4">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(item)}
+                      className="w-full justify-center"
                     >
                       <Edit className="w-4 h-4 mr-2" />
                       Edit
@@ -346,7 +347,7 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(item.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 w-full justify-center"
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       Delete

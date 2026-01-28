@@ -1,6 +1,6 @@
 // AI assisted development
 import { useState, useEffect } from 'react';
-import { DollarSign, Edit, Save, X, Percent, Tag, ToggleLeft, ToggleRight, AlertCircle, CheckCircle, Loader2, Trash2, Eye, EyeOff } from 'lucide-react';
+import { DollarSign, Edit, Save, X, Percent, Tag, ToggleLeft, ToggleRight, AlertCircle, CheckCircle, Loader2, Trash2, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -313,34 +313,42 @@ export function AdminPricingManagement({ onNavigate }: AdminPricingManagementPro
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
                 Pricing Management
               </h1>
-              <p className="text-gray-600 mt-2">Manage subscription plan pricing, discounts, and availability</p>
+              <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Manage subscription plan pricing, discounts, and availability</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button 
                 onClick={() => onNavigate('subscription')} 
                 variant="outline" 
-                className="flex items-center gap-2"
+                size="sm"
+                className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                 title="View plans as employers see them"
               >
-                <Eye className="w-4 h-4" />
-                View Employer Page
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline sm:inline">View Employer Page</span>
+                <span className="xs:hidden sm:hidden">View</span>
               </Button>
-              <Button onClick={loadPlans} variant="outline" className="flex items-center gap-2" disabled={loading}>
+              <Button 
+                onClick={loadPlans} 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2" 
+                disabled={loading}
+              >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading...
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                    <span className="hidden sm:inline">Loading...</span>
                   </>
                 ) : (
                   <>
-                    <Eye className="w-4 h-4" />
-                    Refresh
+                    <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline sm:inline">Refresh</span>
                   </>
                 )}
               </Button>

@@ -289,15 +289,15 @@ export function AdminJobManagementPage({ onNavigate }: AdminJobManagementPagePro
               <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex gap-2">
-            <Button onClick={handleCreateNewJob} className="bg-blue-600 hover:bg-blue-700">
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleCreateNewJob} className="bg-blue-600 hover:bg-blue-700 w-full justify-center">
               <Plus className="w-4 h-4 mr-2" />
               Create New Job
             </Button>
             <Button 
               onClick={handleQuickAddSampleJob} 
               variant="outline" 
-              className="border-green-600 text-green-600 hover:bg-green-50"
+              className="border-green-600 text-green-600 hover:bg-green-50 w-full justify-center"
               disabled={loading}
             >
               <Plus className="w-4 h-4 mr-2" />

@@ -548,9 +548,6 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               <Plus className="w-4 h-4 mr-2" />
               Add Admin
             </Button>
-            <Button variant="outline" onClick={() => onNavigate('dashboard')}>
-              Back to Dashboard
-            </Button>
           </div>
         </div>
 
