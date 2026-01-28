@@ -12,6 +12,7 @@ import com.medexjob.repository.UserRepository;
 import com.medexjob.repository.NotificationRepository;
 import com.medexjob.repository.EmployerRepository;
 import com.medexjob.repository.ResumeRepository;
+import com.medexjob.service.FileUploadService;
 import com.medexjob.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,9 +48,10 @@ public class ApplicationController {
     private final NotificationService notificationService;
     private final EmployerRepository employerRepository;
     private final ResumeRepository resumeRepository;
+    private final FileUploadService fileUploadService;
     private final Path uploadPath = Paths.get("uploads");
 
-    public ApplicationController(ApplicationRepository applicationRepository, JobRepository jobRepository, UserRepository userRepository, NotificationRepository notificationRepository, NotificationService notificationService, EmployerRepository employerRepository, ResumeRepository resumeRepository) {
+    public ApplicationController(ApplicationRepository applicationRepository, JobRepository jobRepository, UserRepository userRepository, NotificationRepository notificationRepository, NotificationService notificationService, EmployerRepository employerRepository, ResumeRepository resumeRepository, FileUploadService fileUploadService) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
         this.userRepository = userRepository;
@@ -57,6 +59,7 @@ public class ApplicationController {
         this.notificationService = notificationService;
         this.employerRepository = employerRepository;
         this.resumeRepository = resumeRepository;
+        this.fileUploadService = fileUploadService;
         try {
             Files.createDirectories(uploadPath);
         } catch (IOException e) {
@@ -146,12 +149,21 @@ public class ApplicationController {
                             application.setCandidateId(candidateIdSet);
                         }
 
-                        // Handle resume upload
+                        // Handle resume upload - use FileUploadService for FTP/local storage
                         if (resume != null && !resume.isEmpty()) {
-                            String fileName = UUID.randomUUID() + "_" + resume.getOriginalFilename();
-                            Path filePath = uploadPath.resolve(fileName);
-                            Files.copy(resume.getInputStream(), filePath);
-                            application.setResumeUrl("/uploads/" + fileName);
+                            try {
+                                String fileUrl = fileUploadService.uploadFile(resume);
+                                application.setResumeUrl(fileUrl);
+                                logger.info("Resume uploaded successfully: {}", fileUrl);
+                            } catch (IOException e) {
+                                logger.error("Failed to upload resume: {}", e.getMessage());
+                                // Fallback to local storage if FTP fails
+                                String fileName = UUID.randomUUID() + "_" + resume.getOriginalFilename();
+                                Path filePath = uploadPath.resolve(fileName);
+                                Files.copy(resume.getInputStream(), filePath);
+                                application.setResumeUrl("/uploads/" + fileName);
+                                logger.warn("Resume saved to local storage as fallback: /uploads/{}", fileName);
+                            }
                         }
 
                         Application saved = applicationRepository.save(application);
