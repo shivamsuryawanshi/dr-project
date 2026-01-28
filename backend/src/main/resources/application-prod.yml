@@ -57,18 +57,18 @@ razorpay:
 
 # File Upload Configuration
 file:
-  upload-dir: ${FILE_UPLOAD_DIR:/app/uploads}
+  upload-dir: /app/uploads
   max-size: 10485760
-  base-url: ${FILE_BASE_URL:https://medexjob.com}
-  use-ftp: ${FILE_USE_FTP:true} # Enable FTP in production (files saved to FTP server)
+  base-url: https://medexjob.com
+  use-ftp: true  # FTP ENABLED - files upload to Hostinger
 
-# FTP Configuration for Hostinger
+# FTP Configuration for Hostinger (HARDCODED for reliability)
 ftp:
-  host: ${FTP_HOST:82.180.143.101}
-  port: ${FTP_PORT:21}
-  username: ${FTP_USERNAME:u284488379}
-  password: ${FTP_PASSWORD:Shivam@3650}
-  remote-dir: ${FTP_REMOTE_DIR:public_html/uploads}
+  host: 82.180.143.101
+  port: 21
+  username: u284488379
+  password: Shivam@3650
+  remote-dir: public_html/uploads
 
 # CORS Configuration
 cors:
