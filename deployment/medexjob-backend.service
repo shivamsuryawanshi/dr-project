@@ -22,7 +22,7 @@ Environment="FTP_HOST=82.180.143.101"
 Environment="FTP_PORT=21"
 Environment="FTP_USERNAME=u284488379"
 Environment="FTP_PASSWORD=Shivam@3650"
-Environment="FTP_REMOTE_DIR=public_html/uploads"
+Environment="FTP_REMOTE_DIR=uploads"
 # Uncomment and set these if needed:
 # Environment="JWT_SECRET=your_secret_here"
 # Environment="DB_PASSWORD=your_db_password"

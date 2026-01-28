@@ -57,7 +57,7 @@ services:
       FTP_PORT: "21"
       FTP_USERNAME: u284488379
       FTP_PASSWORD: Shivam@3650
-      FTP_REMOTE_DIR: public_html/uploads
+      FTP_REMOTE_DIR: uploads
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://medexjob.com,http://medexjob.com,https://www.medexjob.com,http://www.medexjob.com}
     ports:
       - "${BACKEND_PORT:-8081}:8081"
