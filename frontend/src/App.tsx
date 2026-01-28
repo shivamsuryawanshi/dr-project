@@ -34,6 +34,7 @@ import { NewsPage } from './components/NewsPage';
 import { NewsDetailPage } from './components/NewsDetailPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { AdminPricingManagement } from './components/AdminPricingManagement';
+import { Toaster } from './components/ui/sonner';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -45,7 +46,15 @@ function AppContent() {
     setCurrentPage(location.pathname.substring(1) || 'home');
   }, [location]);
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname]);
+
   const handleNavigate = (page: string, entityId?: string) => {
+    // Scroll to top before navigation
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    
     if (page === 'logout') {
       logout();
       navigate('/login');
@@ -212,8 +221,26 @@ function AppContent() {
               <Route path="/profile" element={<ProfilePage onNavigate={handleNavigate} />} />
               <Route path="/admin-users" element={<AdminUsersPage onNavigate={handleNavigate} />} />
               <Route path="/admin-employer-verification" element={<EmployerVerificationPage onNavigate={handleNavigate} />} />
-              <Route path="/admin-applications" element={<AdminApplications onNavigate={handleNavigate} userRole="admin" />} />
-              <Route path="/employer-manage-applications" element={<AdminApplications onNavigate={handleNavigate} userRole="employer" />} />
+              <Route 
+                path="/admin-applications" 
+                element={
+                  isAuthenticated && user && user.role === 'admin' ? (
+                    <AdminApplications onNavigate={handleNavigate} userRole="admin" />
+                  ) : (
+                    <AuthPage mode="login" onNavigate={handleNavigate} />
+                  )
+                } 
+              />
+              <Route 
+                path="/employer-manage-applications" 
+                element={
+                  isAuthenticated && user && (user.role === 'employer' || user.role === 'admin') ? (
+                    <AdminApplications onNavigate={handleNavigate} userRole="employer" />
+                  ) : (
+                    <AuthPage mode="login" onNavigate={handleNavigate} />
+                  )
+                } 
+              />
               <Route path="/analytics" element={<AnalyticsDashboard userRole={user.role} userId={user.id} />} />
             </>
           )}
@@ -228,6 +255,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppContent />
+      <Toaster position="top-right" richColors />
     </BrowserRouter>
   );
 }

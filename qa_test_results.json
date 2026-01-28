@@ -1,0 +1,138 @@
+﻿[
+    {
+        "Expected":  "200 OK with token",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401 The remote server returned an error: (401) Unauthorized.",
+        "Test":  "A1. Admin Login",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK with token",
+        "Details":  "",
+        "Role":  "EMPLOYER",
+        "Actual":  "401 The remote server returned an error: (401) Unauthorized.",
+        "Test":  "A2. Employer Login",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK with token",
+        "Details":  "",
+        "Role":  "CANDIDATE",
+        "Actual":  "401 The remote server returned an error: (401) Unauthorized.",
+        "Test":  "A3. Candidate Login",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "Job created with ID",
+        "Details":  "",
+        "Role":  "EMPLOYER",
+        "Actual":  "401 The remote server returned an error: (401) Unauthorized.",
+        "Test":  "SETUP. Create Test Job",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK with application ID",
+        "Details":  "",
+        "Role":  "CANDIDATE",
+        "Actual":  " A parameter cannot be found that matches parameter name \u0027Form\u0027.",
+        "Test":  "B1. Apply to Job",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK with applications list",
+        "Details":  "",
+        "Role":  "EMPLOYER",
+        "Actual":  "401 The remote server returned an error: (401) Unauthorized.",
+        "Test":  "C1. View Own Job Applications",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK with all applications",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401 The remote server returned an error: (401) Unauthorized.",
+        "Test":  "D1. View All Applications",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK with filtered results",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401",
+        "Test":  "F1. Filter by Status",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401",
+        "Test":  "F2. Filter by JobId",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401",
+        "Test":  "F3. Filter by CandidateId",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401",
+        "Test":  "F4. Search Applications",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK",
+        "Details":  "",
+        "Role":  "ADMIN",
+        "Actual":  "401",
+        "Test":  "F5. Sort by Newest",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK (own apps only)",
+        "Details":  "",
+        "Role":  "CANDIDATE",
+        "Actual":  "401",
+        "Test":  "G1. Candidate View Own",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "200 OK (own jobs only)",
+        "Details":  "",
+        "Role":  "EMPLOYER",
+        "Actual":  "401",
+        "Test":  "G2. Employer View Own Jobs",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "401 Unauthorized",
+        "Details":  "",
+        "Role":  "NONE",
+        "Actual":  "401",
+        "Test":  "G3. Unauthorized Access",
+        "Status":  "PASS"
+    },
+    {
+        "Expected":  "404 Not Found",
+        "Details":  "",
+        "Role":  "CANDIDATE",
+        "Actual":  "",
+        "Test":  "H1. Invalid JobId",
+        "Status":  "FAIL"
+    },
+    {
+        "Expected":  "400 Bad Request",
+        "Details":  "",
+        "Role":  "CANDIDATE",
+        "Actual":  "",
+        "Test":  "H3. Missing Required Fields",
+        "Status":  "PASS"
+    }
+]

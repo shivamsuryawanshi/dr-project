@@ -13,11 +13,20 @@ export interface ApplicationPayload {
 export interface ApplicationQuery {
   jobId?: string;
   candidateId?: string;
-  status?: 'applied' | 'shortlisted' | 'interview' | 'selected' | 'rejected';
+  status?: 'pending' | 'shortlisted' | 'interview' | 'hired' | 'rejected' | 'applied' | 'selected';
   search?: string;
+  startDate?: string;
+  endDate?: string;
   page?: number;
   size?: number;
   sort?: string;
+}
+
+export interface PostedByInfo {
+  userId: string | null;
+  name: string;
+  email?: string;
+  company: string;
 }
 
 export interface ApplicationResponse {
@@ -30,10 +39,11 @@ export interface ApplicationResponse {
   candidateEmail: string;
   candidatePhone: string;
   resumeUrl?: string;
-  status: 'applied' | 'shortlisted' | 'interview' | 'selected' | 'rejected';
+  status: 'pending' | 'shortlisted' | 'interview' | 'hired' | 'rejected' | 'applied' | 'selected';
   notes?: string;
   interviewDate?: string;
   appliedDate: string;
+  postedBy?: PostedByInfo; // Only included for candidate requests
 }
 
 export async function applyForJob(payload: ApplicationPayload): Promise<ApplicationResponse> {
@@ -64,8 +74,17 @@ export async function fetchApplications(params: ApplicationQuery = {}, token: st
   const qs = new URLSearchParams();
   if (params.jobId) qs.set('jobId', params.jobId);
   if (params.candidateId) qs.set('candidateId', params.candidateId);
-  if (params.status) qs.set('status', params.status);
+  if (params.status) {
+    // Map UI status to backend status
+    const statusMap: Record<string, string> = {
+      'pending': 'applied',
+      'hired': 'selected'
+    };
+    qs.set('status', statusMap[params.status] || params.status);
+  }
   if (params.search) qs.set('search', params.search);
+  if (params.startDate) qs.set('startDate', params.startDate);
+  if (params.endDate) qs.set('endDate', params.endDate);
   qs.set('page', String(params.page ?? 0));
   qs.set('size', String(params.size ?? 20));
   qs.set('sort', params.sort || 'appliedDate,desc');
@@ -77,12 +96,75 @@ export async function fetchApplications(params: ApplicationQuery = {}, token: st
       'Authorization': `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new Error(`Failed to fetch applications (${res.status})`);
+  if (!res.ok) {
+    const errorMessage = res.status === 401 
+      ? '401 Unauthorized - Authentication required' 
+      : `Failed to fetch applications (${res.status})`;
+    throw new Error(errorMessage);
+  }
+  return res.json();
+}
+
+export async function fetchApplicationsByEmployee(employeeId: string, params: ApplicationQuery = {}, token: string) {
+  const qs = new URLSearchParams();
+  if (params.status) {
+    const statusMap: Record<string, string> = {
+      'pending': 'applied',
+      'hired': 'selected'
+    };
+    qs.set('status', statusMap[params.status] || params.status);
+  }
+  if (params.search) qs.set('search', params.search);
+  if (params.startDate) qs.set('startDate', params.startDate);
+  if (params.endDate) qs.set('endDate', params.endDate);
+  qs.set('page', String(params.page ?? 0));
+  qs.set('size', String(params.size ?? 20));
+  qs.set('sort', params.sort || 'appliedDate,desc');
+
+  const res = await fetch(`${API_BASE}/applications/employee/${employeeId}?${qs.toString()}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch employee applications (${res.status})`);
+  return res.json();
+}
+
+export async function fetchApplicationsByCandidate(candidateId: string, params: ApplicationQuery = {}, token: string) {
+  const qs = new URLSearchParams();
+  if (params.status) {
+    const statusMap: Record<string, string> = {
+      'pending': 'applied',
+      'hired': 'selected'
+    };
+    qs.set('status', statusMap[params.status] || params.status);
+  }
+  qs.set('page', String(params.page ?? 0));
+  qs.set('size', String(params.size ?? 20));
+  qs.set('sort', params.sort || 'appliedDate,desc');
+
+  const res = await fetch(`${API_BASE}/applications/candidate/${candidateId}?${qs.toString()}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch candidate applications (${res.status})`);
   return res.json();
 }
 
 export async function updateApplicationStatus(id: string, status: string, token: string, notes?: string, interviewDate?: string | null) {
-  const payload: any = { status };
+  // Map UI status to backend status
+  const statusMap: Record<string, string> = {
+    'pending': 'applied',
+    'hired': 'selected'
+  };
+  const backendStatus = statusMap[status] || status;
+  
+  const payload: any = { status: backendStatus };
   if (notes) payload.notes = notes;
   if (interviewDate) payload.interviewDate = interviewDate;
 
@@ -95,6 +177,19 @@ export async function updateApplicationStatus(id: string, status: string, token:
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Failed to update application status (${res.status})`);
+  return res.json();
+}
+
+export async function updateApplicationNotes(id: string, notes: string, token: string) {
+  const res = await fetch(`${API_BASE}/applications/${id}/notes`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ notes }),
+  });
+  if (!res.ok) throw new Error(`Failed to update application notes (${res.status})`);
   return res.json();
 }
 

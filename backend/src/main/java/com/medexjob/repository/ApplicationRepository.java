@@ -68,4 +68,22 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     // Find application by job and email
     Optional<Application> findByJobIdAndCandidateEmail(UUID jobId, String candidateEmail);
+
+    // Find applications by date range
+    @Query("SELECT a FROM Application a WHERE a.appliedDate >= :startDate AND a.appliedDate <= :endDate")
+    Page<Application> findByAppliedDateBetween(@Param("startDate") java.time.LocalDateTime startDate, 
+                                               @Param("endDate") java.time.LocalDateTime endDate, 
+                                               Pageable pageable);
+
+    // Find applications by employer (through jobs)
+    @Query("SELECT DISTINCT a FROM Application a JOIN FETCH a.job j LEFT JOIN FETCH j.employer e WHERE e.user.id = :employerUserId")
+    List<Application> findByEmployerUserIdWithDetails(@Param("employerUserId") UUID employerUserId);
+
+    // Find applications by employer with date range
+    @Query("SELECT a FROM Application a JOIN a.job j JOIN j.employer e WHERE e.user.id = :employerUserId " +
+           "AND a.appliedDate >= :startDate AND a.appliedDate <= :endDate")
+    Page<Application> findByEmployerUserIdAndDateRange(@Param("employerUserId") UUID employerUserId,
+                                                         @Param("startDate") java.time.LocalDateTime startDate,
+                                                         @Param("endDate") java.time.LocalDateTime endDate,
+                                                         Pageable pageable);
 }

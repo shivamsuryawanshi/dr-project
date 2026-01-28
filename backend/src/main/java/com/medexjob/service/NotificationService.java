@@ -84,29 +84,36 @@ public class NotificationService {
             switch (status.toUpperCase()) {
                 case "SHORTLISTED":
                     message = String.format(
-                            "🎉 Congratulations! Your application for '%s' has been shortlisted.",
+                            "Your application for '%s' was updated to shortlisted.",
                             jobTitle);
                     break;
                 case "SELECTED":
+                case "HIRED":
                     message = String.format(
-                            "🎉 Congratulations! You have been selected for the job '%s'",
+                            "Your application for '%s' was updated to hired.",
                             jobTitle);
                     break;
                 case "REJECTED":
                     message = String.format(
-                            "Your application for '%s' has been reviewed. Unfortunately, we cannot proceed at this time.",
+                            "Your application for '%s' was updated to rejected.",
+                            jobTitle);
+                    break;
+                case "INTERVIEW":
+                    message = String.format(
+                            "Your application for '%s' was updated to interview.",
                             jobTitle);
                     break;
                 case "APPLIED":
+                case "PENDING":
                     message = String.format(
-                            "Your application for '%s' has been submitted successfully.",
+                            "Your application for '%s' was updated to pending.",
                             jobTitle);
                     break;
                 default:
                     message = String.format(
-                            "Your application status for '%s' has been updated to %s",
+                            "Your application for '%s' was updated to %s.",
                             jobTitle,
-                            status);
+                            status.toLowerCase());
             }
 
             String title = "Application Status Update";

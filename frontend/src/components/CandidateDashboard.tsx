@@ -1,10 +1,13 @@
 // AI assisted development
-import { Briefcase, BookmarkIcon, Bell, User, FileText, TrendingUp, ArrowLeft, Trash2, Heart } from 'lucide-react';
+import { Briefcase, BookmarkIcon, Bell, User, FileText, TrendingUp, ArrowLeft, Trash2, Heart, Search, Filter, Download, Building2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Progress } from './ui/progress';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -21,11 +24,18 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
   const { user, logout, token } = useAuth();
   const location = useLocation();
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
-  const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
+  const [applications, setApplications] = useState<ApplicationResponse[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<ApplicationResponse[]>([]);
   const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<any[]>([]);
   const profileCompleteness = 75;
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [postedByFilter, setPostedByFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('appliedDate,desc');
 
   const handleLogout = () => {
     logout();
@@ -42,72 +52,19 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
     try {
       console.log('📥 Loading dashboard data for user:', user.id);
       // Fetch user's applications - handle errors gracefully
-      let applications: ApplicationResponse[] = [];
+      let fetchedApplications: ApplicationResponse[] = [];
       try {
         console.log('📋 Fetching applications for candidate:', user.id);
         const applicationsData = await fetchApplications({ candidateId: user.id }, token);
-        applications = applicationsData?.content || [];
-        console.log('✅ Applications fetched:', applications.length, 'applications found');
+        fetchedApplications = applicationsData?.content || [];
+        console.log('✅ Applications fetched:', fetchedApplications.length, 'applications found');
       } catch (error: any) {
         console.error('❌ Error fetching applications:', error);
         // If 500 error or any error, just set empty array
-        applications = [];
+        fetchedApplications = [];
       }
       
-      // Map applications to jobs with status - only if we have applications
-      if (applications.length > 0) {
-        const appliedJobsWithDetails = await Promise.all(
-          applications.map(async (app: ApplicationResponse) => {
-            try {
-              // Try to fetch job details by ID
-              let job = null;
-              try {
-                job = await fetchJob(app.jobId);
-              } catch (error) {
-                console.error(`Error fetching job ${app.jobId}:`, error);
-                // If fetch fails, use fallback
-              }
-              
-              if (job) {
-                return {
-                  ...job,
-                  status: app.status === 'applied' ? 'under_review' : app.status,
-                  appliedDate: app.appliedDate,
-                  interviewDate: app.interviewDate,
-                };
-              }
-              
-              // Fallback if job not found
-              return {
-                id: app.jobId,
-                title: app.jobTitle,
-                organization: app.jobOrganization,
-                sector: 'private' as const,
-                status: app.status === 'applied' ? 'under_review' : app.status,
-                appliedDate: app.appliedDate,
-                interviewDate: app.interviewDate,
-              };
-            } catch (error) {
-              console.error('Error processing application:', error);
-              // Return minimal job data
-              return {
-                id: app.jobId,
-                title: app.jobTitle,
-                organization: app.jobOrganization,
-                sector: 'private' as const,
-                status: app.status === 'applied' ? 'under_review' : app.status,
-                appliedDate: app.appliedDate,
-                interviewDate: app.interviewDate,
-              };
-            }
-          })
-        );
-        
-        setAppliedJobs(appliedJobsWithDetails);
-      } else {
-        // No applications found
-        setAppliedJobs([]);
-      }
+      setApplications(fetchedApplications);
 
       // Fetch saved jobs from backend
       try {
@@ -152,7 +109,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       // Set empty arrays on error
-      setAppliedJobs([]);
+      setApplications([]);
       setSavedJobs([]);
       setRecommendedJobs([]);
       setNotifications([]);
@@ -160,6 +117,60 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
       setLoading(false);
     }
   }, [user, token]);
+
+  // Filter and sort applications
+  useEffect(() => {
+    let filtered = [...applications];
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(app => 
+        app.jobTitle.toLowerCase().includes(searchLower) ||
+        app.jobOrganization.toLowerCase().includes(searchLower) ||
+        (app.postedBy?.name && app.postedBy.name.toLowerCase().includes(searchLower)) ||
+        (app.postedBy?.company && app.postedBy.company.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(app => app.status === statusFilter);
+    }
+
+    // Apply postedBy filter
+    if (postedByFilter !== 'all') {
+      filtered = filtered.filter(app => {
+        if (!app.postedBy) return false;
+        if (postedByFilter === 'name') return app.postedBy.name && app.postedBy.name !== 'N/A';
+        if (postedByFilter === 'company') return app.postedBy.company && app.postedBy.company !== 'N/A';
+        return true;
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      const [sortField, sortDir] = sortBy.split(',');
+      const dir = sortDir === 'asc' ? 1 : -1;
+      
+      switch (sortField) {
+        case 'appliedDate':
+          return dir * (new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime());
+        case 'jobTitle':
+          return dir * a.jobTitle.localeCompare(b.jobTitle);
+        case 'status':
+          return dir * a.status.localeCompare(b.status);
+        case 'postedBy':
+          const aName = a.postedBy?.name || '';
+          const bName = b.postedBy?.name || '';
+          return dir * aName.localeCompare(bName);
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredApplications(filtered);
+  }, [applications, searchTerm, statusFilter, postedByFilter, sortBy]);
 
   useEffect(() => {
     console.log('🔄 Dashboard useEffect triggered - pathname:', location.pathname, 'user:', user?.id);
@@ -227,7 +238,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500 mb-1">Applied Jobs</p>
-                <p className="text-3xl text-gray-900">{appliedJobs.length}</p>
+                <p className="text-3xl text-gray-900">{applications.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <Briefcase className="w-6 h-6 text-blue-600" />
@@ -251,7 +262,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500 mb-1">Interviews</p>
-                <p className="text-3xl text-gray-900">{appliedJobs.filter(job => job.status === 'interview' || job.interviewDate).length}</p>
+                <p className="text-3xl text-gray-900">{applications.filter(app => app.status === 'interview' || app.interviewDate).length}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-purple-600" />
@@ -283,77 +294,147 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
               </TabsList>
 
               <TabsContent value="applied" className="space-y-4 mt-6">
+                {/* Filters and Search */}
+                <Card className="p-4">
+                  <div className="grid md:grid-cols-4 gap-4">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="search">Search</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          id="search"
+                          placeholder="Search by job title, company, or posted by..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="shortlisted">Shortlisted</SelectItem>
+                          <SelectItem value="interview">Interview</SelectItem>
+                          <SelectItem value="hired">Hired</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="sort">Sort By</Label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="appliedDate,desc">Newest First</SelectItem>
+                          <SelectItem value="appliedDate,asc">Oldest First</SelectItem>
+                          <SelectItem value="jobTitle,asc">Job Title (A-Z)</SelectItem>
+                          <SelectItem value="jobTitle,desc">Job Title (Z-A)</SelectItem>
+                          <SelectItem value="status,asc">Status</SelectItem>
+                          <SelectItem value="postedBy,asc">Posted By (A-Z)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </Card>
+
                 {loading ? (
                   <div className="text-center py-8 text-gray-500">Loading applications...</div>
-                ) : appliedJobs.length === 0 ? (
+                ) : filteredApplications.length === 0 ? (
                   <div className="text-center py-8">
                     <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">You haven't applied for any jobs yet.</p>
-                    <Button className="mt-4" onClick={() => onNavigate('jobs')}>
-                      Browse Jobs
-                    </Button>
+                    <p className="text-gray-600">
+                      {applications.length === 0 
+                        ? "You haven't applied for any jobs yet."
+                        : "No applications match your filters."}
+                    </p>
+                    {applications.length === 0 && (
+                      <Button className="mt-4" onClick={() => onNavigate('jobs')}>
+                        Browse Jobs
+                      </Button>
+                    )}
                   </div>
                 ) : (
-                  appliedJobs.map((job) => (
-                  <Card key={job.id} className="p-6">
+                  filteredApplications.map((app) => (
+                  <Card key={app.id} className="p-6">
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span 
-                              className={`${
-                                job.sector === 'government' 
-                                  ? '!bg-gradient-to-r !from-blue-500 !to-blue-600 !text-white' 
-                                  : '!bg-gradient-to-r !from-emerald-500 !to-emerald-600 !text-white'
-                              } !border-0 shadow-md px-3 py-1 text-xs font-semibold rounded-md inline-flex`}
-                              style={{
-                                background: job.sector === 'government' 
-                                  ? 'linear-gradient(to right, rgb(59 130 246), rgb(37 99 235))' 
-                                  : 'linear-gradient(to right, rgb(16 185 129), rgb(5 150 105))',
-                                color: 'white'
-                              }}
-                            >
-                              {job.sector === 'government' ? 'Government' : 'Private'}
-                            </span>
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <Badge 
                               className={
-                                job.status === 'shortlisted' ? 'bg-green-100 text-green-700 border-green-200' :
-                                job.status === 'interview' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                app.status === 'shortlisted' ? 'bg-green-100 text-green-700 border-green-200' :
+                                app.status === 'interview' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                app.status === 'hired' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                app.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
                                 'bg-gray-100 text-gray-700 border-gray-200'
                               }
                               variant="outline"
                             >
-                              {job.status === 'under_review' ? 'Under Review' :
-                               job.status === 'shortlisted' ? 'Shortlisted' :
-                               job.status === 'interview' ? 'Interview Scheduled' : job.status}
+                              {app.status === 'pending' ? 'Under Review' :
+                               app.status === 'shortlisted' ? 'Shortlisted' :
+                               app.status === 'interview' ? 'Interview Scheduled' :
+                               app.status === 'hired' ? 'Hired' :
+                               app.status === 'rejected' ? 'Rejected' : app.status}
                             </Badge>
                           </div>
                           <h3 
-                            className="text-lg text-gray-900 mb-1 cursor-pointer hover:text-blue-600"
-                            onClick={() => onNavigate('job-detail', job.id)}
+                            className="text-lg font-semibold text-gray-900 mb-1 cursor-pointer hover:text-blue-600"
+                            onClick={() => onNavigate('job-detail', app.jobId)}
                           >
-                            {job.title}
+                            {app.jobTitle}
                           </h3>
-                          <p className="text-sm text-gray-600">{job.organization}</p>
+                          <p className="text-sm text-gray-600 mb-2">{app.jobOrganization}</p>
+                          
+                          {/* Posted By Information */}
+                          {app.postedBy && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                              <Building2 className="w-4 h-4" />
+                              <span className="font-medium">Posted by:</span>
+                              <span>{app.postedBy.name !== 'N/A' ? app.postedBy.name : 'Unknown'}</span>
+                              {app.postedBy.company && app.postedBy.company !== 'N/A' && (
+                                <span className="text-gray-500">• {app.postedBy.company}</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="text-sm text-gray-600">
-                        <p>Applied on: {new Date(job.appliedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                        {job.interviewDate && (
-                          <p className="text-purple-600 mt-1">
-                            Interview scheduled: {new Date(job.interviewDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>Applied on: {new Date(app.appliedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        {app.interviewDate && (
+                          <p className="text-purple-600">
+                            Interview scheduled: {new Date(app.interviewDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                           </p>
                         )}
                       </div>
 
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => onNavigate('job-detail', job.id)}>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={() => onNavigate('job-detail', app.jobId)}>
                           View Job
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleTrackStatus(job.id)}>
-                          Track Status
-                        </Button>
+                        {app.resumeUrl && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const resumeUrl = app.resumeUrl?.startsWith('http') 
+                                ? app.resumeUrl 
+                                : `${window.location.origin}${app.resumeUrl}`;
+                              window.open(resumeUrl, '_blank');
+                            }}
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download Resume
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </Card>

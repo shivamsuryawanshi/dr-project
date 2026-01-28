@@ -176,6 +176,12 @@ public class Application {
 
     // Enum for Application Status
     public enum ApplicationStatus {
-        APPLIED, SHORTLISTED, INTERVIEW, SELECTED, REJECTED
+        APPLIED,      // Maps to "pending" in UI
+        SHORTLISTED,  // Maps to "shortlisted" in UI
+        INTERVIEW,    // Interview scheduled
+        SELECTED,     // Maps to "hired" in UI
+        REJECTED      // Maps to "rejected" in UI
+        
+        // Note: APPLIED = pending, SELECTED = hired for UI consistency
     }
 }

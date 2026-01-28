@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, TrendingUp, Shield, Users, ChevronRight, MapPin, Briefcase as BriefcaseIcon, Building2, UserCheck, Calendar, Landmark, GraduationCap, AlarmClock, Sparkles, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,6 +10,14 @@ import { JobCard } from './JobCard';
 import { fetchJobs, fetchJobsMeta } from '../api/jobs';
 import { fetchHomepageNews, PulseUpdate } from '../api/news';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { 
+  normalizeSearchQuery, 
+  buildSearchUrl, 
+  saveSearchHistory, 
+  trackSearch, 
+  validateSearchQuery,
+  useDebounce 
+} from '../utils/searchUtils';
 
 interface HomePageProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -147,30 +155,44 @@ export function HomePage({ onNavigate }: HomePageProps) {
     })();
   }, []);
 
-  const handleSearch = () => {
-    // Enhanced search - works even with 1-2 words
-    // Trim and normalize the search query
-    const normalizedQuery = searchQuery.trim();
-    
-    // Build URL with search query and location
-    const params = new URLSearchParams();
-    
-    // Even if user types just 1-2 words, search will work
-    // Backend handles partial matches, word-by-word matching, and searches across:
-    // title, description, qualification, speciality, requirements, benefits, company name
-    if (normalizedQuery) {
-      params.set('search', normalizedQuery);
-    }
-    if (selectedLocation) {
-      params.set('location', selectedLocation);
+  // Optimized search handler with validation, history, and analytics
+  const handleSearch = useCallback(() => {
+    // Validate search query
+    const validation = validateSearchQuery(searchQuery);
+    if (!validation.valid) {
+      // You can show a toast/alert here if needed
+      console.warn('Search validation failed:', validation.error);
+      return;
     }
     
-    const queryString = params.toString();
-    const url = queryString ? `/jobs?${queryString}` : '/jobs';
+    // Normalize and optimize the search query
+    const normalizedQuery = normalizeSearchQuery(searchQuery);
     
-    // Redirect to jobs page with search results
-    window.location.href = url;
-  };
+    // Save to search history
+    saveSearchHistory(normalizedQuery, selectedLocation);
+    
+    // Build optimized search URL
+    const url = buildSearchUrl(normalizedQuery, selectedLocation);
+    
+    // Track search analytics (before navigation)
+    trackSearch(normalizedQuery, selectedLocation, 0);
+    
+    // Navigate to jobs page with search results
+    // Use onNavigate for better SPA navigation instead of window.location
+    if (normalizedQuery || selectedLocation) {
+      onNavigate(url.replace('/jobs', 'jobs'));
+    } else {
+      onNavigate('jobs');
+    }
+  }, [searchQuery, selectedLocation, onNavigate]);
+  
+  // Handle Enter key press with debouncing
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  }, [handleSearch]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -205,40 +227,123 @@ export function HomePage({ onNavigate }: HomePageProps) {
               India's Premier Job Portal for Doctors, Nurses & Paramedical Professionals
             </p>
 
-            {/* Enhanced Search Bar */}
-            <div className="bg-white rounded-full p-2 md:p-3 shadow-2xl animate-fade-in-up hover:shadow-3xl transition-shadow duration-300" style={{ animationDelay: '0.4s' }}>
-              <div className="flex flex-col md:flex-row gap-3 items-center">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            {/* Enhanced Search Bar - Refined */}
+            <div 
+              className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up max-w-6xl mx-auto px-4 sm:px-6"
+              style={{ 
+                animationDelay: '0.4s',
+                borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
+                padding: 'clamp(0.75rem, 1.5vw, 1.25rem)'
+              }}
+            >
+              {/* Mobile: Stack | Tablet: Grid 2-col | Desktop: Grid 3-col with equal widths */}
+              <div 
+                className="flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-3 items-stretch"
+                style={{ gap: 'clamp(0.125rem, 0.3vw, 0.375rem)' }}
+              >
+                {/* Keyword Search Input */}
+                <div 
+                  className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
+                  style={{
+                    gap: 'clamp(0.5rem, 1vw, 0.75rem)',
+                    paddingLeft: 'clamp(0.75rem, 1.5vw, 1rem)',
+                    paddingRight: 'clamp(0.75rem, 1.5vw, 1rem)',
+                    paddingTop: 'clamp(0.625rem, 1vw, 0.875rem)',
+                    paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
+                    borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
+                    minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
+                    height: 'clamp(2.75rem, 3vw, 3.25rem)'
+                  }}
+                >
+                  <Search 
+                    className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
+                    style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
+                    aria-hidden="true"
+                  />
                   <Input
+                    id="job-search-keyword"
+                    type="text"
                     placeholder="Job title or company"
-                    className="pl-10 border-0 focus-visible:ring-0 text-gray-900 h-12 rounded-full"
+                    className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full placeholder:text-gray-500 dark:placeholder:text-gray-400 min-w-0"
+                    style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    onKeyPress={handleKeyPress}
+                    aria-label="Search jobs by title or company name"
+                    aria-describedby="job-search-keyword-description"
                   />
                 </div>
-                <div className="flex-1 relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+                <span id="job-search-keyword-description" className="sr-only">Enter job title or company name to search for available positions</span>
+
+                {/* Location Dropdown */}
+                <div 
+                  className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
+                  style={{
+                    gap: 'clamp(0.5rem, 1vw, 0.75rem)',
+                    paddingLeft: 'clamp(0.75rem, 1.5vw, 1rem)',
+                    paddingRight: 'clamp(0.75rem, 1.5vw, 1rem)',
+                    paddingTop: 'clamp(0.625rem, 1vw, 0.875rem)',
+                    paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
+                    borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
+                    minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
+                    height: 'clamp(2.75rem, 3vw, 3.25rem)',
+                    marginTop: 'clamp(-0.5rem, -0.8vw, -1rem)',
+                    marginBottom: 'clamp(0.5rem, 0.8vw, 1rem)'
+                  }}
+                >
+                  <MapPin 
+                    className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
+                    style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
+                    aria-hidden="true"
+                  />
                   <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                    <SelectTrigger className="pl-10 border-0 focus:ring-0 text-gray-900 h-12 rounded-full">
-                      <SelectValue placeholder="Select Location" />
+                    <SelectTrigger 
+                      id="job-search-location"
+                      className="flex-1 border-0 focus:ring-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full min-w-0 pl-0"
+                      style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                      aria-label="Select job location"
+                    >
+                      <SelectValue placeholder="Select Location" className="placeholder:text-gray-500 dark:placeholder:text-gray-400" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[20rem]">
                       {locations.map((location) => (
-                        <SelectItem key={location} value={location}>
+                        <SelectItem 
+                          key={location} 
+                          value={location}
+                          style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                        >
                           {location}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Search Button */}
                 <Button 
-                  className="bg-blue-600 hover:bg-blue-700 px-8 h-12 rounded-full transform hover:scale-105 transition-transform"
+                  id="job-search-submit"
+                  type="button"
+                  className="w-full md:col-span-2 lg:col-span-1 lg:min-w-[240px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 shadow-sm hover:shadow-md flex items-center justify-center"
+                  style={{
+                    gap: 'clamp(0.5rem, 1vw, 0.75rem)',
+                    paddingLeft: 'clamp(1rem, 2vw, 2rem)',
+                    paddingRight: 'clamp(1rem, 2vw, 2rem)',
+                    paddingTop: 'clamp(0.625rem, 1vw, 0.875rem)',
+                    paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
+                    borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
+                    minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
+                    height: 'clamp(2.75rem, 3vw, 3.25rem)',
+                    fontSize: 'clamp(0.85rem, 1vw, 1rem)'
+                  }}
                   onClick={handleSearch}
+                  aria-label="Search for jobs"
                 >
-                  <Search className="w-4 h-4 mr-2" />
-                  Search Jobs
+                  <Search 
+                    className="flex-shrink-0" 
+                    style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
+                    aria-hidden="true" 
+                  />
+                  <span>Search Jobs</span>
                 </Button>
               </div>
             </div>

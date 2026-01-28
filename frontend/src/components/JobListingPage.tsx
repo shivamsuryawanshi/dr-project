@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from './ui/input';
@@ -6,6 +6,13 @@ import { Button } from './ui/button';
 import { JobCard } from './JobCard';
 import { FilterSidebar, FilterOptions } from './FilterSidebar';
 import { fetchJobs, fetchJobsMeta } from '../api/jobs';
+import { 
+  normalizeSearchQuery, 
+  buildSearchUrl, 
+  saveSearchHistory, 
+  trackSearch, 
+  validateSearchQuery 
+} from '../utils/searchUtils';
 
 interface JobListingPageProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -140,29 +147,53 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
     })();
   }, [searchQuery, filters, sector, location.search]);
 
-  const handleSearch = () => {
-    // Build URL with search query
-    const params = new URLSearchParams(location.search);
+  // Optimized search handler with validation, history, and analytics
+  const handleSearch = useCallback(() => {
+    // Validate search query
+    const validation = validateSearchQuery(searchQuery);
+    if (!validation.valid) {
+      console.warn('Search validation failed:', validation.error);
+      // Continue with search for flexibility
+    }
     
-    // Update or remove search parameter
-    if (searchQuery.trim()) {
-      params.set('search', searchQuery.trim());
+    // Normalize and optimize the search query
+    const normalizedQuery = normalizeSearchQuery(searchQuery);
+    const locationParam = filters.locations.length > 0 ? filters.locations[0] : '';
+    
+    // Save to search history
+    saveSearchHistory(normalizedQuery, locationParam);
+    
+    // Build URL params
+    const params = new URLSearchParams();
+    
+    // Add search query if present
+    if (normalizedQuery) {
+      params.set('search', normalizedQuery);
     } else {
       params.delete('search');
     }
     
-    // Preserve other filters
-    if (filters.locations[0]) {
-      params.set('location', filters.locations[0]);
-    }
-    if (filters.categories[0]) {
-      params.set('category', filters.categories[0]);
+    // Add location if present
+    if (locationParam) {
+      params.set('location', locationParam);
+    } else {
+      params.delete('location');
     }
     
+    // Add category if present
+    if (filters.categories.length > 0) {
+      params.set('category', filters.categories[0]);
+    } else {
+      params.delete('category');
+    }
+    
+    // Track search analytics
+    trackSearch(normalizedQuery, locationParam, 0);
+    
     // Navigate to updated URL - this will trigger the useEffect to fetch jobs
-    const newSearch = params.toString();
-    navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
-  };
+    const queryString = params.toString();
+    navigate(`${location.pathname}${queryString ? `?${queryString}` : ''}`, { replace: true });
+  }, [searchQuery, filters, location.pathname, navigate]);
 
   const title = sector === 'government' ? 'Government Jobs' : sector === 'private' ? 'Private Jobs' : 'All Jobs';
   const countLabel = total > 0 ? `Showing ${total} job${total !== 1 ? 's' : ''}` : `Showing ${jobs.length} job${jobs.length !== 1 ? 's' : ''}`;
