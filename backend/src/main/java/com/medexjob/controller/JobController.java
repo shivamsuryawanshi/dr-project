@@ -9,6 +9,7 @@ import com.medexjob.repository.JobRepository;
 import com.medexjob.repository.EmployerRepository;
 import com.medexjob.repository.SubscriptionRepository;
 import com.medexjob.service.NotificationService;
+import com.medexjob.service.JobSearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -36,13 +37,15 @@ public class JobController {
     private final UserRepository userRepository; // Inject UserRepository
     private final SubscriptionRepository subscriptionRepository;
     private final NotificationService notificationService;
+    private final JobSearchService jobSearchService;
 
-    public JobController(JobRepository jobRepository, EmployerRepository employerRepository, UserRepository userRepository, SubscriptionRepository subscriptionRepository, NotificationService notificationService) {
+    public JobController(JobRepository jobRepository, EmployerRepository employerRepository, UserRepository userRepository, SubscriptionRepository subscriptionRepository, NotificationService notificationService, JobSearchService jobSearchService) {
         this.jobRepository = jobRepository;
         this.employerRepository = employerRepository;
         this.userRepository = userRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.notificationService = notificationService;
+        this.jobSearchService = jobSearchService;
     }
 
     @GetMapping
@@ -84,17 +87,10 @@ public class JobController {
         if (Boolean.TRUE.equals(featured)) {
             result = jobRepository.findByIsFeaturedTrueAndStatus(statusFilter != null ? statusFilter : Job.JobStatus.ACTIVE, pageable);
         } else if (search != null && !search.isBlank()) {
-            // If both search and location are provided, use combined search method
-            if (location != null && !location.isBlank()) {
-                // Use searchJobsWithLocation when both search and location are provided
-                // This ensures location filtering is mandatory
-                // Trim and normalize location to ensure proper matching
-                String normalizedLocation = location.trim();
-                result = jobRepository.searchJobsWithLocation(search.trim(), normalizedLocation, statusFilter, pageable);
-            } else {
-                // Use searchJobs when only search is provided (no location filter)
-                result = jobRepository.searchJobs(search.trim(), statusFilter, pageable);
-            }
+            // Use enhanced search service for powerful Google/YouTube-like search
+            // Searches across: title, description, qualification, speciality, requirements, benefits, and company name
+            // Handles word-by-word matching and relevance scoring
+            result = jobSearchService.searchJobsAdvanced(search.trim(), location != null ? location.trim() : null, statusFilter, pageable);
         } else if (sector != null || category != null || location != null || expLevel != null || speciality != null || duty != null) {
             Job.JobSector s = (sector != null && !sector.isBlank()) ? parseSector(sector) : null;
             Job.JobCategory c = (category != null && !category.isBlank()) ? mapCategoryFromLabel(category) : null;

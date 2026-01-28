@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -14,6 +14,7 @@ interface JobListingPageProps {
 
 export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
@@ -26,7 +27,7 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
   const [metaLocations, setMetaLocations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Read search query, location, and category from URL params on mount
+  // Read search query, location, and category from URL params on mount and when URL changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const searchParam = params.get('search');
@@ -35,13 +36,22 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
     
     if (searchParam) {
       setSearchQuery(searchParam);
+    } else {
+      setSearchQuery(''); // Clear if not in URL
     }
+    
     if (locationParam) {
       setFilters(prev => ({
         ...prev,
         locations: [locationParam]
       }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        locations: []
+      }));
     }
+    
     if (categoryParam) {
       setFilters(prev => ({
         ...prev,
@@ -63,18 +73,26 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
 
   useEffect(() => {
     // fetch jobs on filters/search change
+    // Also read URL params directly to ensure we use latest values
     (async () => {
       setLoading(true);
       try {
+        // Read URL params directly to ensure we have latest values
+        const urlParams = new URLSearchParams(location.search);
+        const urlSearch = urlParams.get('search');
+        const urlLocation = urlParams.get('location');
+        
+        // Use URL params if available, otherwise use state
         const params: any = {
-          search: searchQuery || undefined,
+          search: urlSearch || searchQuery || undefined,
           sector: sector || undefined,
           category: filters.categories[0] || undefined,
-          location: filters.locations[0] || undefined,
+          location: urlLocation || filters.locations[0] || undefined,
           featured: filters.featured || undefined,
           status: 'active',
           size: 50,
         };
+        
         // Remove undefined values to avoid passing them to API
         Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
         
@@ -87,7 +105,7 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
 
         // Don't retry without status filter if location filter is applied
         // This ensures location filtering is not bypassed
-        if (content.length === 0 && !params.location) {
+        if (content.length === 0 && !params.location && !params.search) {
           const { status, ...fallbackParams } = params;
           res = await fetchJobs(fallbackParams);
           content = res?.content || [];
@@ -112,14 +130,39 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
         
         setJobs(normalizedJobs);
         setTotal(total);
-      } catch {
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
         setJobs([]);
         setTotal(0);
       } finally {
         setLoading(false);
       }
     })();
-  }, [searchQuery, filters, sector]);
+  }, [searchQuery, filters, sector, location.search]);
+
+  const handleSearch = () => {
+    // Build URL with search query
+    const params = new URLSearchParams(location.search);
+    
+    // Update or remove search parameter
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    } else {
+      params.delete('search');
+    }
+    
+    // Preserve other filters
+    if (filters.locations[0]) {
+      params.set('location', filters.locations[0]);
+    }
+    if (filters.categories[0]) {
+      params.set('category', filters.categories[0]);
+    }
+    
+    // Navigate to updated URL - this will trigger the useEffect to fetch jobs
+    const newSearch = params.toString();
+    navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
+  };
 
   const title = sector === 'government' ? 'Government Jobs' : sector === 'private' ? 'Private Jobs' : 'All Jobs';
   const countLabel = total > 0 ? `Showing ${total} job${total !== 1 ? 's' : ''}` : `Showing ${jobs.length} job${jobs.length !== 1 ? 's' : ''}`;
@@ -135,13 +178,18 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
-                placeholder="Search by job title, organization, or location..."
+                placeholder="Search by job title, company name, or location..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
               />
             </div>
-            <Button>Search</Button>
+            <Button onClick={handleSearch}>Search</Button>
           </div>
         </div>
       </div>

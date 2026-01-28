@@ -29,16 +29,42 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
   }, [jobId, token, user]);
 
   const loadMyResume = async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
       const response = await getMyResume(jobId, token);
-      setResume(response.resume);
+      console.log('Resume response:', response);
+      if (response && response.resume) {
+        setResume(response.resume);
+      } else {
+        setResume(null);
+      }
     } catch (err: any) {
       console.error('Error loading resume:', err);
-      setError(err.message || 'Failed to load resume');
+      // If it's a 404 or the resume doesn't exist, that's okay - just set resume to null
+      if (err?.response?.status === 404 || err?.message?.includes('404')) {
+        setResume(null);
+        setError(null); // Don't show error if resume just doesn't exist
+      } else if (err?.response?.status === 500 || err?.message?.includes('500')) {
+        // For 500 errors, show a user-friendly message
+        const errorMsg = err?.response?.data?.error || 'Unable to load resume. Please try again later.';
+        setError(errorMsg);
+        setResume(null);
+      } else if (err?.response?.status === 401 || err?.response?.status === 403) {
+        // Authentication/authorization errors
+        setError('Please login to view your resume');
+        setResume(null);
+      } else {
+        // Other errors
+        const errorMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Failed to load resume';
+        setError(errorMsg);
+        setResume(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -87,7 +113,32 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
       }
     } catch (err: any) {
       console.error('Error uploading resume:', err);
-      setError(err.message || 'Failed to upload resume');
+      
+      // Handle different types of errors with specific messages
+      if (err?.response) {
+        const status = err.response.status;
+        const errorData = err.response.data;
+        
+        if (status === 400) {
+          setError(errorData?.error || 'Invalid file. Please check file size (max 10MB) and format (PDF, DOC, DOCX).');
+        } else if (status === 401) {
+          setError('Please login to upload resume');
+        } else if (status === 403) {
+          setError('Only candidates can upload resumes');
+        } else if (status === 404) {
+          setError('Job not found');
+        } else if (status === 413) {
+          setError('File too large. Maximum size is 10MB');
+        } else if (status === 500) {
+          setError(errorData?.error || 'Server error. Please try again later.');
+        } else {
+          setError(errorData?.error || errorData?.message || 'Failed to upload resume. Please try again.');
+        }
+      } else if (err?.request) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(err?.message || 'Failed to upload resume. Please try again.');
+      }
     } finally {
       setUploading(false);
     }
@@ -107,7 +158,8 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
       setSuccess('Resume deleted successfully');
     } catch (err: any) {
       console.error('Error deleting resume:', err);
-      setError(err.message || 'Failed to delete resume');
+      const errorMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Failed to delete resume';
+      setError(errorMsg);
     }
   };
 

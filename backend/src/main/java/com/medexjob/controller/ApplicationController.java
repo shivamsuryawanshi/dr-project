@@ -10,6 +10,8 @@ import com.medexjob.repository.ApplicationRepository;
 import com.medexjob.repository.JobRepository;
 import com.medexjob.repository.UserRepository;
 import com.medexjob.repository.NotificationRepository;
+import com.medexjob.repository.EmployerRepository;
+import com.medexjob.repository.ResumeRepository;
 import com.medexjob.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,14 +45,18 @@ public class ApplicationController {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
+    private final EmployerRepository employerRepository;
+    private final ResumeRepository resumeRepository;
     private final Path uploadPath = Paths.get("uploads");
 
-    public ApplicationController(ApplicationRepository applicationRepository, JobRepository jobRepository, UserRepository userRepository, NotificationRepository notificationRepository, NotificationService notificationService) {
+    public ApplicationController(ApplicationRepository applicationRepository, JobRepository jobRepository, UserRepository userRepository, NotificationRepository notificationRepository, NotificationService notificationService, EmployerRepository employerRepository, ResumeRepository resumeRepository) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.notificationService = notificationService;
+        this.employerRepository = employerRepository;
+        this.resumeRepository = resumeRepository;
         try {
             Files.createDirectories(uploadPath);
         } catch (IOException e) {
@@ -252,6 +258,30 @@ public class ApplicationController {
                 logger.info("✅ Auto-setting candidateId to current user: {}", candidateId);
             }
         }
+        
+        // Security validation: Employers/Admins can only see applications for their own jobs
+        if (currentUser != null && jobId != null) {
+            if (currentUser.getRole() == User.UserRole.EMPLOYER) {
+                // Verify that the employer owns this job
+                Optional<Job> jobOpt = jobRepository.findById(jobId);
+                if (jobOpt.isPresent()) {
+                    Job job = jobOpt.get();
+                    Employer employer = job.getEmployer();
+                    if (employer == null || employer.getUser() == null || !employer.getUser().getId().equals(currentUser.getId())) {
+                        logger.warn("🚫 Unauthorized access attempt: Employer {} tried to access applications for job {} (owned by different employer)", 
+                            currentUser.getId(), jobId);
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("message", "You can only view applications for your own jobs");
+                        error.put("status", "error");
+                        return ResponseEntity.status(403).body(error);
+                    }
+                    logger.info("✅ Employer {} authorized to view applications for job {}", currentUser.getId(), jobId);
+                }
+            } else if (currentUser.getRole() == User.UserRole.ADMIN) {
+                // Admins can view all applications, no restriction needed
+                logger.info("✅ Admin {} viewing applications for job {}", currentUser.getId(), jobId);
+            }
+        }
 
         String[] sortParts = sort.split(",");
         Sort.Direction dir = (sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc")) ? Sort.Direction.ASC : Sort.Direction.DESC;
@@ -441,7 +471,25 @@ public class ApplicationController {
             m.put("candidateName", app.getCandidateName() != null ? app.getCandidateName() : "N/A");
             m.put("candidateEmail", app.getCandidateEmail() != null ? app.getCandidateEmail() : "N/A");
             m.put("candidatePhone", app.getCandidatePhone() != null ? app.getCandidatePhone() : "N/A");
-            m.put("resumeUrl", app.getResumeUrl());
+            
+            // Get resume URL - check both application resume and Resume entity
+            String resumeUrl = app.getResumeUrl();
+            // If no resume in application, check if candidate uploaded resume separately
+            if ((resumeUrl == null || resumeUrl.isEmpty()) && app.getCandidateId() != null && job != null) {
+                try {
+                    Optional<com.medexjob.entity.Resume> resumeOpt = resumeRepository.findFirstByJobIdAndCandidateIdOrderByUploadedAtDesc(
+                        job.getId(), app.getCandidateId());
+                    if (resumeOpt.isPresent()) {
+                        resumeUrl = resumeOpt.get().getFileUrl();
+                        logger.debug("Found resume from Resume entity for candidate {} and job {}", 
+                            app.getCandidateId(), job.getId());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error fetching resume from Resume entity: {}", e.getMessage());
+                }
+            }
+            m.put("resumeUrl", resumeUrl);
+            
             m.put("status", app.getStatus() != null ? app.getStatus().name().toLowerCase() : "applied");
             m.put("notes", app.getNotes());
             m.put("interviewDate", app.getInterviewDate() != null ? app.getInterviewDate().toString() : null);

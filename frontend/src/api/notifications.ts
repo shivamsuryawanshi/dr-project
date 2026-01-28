@@ -85,8 +85,18 @@ export async function getUnreadCount(token: string): Promise<number> {
   }
 
   const data = await res.json();
-  console.log('✅ Unread count:', data);
-  return data.unreadCount || 0;
+  console.log('✅ Unread count response:', data);
+  
+  // Ensure we return a number, not an object
+  const count = typeof data === 'object' && data !== null 
+    ? (data.unreadCount || 0) 
+    : (typeof data === 'number' ? data : 0);
+  
+  // Ensure it's a number
+  const numericCount = Number(count) || 0;
+  console.log('✅ Extracted unread count:', numericCount);
+  
+  return numericCount;
 }
 
 export async function markAsRead(notificationId: string, token: string): Promise<NotificationResponse> {

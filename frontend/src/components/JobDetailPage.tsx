@@ -123,29 +123,60 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
   // Check if user has already applied for this job
   useEffect(() => {
     const checkApplicationStatus = async () => {
-      if (jobId && isAuthenticated && token && user?.role === 'candidate' && user?.id) {
-        try {
-          const { fetchApplications } = await import('../api/applications');
-          const response = await fetchApplications({ 
-            jobId, 
-            candidateId: user.id,
-            page: 0,
-            size: 1
-          }, token);
+      // Always reset state first when jobId or user changes
+      setHasApplied(false);
+      
+      if (!jobId || !isAuthenticated || !token || user?.role !== 'candidate' || !user?.id) {
+        setHasApplied(false);
+        return;
+      }
+      
+      try {
+        const { fetchApplications } = await import('../api/applications');
+        // Fetch applications for this candidate (not filtering by jobId first to avoid backend issue)
+        // Then filter on frontend to find if any application matches this jobId
+        const response = await fetchApplications({ 
+          candidateId: user.id,
+          page: 0,
+          size: 100 // Get enough to check all user's applications
+        }, token);
+        
+        console.log('📋 Application check response for candidate:', response);
+        
+        // Check if any application in the response matches this jobId
+        let hasApplication = false;
+        if (response?.content && Array.isArray(response.content)) {
+          // Filter to find applications for this specific job
+          const applicationsForThisJob = response.content.filter((app: any) => {
+            const matches = app?.jobId === jobId;
+            console.log('🔍 Checking application:', {
+              appJobId: app?.jobId,
+              currentJobId: jobId,
+              matches
+            });
+            return matches;
+          });
           
-          const hasApplication = response?.content && response.content.length > 0;
-          setHasApplied(hasApplication);
-          console.log('📋 Application status checked:', hasApplication ? 'Already applied' : 'Not applied');
-        } catch (error) {
-          console.error('Error checking application status:', error);
-          setHasApplied(false);
+          hasApplication = applicationsForThisJob.length > 0;
+          console.log('📋 Found', applicationsForThisJob.length, 'application(s) for job', jobId);
         }
-      } else {
+        
+        setHasApplied(hasApplication);
+        console.log('📋 Final application status for job', jobId, ':', hasApplication ? 'Already applied' : 'Not applied');
+      } catch (error: any) {
+        console.error('Error checking application status:', error);
+        // For any error, assume not applied to be safe
         setHasApplied(false);
       }
     };
-    checkApplicationStatus();
-  }, [jobId, isAuthenticated, token, user]);
+    
+    // Add a small delay to ensure state is reset before checking
+    const timeoutId = setTimeout(() => {
+      checkApplicationStatus();
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [jobId, isAuthenticated, token, user?.id, user?.role]);
 
 
   if (loading) {

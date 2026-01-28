@@ -148,23 +148,34 @@ export function HomePage({ onNavigate }: HomePageProps) {
   }, []);
 
   const handleSearch = () => {
+    // Enhanced search - works even with 1-2 words
+    // Trim and normalize the search query
+    const normalizedQuery = searchQuery.trim();
+    
     // Build URL with search query and location
     const params = new URLSearchParams();
-    if (searchQuery.trim()) {
-      params.set('search', searchQuery.trim());
+    
+    // Even if user types just 1-2 words, search will work
+    // Backend handles partial matches, word-by-word matching, and searches across:
+    // title, description, qualification, speciality, requirements, benefits, company name
+    if (normalizedQuery) {
+      params.set('search', normalizedQuery);
     }
     if (selectedLocation) {
       params.set('location', selectedLocation);
     }
+    
     const queryString = params.toString();
     const url = queryString ? `/jobs?${queryString}` : '/jobs';
+    
+    // Redirect to jobs page with search results
     window.location.href = url;
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Better Visible Background */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-24 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-16 md:py-24 overflow-hidden">
         {/* Background Image with Better Visibility */}
         <div className="absolute inset-0">
           <ImageWithFallback
@@ -195,12 +206,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
             </p>
 
             {/* Enhanced Search Bar */}
-            <div className="bg-white rounded-full p-3 shadow-2xl animate-fade-in-up hover:shadow-3xl transition-shadow duration-300" style={{ animationDelay: '0.4s' }}>
+            <div className="bg-white rounded-full p-2 md:p-3 shadow-2xl animate-fade-in-up hover:shadow-3xl transition-shadow duration-300" style={{ animationDelay: '0.4s' }}>
               <div className="flex flex-col md:flex-row gap-3 items-center">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
-                    placeholder="Job title, keywords, or company"
+                    placeholder="Job title or company"
                     className="pl-10 border-0 focus-visible:ring-0 text-gray-900 h-12 rounded-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -423,80 +434,13 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
             </div>
 
-            {/* Premium Editorial News Grid - 1 Full Width Breaking + 2x2 Grid */}
+            {/* News Cards - Job Cards Style with Equal Space */}
             {newsUpdates.length > 0 ? (
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {(() => {
-                  // Separate breaking news and regular news
-                  const breakingNews = newsUpdates.filter(update => update.breaking).slice(0, 1); // Only first breaking news
-                  const regularNews = newsUpdates.filter(update => !update.breaking).slice(0, 4); // Only 4 regular news
+                  // Get all news (breaking + regular) - max 4 cards, all equal size
+                  const allNews = newsUpdates.slice(0, 4);
                   
-                  // Premium Editorial Color System - News-grade palettes
-                  const getCategoryColors = (type: string, isBreaking: boolean) => {
-                    if (isBreaking) {
-                      return {
-                        bg: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 50%, #fecaca 100%)',
-                        border: '#ef4444',
-                        accent: 'linear-gradient(90deg, #dc2626, #b91c1c)',
-                        badge: 'bg-red-600 text-white',
-                        badgeText: 'Breaking',
-                        iconColor: '#dc2626',
-                        hoverShadow: '0 25px 50px -12px rgba(220, 38, 38, 0.4)',
-                        ribbon: true
-                      };
-                    }
-                    
-                    const colorMap: Record<string, any> = {
-                      GOVT: {
-                        bg: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%)',
-                        border: '#1e40af',
-                        accent: 'linear-gradient(90deg, #1e3a8a, #1e40af)',
-                        badge: 'bg-blue-900 text-white',
-                        badgeText: 'Government',
-                        iconColor: '#1e40af',
-                        hoverShadow: '0 25px 50px -12px rgba(30, 64, 175, 0.3)'
-                      },
-                      EXAM: {
-                        bg: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%)',
-                        border: '#6b21a8',
-                        accent: 'linear-gradient(90deg, #7c3aed, #6b21a8)',
-                        badge: 'bg-purple-900 text-white',
-                        badgeText: 'Exam',
-                        iconColor: '#7c3aed',
-                        hoverShadow: '0 25px 50px -12px rgba(107, 33, 168, 0.3)'
-                      },
-                      PRIVATE: {
-                        bg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%)',
-                        border: '#059669',
-                        accent: 'linear-gradient(90deg, #10b981, #059669)',
-                        badge: 'bg-emerald-700 text-white',
-                        badgeText: 'Vacancies',
-                        iconColor: '#059669',
-                        hoverShadow: '0 25px 50px -12px rgba(5, 150, 105, 0.3)'
-                      },
-                      DEADLINE: {
-                        bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%)',
-                        border: '#d97706',
-                        accent: 'linear-gradient(90deg, #f59e0b, #d97706)',
-                        badge: 'bg-amber-600 text-white',
-                        badgeText: 'Deadline',
-                        iconColor: '#d97706',
-                        hoverShadow: '0 25px 50px -12px rgba(217, 119, 6, 0.3)'
-                      },
-                      UPDATE: {
-                        bg: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
-                        border: '#475569',
-                        accent: 'linear-gradient(90deg, #64748b, #475569)',
-                        badge: 'bg-slate-700 text-white',
-                        badgeText: 'Update',
-                        iconColor: '#475569',
-                        hoverShadow: '0 25px 50px -12px rgba(71, 85, 105, 0.25)'
-                      }
-                    };
-                    
-                    return colorMap[type] || colorMap.UPDATE;
-                  };
-
                   const formatDate = (dateStr: string) => {
                     if (!dateStr) return '';
                     const d = new Date(dateStr);
@@ -515,233 +459,126 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     return iconMap[type] || Sparkles;
                   };
 
-                  return (
-                    <>
-                      {/* Full Width Breaking News Card */}
-                      {breakingNews.length > 0 && breakingNews.map((update) => {
-                        const colors = getCategoryColors(update.type, true);
-                        const Icon = getIcon(update.type);
-                        
-                        return (
-                          <Card
-                            key={update.id}
-                            className="relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer group w-full hover:-translate-y-1 hover:shadow-2xl"
-                            style={{
-                              background: colors.bg,
-                              borderColor: colors.border,
-                              boxShadow: `0 4px 6px -1px ${colors.border}20, 0 2px 4px -2px ${colors.border}20`
-                            }}
-                            onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
-                          >
-                            {/* Breaking News Ribbon */}
-                            <div className="absolute top-0 right-0 z-20">
-                              <div className="relative">
-                                <div 
-                                  className="px-6 py-1 text-xs font-bold text-white shadow-lg transform rotate-45 translate-x-6 -translate-y-1"
-                                  style={{ background: colors.accent }}
+                  return allNews.map((update, index) => {
+                    const Icon = getIcon(update.type);
+                    const isBreaking = update.breaking;
+                    
+                    // Alternate between green and blue, but red for breaking
+                    let borderColor, badgeBg, badgeText, iconColor, buttonBg, headlineColor;
+                    
+                    if (isBreaking) {
+                      // Red for breaking
+                      borderColor = '#ef4444';
+                      badgeBg = 'linear-gradient(to right, #dc2626, #b91c1c)';
+                      badgeText = 'Breaking';
+                      iconColor = '#dc2626';
+                      buttonBg = 'linear-gradient(to right, #dc2626, #b91c1c)';
+                      headlineColor = '#dc2626';
+                    } else {
+                      // Alternate green and blue
+                      const isGreen = index % 2 === 0;
+                      if (isGreen) {
+                        borderColor = '#10b981';
+                        badgeBg = 'linear-gradient(to right, #10b981, #059669)';
+                        badgeText = update.type === 'PRIVATE' ? 'Vacancies' : update.type || 'Update';
+                        iconColor = '#10b981';
+                        buttonBg = 'linear-gradient(to right, #10b981, #059669)';
+                        headlineColor = '#059669';
+                      } else {
+                        borderColor = '#2563eb';
+                        badgeBg = 'linear-gradient(to right, #2563eb, #1d4ed8)';
+                        badgeText = update.type === 'GOVT' ? 'Government' : update.type || 'Update';
+                        iconColor = '#2563eb';
+                        buttonBg = 'linear-gradient(to right, #2563eb, #1d4ed8)';
+                        headlineColor = '#1d4ed8';
+                      }
+                    }
+                    
+                    return (
+                      <Card
+                        key={update.id}
+                        className="relative h-full cursor-pointer overflow-hidden rounded-2xl border-2 p-5 md:p-6 shadow-md transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-xl focus-visible:-translate-y-2 focus-visible:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-200 group"
+                        style={{
+                          background: '#ffffff',
+                          borderColor: borderColor,
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)'
+                        }}
+                        onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
+                      >
+                        <div className="relative flex h-full flex-col gap-4">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span 
+                                  className="!border-0 shadow-md hover:shadow-lg transition-all duration-200 px-4 py-1.5 text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 rounded-md inline-flex text-white"
+                                  style={{ background: badgeBg }}
                                 >
-                                  BREAKING
-                                </div>
-                                <div className="absolute top-0 right-0 w-0 h-0 border-l-[12px] border-l-transparent border-t-[12px]" style={{ borderTopColor: colors.border }} />
+                                  <Icon className="w-3.5 h-3.5" />
+                                  {badgeText}
+                                </span>
+                                {isBreaking && (
+                                  <Badge className="bg-red-600 text-white border-0 px-3 py-1 text-xs font-semibold">
+                                    BREAKING
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <h3 
+                                  className="text-lg md:text-xl font-bold group-hover:opacity-80 transition-opacity line-clamp-2"
+                                  style={{ color: headlineColor }}
+                                >
+                                  {update.title}
+                                </h3>
                               </div>
                             </div>
+                          </div>
 
-                            {/* Colorful Left Border Accent */}
-                            <div 
-                              className="absolute left-0 top-0 bottom-0 w-2 opacity-90"
-                              style={{ background: colors.accent }}
-                            />
+                          {/* Meta pills - Colorful */}
+                          <div className="flex flex-wrap gap-3 text-sm text-gray-700">
+                            <span className="inline-flex items-center gap-2 bg-blue-100/90 border border-blue-200 text-blue-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-blue-200 transition-colors">
+                              <Calendar className="w-4 h-4 text-blue-600" />
+                              {formatDate(update.date)}
+                            </span>
+                            <span className="inline-flex items-center gap-2 bg-purple-100/90 border border-purple-200 text-purple-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-purple-200 transition-colors">
+                              <Icon className="w-4 h-4 text-purple-600" />
+                              {update.type || 'Update'}
+                            </span>
+                          </div>
 
-                            {/* Decorative Background Elements */}
-                            <div className="absolute inset-0 pointer-events-none opacity-30">
-                              <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full blur-3xl" style={{ background: colors.accent }} />
-                              <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full blur-2xl" style={{ background: colors.accent }} />
-                            </div>
+                          {/* Description */}
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+                              Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
+                            </p>
+                          </div>
 
-                            <div className="relative p-6 md:p-8 lg:p-10">
-                              <div className="space-y-4">
-                                {/* Header with Category Badge */}
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex items-center gap-3 flex-wrap">
-                                    <div 
-                                      className="flex items-center justify-center w-12 h-12 rounded-xl shadow-md"
-                                      style={{ background: colors.accent }}
-                                    >
-                                      <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
-                                    </div>
-                                    <Badge 
-                                      className={`${colors.badge} px-4 py-1.5 text-xs font-bold uppercase tracking-wider border-0 shadow-sm`}
-                                    >
-                                      {colors.badgeText}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="relative flex h-3 w-3">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600" />
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Publication Date */}
-                                <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
-                                  <Calendar className="w-4 h-4" style={{ color: colors.iconColor }} />
-                                  <span>{formatDate(update.date)}</span>
-                                </div>
-
-                                {/* Headline - Editorial Typography */}
-                                <div className="space-y-3">
-                                  <h3 
-                                    className="font-bold text-gray-900 group-hover:opacity-80 transition-opacity leading-tight text-2xl md:text-3xl lg:text-4xl"
-                                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                                  >
-                                    {update.title}
-                                  </h3>
-                                  <p className="text-sm md:text-base text-gray-600 leading-relaxed line-clamp-3">
-                                    Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
-                                  </p>
-                                </div>
-
-                                {/* CTA Footer */}
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
-                                  <span className="text-xs text-gray-500 font-medium">
-                                    {update.fullStory ? 'Tap to read full story' : 'View on news page'}
-                                  </span>
-                                  <Button 
-                                    variant="ghost" 
-                                    className="h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all"
-                                    style={{ color: colors.iconColor }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (update.fullStory) {
-                                        onNavigate(`news/${update.id}`);
-                                      } else {
-                                        onNavigate('news');
-                                      }
-                                    }}
-                                  >
-                                    {update.fullStory ? 'View Full Story' : 'View Story'}
-                                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Hover Effect Overlay */}
-                            <div 
-                              className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
-                              style={{ background: colors.accent }}
-                            />
-                          </Card>
-                        );
-                      })}
-
-                      {/* 2x2 Grid for Regular News (4 cards) */}
-                      {regularNews.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {regularNews.map((update) => {
-                            const colors = getCategoryColors(update.type, false);
-                            const Icon = getIcon(update.type);
-                            
-                            return (
-                              <Card
-                                key={update.id}
-                                className="relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-2xl"
-                                onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
-                                style={{
-                                  background: colors.bg,
-                                  borderColor: colors.border,
-                                  boxShadow: `0 4px 6px -1px ${colors.border}20, 0 2px 4px -2px ${colors.border}20`
-                                }}
-                                onClick={() => onNavigate('news')}
-                              >
-                                {/* Colorful Left Border Accent */}
-                                <div 
-                                  className="absolute left-0 top-0 bottom-0 w-2 opacity-90"
-                                  style={{ background: colors.accent }}
-                                />
-
-                                {/* Decorative Background Elements */}
-                                <div className="absolute inset-0 pointer-events-none opacity-30">
-                                  <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full blur-3xl" style={{ background: colors.accent }} />
-                                  <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full blur-2xl" style={{ background: colors.accent }} />
-                                </div>
-
-                                <div className="relative p-6 md:p-8">
-                                  <div className="space-y-4">
-                                    {/* Header with Category Badge */}
-                                    <div className="flex items-start justify-between gap-4">
-                                      <div className="flex items-center gap-3 flex-wrap">
-                                        <div 
-                                          className="flex items-center justify-center w-12 h-12 rounded-xl shadow-md"
-                                          style={{ background: colors.accent }}
-                                        >
-                                          <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
-                                        </div>
-                                        <Badge 
-                                          className={`${colors.badge} px-4 py-1.5 text-xs font-bold uppercase tracking-wider border-0 shadow-sm`}
-                                        >
-                                          {colors.badgeText}
-                                        </Badge>
-                                      </div>
-                                    </div>
-
-                                    {/* Publication Date */}
-                                    <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
-                                      <Calendar className="w-4 h-4" style={{ color: colors.iconColor }} />
-                                      <span>{formatDate(update.date)}</span>
-                                    </div>
-
-                                    {/* Headline - Editorial Typography */}
-                                    <div className="space-y-3">
-                                      <h3 
-                                        className="font-bold text-gray-900 group-hover:opacity-80 transition-opacity leading-tight text-xl md:text-2xl"
-                                        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                                      >
-                                        {update.title}
-                                      </h3>
-                                      <p className="text-sm md:text-base text-gray-600 leading-relaxed line-clamp-3">
-                                        Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
-                                      </p>
-                                    </div>
-
-                                    {/* CTA Footer */}
-                                    <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
-                                      <span className="text-xs text-gray-500 font-medium">
-                                        {update.fullStory ? 'Tap to read full story' : 'View on news page'}
-                                      </span>
-                                      <Button 
-                                        variant="ghost" 
-                                        className="h-9 px-4 font-semibold gap-2 group-hover:gap-3 transition-all"
-                                        style={{ color: colors.iconColor }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (update.fullStory) {
-                                            onNavigate(`news/${update.id}`);
-                                          } else {
-                                            onNavigate('news');
-                                          }
-                                        }}
-                                      >
-                                        {update.fullStory ? 'View Full Story' : 'View Story'}
-                                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Hover Effect Overlay */}
-                                <div 
-                                  className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
-                                  style={{ background: colors.accent }}
-                                />
-                              </Card>
-                            );
-                          })}
+                          {/* Footer */}
+                          <div className="mt-auto flex flex-col gap-3 border-t border-slate-100 pt-3 md:flex-row md:items-center md:justify-between">
+                            <span className="text-xs text-gray-500">
+                              Tap to read full story
+                            </span>
+                            <Button 
+                              size="sm" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (update.fullStory) {
+                                  onNavigate(`news/${update.id}`);
+                                } else {
+                                  onNavigate('news');
+                                }
+                              }}
+                              className="inline-flex min-w-[140px] items-center justify-center gap-2 text-white shadow-lg hover:shadow-xl transition-all"
+                              style={{ background: buttonBg }}
+                            >
+                              View Full Story
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                      )}
-                    </>
-                  );
+                      </Card>
+                    );
+                  });
                 })()}
               </div>
             ) : (

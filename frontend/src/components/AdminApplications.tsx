@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, Calendar, FileText, Eye, MessageSquare, Phone, Mail, MapPin, Search, Filter } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Calendar, FileText, Eye, MessageSquare, Phone, Mail, MapPin, Search, Filter, Users, Briefcase } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -13,13 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { fetchApplications, updateApplicationStatus } from '../api/applications';
 import { useAuth } from '../contexts/AuthContext';
 import { ApplicationResponse } from '../api/applications';
+import { fetchJobsByEmployer } from '../api/jobs';
+import { fetchEmployer } from '../api/employers';
 
 interface AdminApplicationsProps {
   onNavigate: (page: string) => void;
+  userRole?: 'admin' | 'employer'; // Allow component to work for both roles
 }
 
-export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
-  const { token } = useAuth();
+export function AdminApplications({ onNavigate, userRole }: AdminApplicationsProps) {
+  const { token, user } = useAuth();
   const [applications, setApplications] = useState<ApplicationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<ApplicationResponse | null>(null);
@@ -33,7 +36,7 @@ export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
 
   useEffect(() => {
     loadApplications();
-  }, [filters]);
+  }, [filters, token, userRole, user]);
 
   const loadApplications = async () => {
     if (!token) return;
@@ -48,8 +51,47 @@ export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
         size: 50,
         sort: 'appliedDate,desc'
       };
-      const response = await fetchApplications(params, token);
-      setApplications(response.content || []);
+
+      // If user is employer, fetch only applications for their jobs
+      if ((userRole === 'employer' || user?.role === 'EMPLOYER') && user) {
+        try {
+          // Get employer data
+          const employerData = await fetchEmployer(user.id, token);
+          
+          // Get all jobs for this employer
+          const jobsResponse = await fetchJobsByEmployer(employerData.id, {
+            status: 'all',
+            page: 0,
+            size: 1000
+          });
+          const employerJobs = jobsResponse.content || [];
+          const jobIds = employerJobs.map((job: any) => job.id);
+
+          // Fetch applications for each job
+          const allApplications: ApplicationResponse[] = [];
+          for (const jobId of jobIds) {
+            try {
+              const appsResponse = await fetchApplications({
+                jobId,
+                ...params
+              }, token);
+              if (appsResponse && appsResponse.content && Array.isArray(appsResponse.content)) {
+                allApplications.push(...appsResponse.content);
+              }
+            } catch (err) {
+              console.error(`Failed to fetch applications for job ${jobId}:`, err);
+            }
+          }
+          setApplications(allApplications);
+        } catch (error) {
+          console.error('Failed to load employer applications:', error);
+          setApplications([]);
+        }
+      } else {
+        // Admin can see all applications
+        const response = await fetchApplications(params, token);
+        setApplications(response.content || []);
+      }
     } catch (error) {
       console.error('Failed to load applications:', error);
     } finally {
@@ -175,9 +217,13 @@ export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl text-gray-900 mb-2">Application Management</h1>
-              <p className="text-gray-600">Review and manage all job applications across the platform</p>
+              <p className="text-gray-600">
+                {userRole === 'employer' || user?.role === 'EMPLOYER' 
+                  ? 'Review and manage job applications from candidates for your posted jobs'
+                  : 'Review and manage all job applications across the platform'}
+              </p>
             </div>
-            <Button variant="outline" onClick={() => onNavigate('dashboard')}>
+            <Button variant="outline" onClick={() => onNavigate(userRole === 'employer' ? 'employer-dashboard' : 'dashboard')}>
               Back to Dashboard
             </Button>
           </div>
@@ -255,14 +301,29 @@ export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
                 </Card>
               ) : (
                 filteredApplications.map((application) => (
-                  <Card key={application.id} className="p-6">
+                  <Card key={application.id} className="p-6 border-l-4 border-l-blue-500">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
+                        {/* Candidate Name - Prominently Displayed */}
+                        <div className="mb-3 pb-3 border-b">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-bold text-lg">
+                                {application.candidateName?.charAt(0)?.toUpperCase() || 'A'}
+                              </span>
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-bold text-gray-900">{application.candidateName || 'Unknown Candidate'}</h2>
+                              <p className="text-sm text-gray-600">Applied for: {application.jobTitle}</p>
+                            </div>
+                            <Badge className={getStatusColor(application.status)} variant="outline">
+                              {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                            </Badge>
+                          </div>
+                        </div>
+                        
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg text-gray-900">{application.jobTitle}</h3>
-                          <Badge className={getStatusColor(application.status)} variant="outline">
-                            {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                          </Badge>
                         </div>
 
                         <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
@@ -332,10 +393,136 @@ export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
                       </div>
 
                       <div className="flex items-center gap-2 ml-4">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Details
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedApplication(application)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View Details
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Application Details - {application.candidateName}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {/* Candidate Information */}
+                              <div className="bg-blue-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                  <Users className="w-5 h-5" />
+                                  Candidate Information
+                                </h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Full Name</label>
+                                    <p className="text-gray-900 font-semibold">{application.candidateName}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Email</label>
+                                    <p className="text-gray-900 flex items-center gap-2">
+                                      <Mail className="w-4 h-4" />
+                                      <a href={`mailto:${application.candidateEmail}`} className="text-blue-600 hover:underline">
+                                        {application.candidateEmail}
+                                      </a>
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Phone</label>
+                                    <p className="text-gray-900 flex items-center gap-2">
+                                      <Phone className="w-4 h-4" />
+                                      <a href={`tel:${application.candidatePhone}`} className="text-blue-600 hover:underline">
+                                        {application.candidatePhone || 'N/A'}
+                                      </a>
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Applied Date</label>
+                                    <p className="text-gray-900">{formatDate(application.appliedDate)}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Job Information */}
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                  <Briefcase className="w-5 h-5" />
+                                  Job Information
+                                </h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Job Title</label>
+                                    <p className="text-gray-900">{application.jobTitle}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Organization</label>
+                                    <p className="text-gray-900">{application.jobOrganization}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Application Status</label>
+                                    <Badge className={getStatusColor(application.status)} variant="outline">
+                                      {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                                    </Badge>
+                                  </div>
+                                  {application.interviewDate && (
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-600">Interview Date</label>
+                                      <p className="text-gray-900">{formatDateTime(application.interviewDate)}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Resume */}
+                              <div className="bg-green-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                  <FileText className="w-5 h-5" />
+                                  Resume
+                                </h3>
+                                {application.resumeUrl ? (
+                                  <div className="flex items-center gap-3">
+                                    <Button 
+                                      variant="default" 
+                                      asChild
+                                      onClick={() => {
+                                        // Ensure full URL
+                                        const resumeUrl = application.resumeUrl?.startsWith('http') 
+                                          ? application.resumeUrl 
+                                          : `${window.location.origin}${application.resumeUrl}`;
+                                        window.open(resumeUrl, '_blank');
+                                      }}
+                                    >
+                                      <a 
+                                        href={application.resumeUrl?.startsWith('http') 
+                                          ? application.resumeUrl 
+                                          : `${window.location.origin}${application.resumeUrl}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2"
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                        View/Download Resume
+                                      </a>
+                                    </Button>
+                                    <span className="text-sm text-gray-600">Click to view or download the candidate's resume</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-600">No resume uploaded by candidate</p>
+                                )}
+                              </div>
+
+                              {/* Notes */}
+                              {application.notes && (
+                                <div className="bg-yellow-50 p-4 rounded-lg">
+                                  <h3 className="font-semibold text-gray-900 mb-2">Application Notes</h3>
+                                  <p className="text-gray-700 whitespace-pre-wrap">{application.notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
 
                         <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
                           <DialogTrigger asChild>
@@ -392,28 +579,58 @@ export function AdminApplications({ onNavigate }: AdminApplicationsProps) {
                       </div>
                     </div>
 
-                    {/* Candidate Info */}
-                    <div className="pt-4 border-t">
-                      <h4 className="text-sm font-medium text-gray-900 mb-3">Candidate Information</h4>
-                      <div className="grid md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-gray-400" />
-                          <span>{application.candidateEmail}</span>
+                    {/* Candidate Info - Enhanced */}
+                    <div className="pt-4 border-t bg-gray-50 -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Candidate Contact Information
+                      </h4>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="bg-white p-3 rounded-lg border">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Mail className="w-4 h-4 text-blue-500" />
+                            <span className="text-xs font-medium text-gray-600">Email</span>
+                          </div>
+                          <a 
+                            href={`mailto:${application.candidateEmail}`} 
+                            className="text-blue-600 hover:underline text-sm font-medium"
+                          >
+                            {application.candidateEmail}
+                          </a>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          <span>{application.candidatePhone}</span>
+                        <div className="bg-white p-3 rounded-lg border">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Phone className="w-4 h-4 text-green-500" />
+                            <span className="text-xs font-medium text-gray-600">Phone</span>
+                          </div>
+                          <a 
+                            href={`tel:${application.candidatePhone}`} 
+                            className="text-green-600 hover:underline text-sm font-medium"
+                          >
+                            {application.candidatePhone || 'N/A'}
+                          </a>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-400" />
+                        <div className="bg-white p-3 rounded-lg border">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="w-4 h-4 text-purple-500" />
+                            <span className="text-xs font-medium text-gray-600">Resume</span>
+                          </div>
                           {application.resumeUrl ? (
-                            <Button variant="link" size="sm" className="p-0 h-auto" asChild>
-                              <a href={application.resumeUrl} target="_blank" rel="noopener noreferrer">
-                                View Resume
-                              </a>
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              className="p-0 h-auto text-purple-600 hover:text-purple-700 font-medium"
+                              onClick={() => {
+                                const resumeUrl = application.resumeUrl?.startsWith('http') 
+                                  ? application.resumeUrl 
+                                  : `${window.location.origin}${application.resumeUrl}`;
+                                window.open(resumeUrl, '_blank');
+                              }}
+                            >
+                              📄 View/Download Resume
                             </Button>
                           ) : (
-                            <span className="text-gray-500">No resume uploaded</span>
+                            <span className="text-gray-500 text-sm">No resume uploaded</span>
                           )}
                         </div>
                       </div>

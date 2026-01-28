@@ -21,15 +21,14 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
     (job as any).state
   ].filter(Boolean).join(', ');
 
-  // All cards use the same vibrant yellow-orange-pink gradient scheme (like Featured jobs)
+  // White background for all cards
   const getCardColors = () => {
-    // All cards get the same colorful yellow-orange-pink gradient
     return {
-      gradientBg: 'linear-gradient(to bottom right, #fef9c3, #fed7aa, #fce7f3)',
-      borderColor: '#fde047',
-      accentGradient: 'linear-gradient(to right, #facc15, #fb923c, #f472b6)',
-      shadowColor: 'rgba(253, 224, 71, 0.3)',
-      patternBg: 'linear-gradient(to bottom right, rgba(254, 249, 195, 0.3), rgba(254, 215, 170, 0.2), rgba(252, 231, 243, 0.3))'
+      gradientBg: '#ffffff',
+      borderColor: '#e5e7eb',
+      accentGradient: 'transparent',
+      shadowColor: 'rgba(0, 0, 0, 0.1)',
+      patternBg: 'transparent'
     };
   };
 
@@ -44,35 +43,6 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
         boxShadow: `0 4px 6px -1px ${colors.shadowColor}, 0 2px 4px -2px ${colors.shadowColor}`
       }}
     >
-      {/* Colorful top accent bar */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-2 origin-left scale-x-100 transform transition-transform duration-300 group-hover:scale-x-110"
-        style={{ background: colors.accentGradient }}
-      />
-      
-      {/* Colorful left border accent */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-1.5 opacity-80 group-hover:opacity-100 transition-opacity"
-        style={{ background: colors.accentGradient }}
-      />
-      
-      {/* Decorative colorful background pattern */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-40 transition-opacity duration-300 group-hover:opacity-60"
-        style={{ background: colors.patternBg }}
-      />
-      
-      {/* Colorful decorative circles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div 
-          className="absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl transition-opacity duration-300 group-hover:opacity-70"
-          style={{ background: colors.patternBg }}
-        />
-        <div 
-          className="absolute -left-6 -bottom-6 h-24 w-24 rounded-full blur-xl transition-opacity duration-300 group-hover:opacity-60"
-          style={{ background: colors.patternBg }}
-        />
-      </div>
 
       <div className="relative flex h-full flex-col gap-4">
         {/* Header */}
@@ -187,9 +157,9 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
           <Button 
             size="sm" 
             onClick={() => onViewDetails(job.id)}
-            className="inline-flex min-w-[140px] items-center justify-center gap-2 text-white shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 hover:from-yellow-600 hover:via-orange-600 hover:to-pink-600"
+            className="inline-flex min-w-[140px] items-center justify-center gap-2 text-white shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
             style={{
-              background: 'linear-gradient(to right, #eab308, #f97316, #ec4899)'
+              background: 'linear-gradient(to right, #2563eb, #1d4ed8)'
             }}
           >
             View Details

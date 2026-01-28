@@ -34,7 +34,7 @@ export async function uploadResume(jobId: string, file: File, token: string): Pr
 
   const res = await apiClient.post(`/jobs/${jobId}/resume`, formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      // Don't set Content-Type manually - let browser set it with boundary for multipart/form-data
       'Authorization': `Bearer ${token}`,
     },
   });

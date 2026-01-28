@@ -17,7 +17,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,6 +55,7 @@ public class ResumeController {
      * POST /api/jobs/{jobId}/resume
      */
     @PostMapping("/{jobId}/resume")
+    @Transactional
     public ResponseEntity<Map<String, Object>> uploadResume(
             @PathVariable UUID jobId,
             @RequestParam("file") MultipartFile file) {
@@ -89,8 +93,19 @@ public class ResumeController {
             }
 
             // Upload file
-            String fileUrl = fileUploadService.uploadFile(file);
+            String fileUrl;
+            try {
+                fileUrl = fileUploadService.uploadFile(file);
+                logger.info("File uploaded successfully. URL: {}", fileUrl);
+            } catch (Exception e) {
+                logger.error("File upload service failed: {}", e.getMessage(), e);
+                throw e; // Re-throw to be caught by outer catch block
+            }
+            
             String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                originalFilename = "resume";
+            }
             String fileType = file.getContentType() != null ? file.getContentType() : "application/pdf";
 
             // Check if candidate already has a resume for this job
@@ -111,17 +126,76 @@ public class ResumeController {
 
             // Create Resume entity
             Resume resume = new Resume(job, user, fileUrl, originalFilename, fileType);
-            resume = resumeRepository.save(resume);
+            
+            // Set uploadedAt manually to ensure it's not null (JPA auditing should handle this, but set as fallback)
+            resume.setUploadedAt(LocalDateTime.now());
+            
+            try {
+                resume = resumeRepository.save(resume);
+                // Flush to ensure save is complete and @CreatedDate is set by JPA auditing
+                resumeRepository.flush();
+                logger.info("Resume uploaded: {} for job: {} by candidate: {}", resume.getId(), jobId, user.getEmail());
+            } catch (Exception saveException) {
+                logger.error("Error saving resume to database: {}", saveException.getMessage(), saveException);
+                // Try to delete the uploaded file if save failed
+                try {
+                    fileUploadService.deleteFile(fileUrl);
+                    logger.info("Deleted uploaded file after save failure: {}", fileUrl);
+                } catch (Exception deleteException) {
+                    logger.warn("Failed to delete file after save failure: {}", deleteException.getMessage());
+                }
+                throw new RuntimeException("Failed to save resume: " + saveException.getMessage(), saveException);
+            }
 
-            logger.info("Resume uploaded: {} for job: {} by candidate: {}", resume.getId(), jobId, user.getEmail());
+            // Build response manually using already-loaded entities to avoid lazy loading issues
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("id", resume.getId().toString());
+            response.put("jobId", jobId.toString());
+            response.put("candidateId", user.getId().toString());
+            response.put("candidateName", user.getName());
+            response.put("candidateEmail", user.getEmail());
+            response.put("fileUrl", fileUrl);
+            response.put("fileName", originalFilename);
+            response.put("fileType", fileType);
+            
+            // Get uploadedAt - @CreatedDate should be set automatically by JPA auditing
+            // Use current time as fallback if somehow null
+            LocalDateTime uploadedAt = resume.getUploadedAt();
+            if (uploadedAt == null) {
+                uploadedAt = LocalDateTime.now();
+                logger.warn("uploadedAt was null, using current time as fallback");
+            }
+            response.put("uploadedAt", uploadedAt.toString());
 
-            return ResponseEntity.ok(toResponse(resume));
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             logger.error("Invalid file upload: {}", e.getMessage());
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        } catch (IOException e) {
+            logger.error("Error uploading resume: {}", e.getMessage(), e);
+            // Don't expose internal error details to user
+            String userMessage = e.getMessage() != null && e.getMessage().contains("Failed to upload file") 
+                ? "Failed to upload resume. Please try again." 
+                : "Failed to upload resume. Please check file size and format.";
+            return ResponseEntity.status(500).body(Map.of("error", userMessage));
         } catch (Exception e) {
-            logger.error("Error uploading resume", e);
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to upload resume: " + e.getMessage()));
+            logger.error("Error uploading resume: {}", e.getMessage(), e);
+            // Log the full stack trace for debugging
+            if (e.getCause() != null) {
+                logger.error("Root cause: {}", e.getCause().getMessage(), e.getCause());
+            }
+            // Return more detailed error message for debugging (in development)
+            String errorMessage = "Failed to upload resume. Please try again.";
+            if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+                // Include error message if it's user-friendly
+                if (e.getMessage().contains("Failed to upload file") || 
+                    e.getMessage().contains("File") ||
+                    e.getMessage().contains("Permission") ||
+                    e.getMessage().contains("directory")) {
+                    errorMessage = e.getMessage();
+                }
+            }
+            return ResponseEntity.status(500).body(Map.of("error", errorMessage));
         }
     }
 
@@ -205,6 +279,7 @@ public class ResumeController {
      * GET /api/jobs/{jobId}/resume/my
      */
     @GetMapping("/{jobId}/resume/my")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getMyResume(@PathVariable UUID jobId) {
         try {
             // Get authenticated user
@@ -216,6 +291,7 @@ public class ResumeController {
             String email = authentication.getName();
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
+                logger.warn("User not found for email: {}", email);
                 return ResponseEntity.status(404).body(Map.of("error", "User not found"));
             }
 
@@ -223,28 +299,68 @@ public class ResumeController {
 
             // Check if user is CANDIDATE
             if (user.getRole() != User.UserRole.CANDIDATE) {
+                logger.warn("Non-candidate user {} tried to access resume", user.getId());
                 return ResponseEntity.status(403).body(Map.of("error", "Only candidates can view their resumes"));
+            }
+
+            // Verify job exists
+            Optional<Job> jobOpt = jobRepository.findById(jobId);
+            if (jobOpt.isEmpty()) {
+                logger.warn("Job not found: {}", jobId);
+                return ResponseEntity.status(404).body(Map.of("error", "Job not found"));
             }
 
             // Get resume
             Optional<Resume> resumeOpt = resumeRepository.findFirstByJobIdAndCandidateIdOrderByUploadedAtDesc(jobId, user.getId());
             
             if (resumeOpt.isEmpty()) {
-                return ResponseEntity.ok(Map.of(
-                        "jobId", jobId.toString(),
-                        "resume", null,
-                        "hasResume", false
-                ));
+                logger.info("No resume found for candidate {} and job {}", user.getId(), jobId);
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("jobId", jobId.toString());
+                response.put("resume", null);
+                response.put("hasResume", false);
+                return ResponseEntity.ok(response);
             }
 
-            return ResponseEntity.ok(Map.of(
-                    "jobId", jobId.toString(),
-                    "resume", toResponse(resumeOpt.get()),
-                    "hasResume", true
-            ));
+            Resume resume = resumeOpt.get();
+            logger.info("Resume found for candidate {} and job {}: {}", user.getId(), jobId, resume.getId());
+            
+            // Build response manually to avoid lazy loading issues
+            // Access lazy fields within transaction to initialize them
+            try {
+                resume.getJob().getId(); // Initialize job
+                resume.getCandidate().getId(); // Initialize candidate
+                resume.getCandidate().getName(); // Initialize name
+                resume.getCandidate().getEmail(); // Initialize email
+            } catch (Exception e) {
+                logger.warn("Error initializing lazy relationships: {}", e.getMessage());
+            }
+            
+            // Build response manually using resume data
+            Map<String, Object> resumeResponse = new LinkedHashMap<>();
+            resumeResponse.put("id", resume.getId().toString());
+            resumeResponse.put("jobId", jobId.toString());
+            resumeResponse.put("candidateId", user.getId().toString());
+            resumeResponse.put("candidateName", user.getName());
+            resumeResponse.put("candidateEmail", user.getEmail());
+            resumeResponse.put("fileUrl", resume.getFileUrl());
+            resumeResponse.put("fileName", resume.getFileName());
+            resumeResponse.put("fileType", resume.getFileType());
+            resumeResponse.put("uploadedAt", resume.getUploadedAt() != null ? resume.getUploadedAt().toString() : null);
+            
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("jobId", jobId.toString());
+            response.put("resume", resumeResponse);
+            response.put("hasResume", true);
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request for resume: {}", e.getMessage());
+            return ResponseEntity.status(400).body(Map.of("error", "Invalid request: " + e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error fetching resume", e);
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch resume: " + e.getMessage()));
+            logger.error("Error fetching resume for job {}: {}", jobId, e.getMessage(), e);
+            // Return user-friendly error message
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch resume. Please try again."));
         }
     }
 
@@ -306,16 +422,25 @@ public class ResumeController {
     }
 
     private Map<String, Object> toResponse(Resume resume) {
+        if (resume == null) {
+            return new LinkedHashMap<>();
+        }
+        
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("id", resume.getId().toString());
-        response.put("jobId", resume.getJob().getId().toString());
-        response.put("candidateId", resume.getCandidate().getId().toString());
-        response.put("candidateName", resume.getCandidate().getName());
-        response.put("candidateEmail", resume.getCandidate().getEmail());
-        response.put("fileUrl", resume.getFileUrl());
-        response.put("fileName", resume.getFileName());
-        response.put("fileType", resume.getFileType());
-        response.put("uploadedAt", resume.getUploadedAt().toString());
+        try {
+            response.put("id", resume.getId() != null ? resume.getId().toString() : null);
+            response.put("jobId", resume.getJob() != null && resume.getJob().getId() != null ? resume.getJob().getId().toString() : null);
+            response.put("candidateId", resume.getCandidate() != null && resume.getCandidate().getId() != null ? resume.getCandidate().getId().toString() : null);
+            response.put("candidateName", resume.getCandidate() != null ? resume.getCandidate().getName() : null);
+            response.put("candidateEmail", resume.getCandidate() != null ? resume.getCandidate().getEmail() : null);
+            response.put("fileUrl", resume.getFileUrl() != null ? resume.getFileUrl() : null);
+            response.put("fileName", resume.getFileName() != null ? resume.getFileName() : null);
+            response.put("fileType", resume.getFileType() != null ? resume.getFileType() : null);
+            response.put("uploadedAt", resume.getUploadedAt() != null ? resume.getUploadedAt().toString() : null);
+        } catch (Exception e) {
+            logger.error("Error converting resume to response: {}", e.getMessage(), e);
+            throw new RuntimeException("Error converting resume to response", e);
+        }
         return response;
     }
 }

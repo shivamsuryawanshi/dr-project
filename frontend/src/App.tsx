@@ -212,7 +212,8 @@ function AppContent() {
               <Route path="/profile" element={<ProfilePage onNavigate={handleNavigate} />} />
               <Route path="/admin-users" element={<AdminUsersPage onNavigate={handleNavigate} />} />
               <Route path="/admin-employer-verification" element={<EmployerVerificationPage onNavigate={handleNavigate} />} />
-              <Route path="/admin-applications" element={<AdminApplications onNavigate={handleNavigate} />} />
+              <Route path="/admin-applications" element={<AdminApplications onNavigate={handleNavigate} userRole="admin" />} />
+              <Route path="/employer-manage-applications" element={<AdminApplications onNavigate={handleNavigate} userRole="employer" />} />
               <Route path="/analytics" element={<AnalyticsDashboard userRole={user.role} userId={user.id} />} />
             </>
           )}

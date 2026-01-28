@@ -36,19 +36,48 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     // Find active jobs
     Page<Job> findByStatusAndLastDateAfter(Job.JobStatus status, LocalDate date, Pageable pageable);
     
-    // Search jobs by title or description
-    @Query("SELECT j FROM Job j WHERE (LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:status IS NULL OR j.status = :status)")
+    // Enhanced search jobs - searches across multiple fields with word-by-word matching
+    // Searches in: title, description, qualification, speciality, requirements, benefits, location, and employer company name
+    // Uses word-by-word matching for better results (like Google/YouTube)
+    @Query("SELECT DISTINCT j FROM Job j LEFT JOIN j.employer e WHERE " +
+           "(:status IS NULL OR j.status = :status) AND " +
+           "(" +
+           "LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(j.qualification) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.speciality, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.requirements, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.benefits, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+           ") " +
+           "ORDER BY " +
+           "CASE WHEN LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "j.createdAt DESC")
     Page<Job> searchJobs(@Param("keyword") String keyword, @Param("status") Job.JobStatus status, Pageable pageable);
     
-    // Search jobs by keyword with location filter (mandatory exact or prefix match)
+    // Enhanced search jobs with location filter - searches across multiple fields with word-by-word matching
     // Location must match exactly or start with the provided location (case-insensitive)
-    // This ensures only jobs from the specified location are returned
-    @Query("SELECT j FROM Job j WHERE (LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (LOWER(TRIM(j.location)) = LOWER(TRIM(:location)) OR LOWER(TRIM(j.location)) LIKE LOWER(CONCAT(TRIM(:location), '%'))) " +
-           "AND (:status IS NULL OR j.status = :status)")
+    @Query("SELECT DISTINCT j FROM Job j LEFT JOIN j.employer e WHERE " +
+           "(:status IS NULL OR j.status = :status) AND " +
+           "(LOWER(TRIM(j.location)) = LOWER(TRIM(:location)) OR LOWER(TRIM(j.location)) LIKE LOWER(CONCAT(TRIM(:location), '%'))) AND " +
+           "(" +
+           "LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(j.qualification) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.speciality, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.requirements, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.benefits, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+           ") " +
+           "ORDER BY " +
+           "CASE WHEN LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "j.createdAt DESC")
     Page<Job> searchJobsWithLocation(@Param("keyword") String keyword, @Param("location") String location, @Param("status") Job.JobStatus status, Pageable pageable);
     
     // Find jobs by multiple criteria

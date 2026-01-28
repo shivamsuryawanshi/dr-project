@@ -1,5 +1,5 @@
 // AI assisted development
-import { Plus, Briefcase, Users, Eye, CheckCircle, XCircle, Calendar, ArrowLeft, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Briefcase, Users, Eye, CheckCircle, XCircle, Calendar, ArrowLeft, Edit, Trash2, AlertTriangle, FileText, Mail, Phone } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -444,6 +444,22 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
           </Card>
         </div>
 
+        {/* Manage Applications Card */}
+        <Card className="p-6 mb-8 border-2 border-purple-200 hover:border-purple-300 transition-colors cursor-pointer" onClick={() => onNavigate('employer-manage-applications')}>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Briefcase className="w-8 h-8 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Manage Applications</h3>
+              <p className="text-gray-600">Review and manage job applications from candidates.</p>
+            </div>
+            <Button className="bg-gray-900 hover:bg-gray-800 text-white">
+              Go to Manage Applications
+            </Button>
+          </div>
+        </Card>
+
         {/* Main Content */}
         <Tabs defaultValue="subscription" className="w-full">
           <TabsList>
@@ -534,7 +550,12 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
             <Card>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg text-gray-900">Recent Applications</h3>
+                  <div>
+                    <h3 className="text-lg text-gray-900">Job Applications</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      View and manage applications for your posted jobs
+                    </p>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -587,89 +608,201 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                     🔄 Refresh
                   </Button>
                 </div>
-                <div className="mb-4 text-sm text-gray-600">
-                  Total Applications: <strong>{myApplications.length}</strong>
-                  {myJobs.length > 0 && (
-                    <span className="ml-4">
-                      (From {myJobs.length} job{myJobs.length > 1 ? 's' : ''})
-                    </span>
-                  )}
+                
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <Card className="p-4 bg-blue-50 border-blue-200">
+                    <div className="text-sm text-blue-600 mb-1">Total Applications</div>
+                    <div className="text-2xl font-bold text-blue-900">{myApplications.length}</div>
+                  </Card>
+                  <Card className="p-4 bg-green-50 border-green-200">
+                    <div className="text-sm text-green-600 mb-1">New (Applied)</div>
+                    <div className="text-2xl font-bold text-green-900">
+                      {myApplications.filter((app: ApplicationResponse) => app.status === 'applied').length}
+                    </div>
+                  </Card>
+                  <Card className="p-4 bg-purple-50 border-purple-200">
+                    <div className="text-sm text-purple-600 mb-1">Shortlisted</div>
+                    <div className="text-2xl font-bold text-purple-900">
+                      {myApplications.filter((app: ApplicationResponse) => app.status === 'shortlisted').length}
+                    </div>
+                  </Card>
+                  <Card className="p-4 bg-orange-50 border-orange-200">
+                    <div className="text-sm text-orange-600 mb-1">Interviews</div>
+                    <div className="text-2xl font-bold text-orange-900">
+                      {myApplications.filter((app: ApplicationResponse) => app.status === 'interview').length}
+                    </div>
+                  </Card>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Candidate</TableHead>
-                      <TableHead>Job Applied</TableHead>
-                      <TableHead>Applied Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                          Loading applications...
-                        </TableCell>
-                      </TableRow>
-                    ) : myApplications.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                          <div>
-                            <p>No applications found</p>
-                            {myJobs.length > 0 && (
-                              <p className="text-xs mt-2 text-gray-400">
-                                You have {myJobs.length} job{myJobs.length > 1 ? 's' : ''} posted.
-                                Applications will appear here when candidates apply.
-                              </p>
-                            )}
-                            {myJobs.length === 0 && (
-                              <p className="text-xs mt-2 text-gray-400">
-                                Post a job to start receiving applications.
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      myApplications.map((application) => {
+
+                {/* Applications Grouped by Job */}
+                {loading ? (
+                  <div className="text-center text-gray-500 py-8">Loading applications...</div>
+                ) : myApplications.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <div>
+                      <p className="text-lg mb-2">No applications found</p>
+                      {myJobs.length > 0 && (
+                        <p className="text-sm text-gray-400">
+                          You have {myJobs.length} job{myJobs.length > 1 ? 's' : ''} posted.
+                          Applications will appear here when candidates apply.
+                        </p>
+                      )}
+                      {myJobs.length === 0 && (
+                        <p className="text-sm text-gray-400">
+                          Post a job to start receiving applications.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Group applications by job */}
+                    {(() => {
+                      const applicationsByJob = new Map<string, ApplicationResponse[]>();
+                      myApplications.forEach((app: ApplicationResponse) => {
+                        const jobId = app.jobId || 'unknown';
+                        if (!applicationsByJob.has(jobId)) {
+                          applicationsByJob.set(jobId, []);
+                        }
+                        applicationsByJob.get(jobId)!.push(app);
+                      });
+
+                      return Array.from(applicationsByJob.entries()).map(([jobId, apps]) => {
+                        const job = myJobs.find((j: any) => j.id === jobId);
+                        const jobTitle = job?.title || apps[0]?.jobTitle || 'Unknown Job';
+                        const newApps = apps.filter((app: ApplicationResponse) => app.status === 'applied').length;
+                        
                         return (
-                          <TableRow key={application.id}>
-                            <TableCell>
-                              <div>
-                                <p className="text-gray-900">{application.candidateName}</p>
-                                <p className="text-sm text-gray-500">{application.candidateEmail}</p>
+                          <Card key={jobId} className="border-l-4 border-l-blue-500">
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <div>
+                                  <h4 className="text-lg font-semibold text-gray-900">{jobTitle}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {apps.length} application{apps.length !== 1 ? 's' : ''}
+                                    {newApps > 0 && (
+                                      <Badge className="ml-2 bg-blue-500 text-white">
+                                        {newApps} new
+                                      </Badge>
+                                    )}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  {job?.status || 'N/A'}
+                                </Badge>
                               </div>
-                            </TableCell>
-                            <TableCell>{application.jobTitle || 'N/A'}</TableCell>
-                            <TableCell>{application.appliedDate ? new Date(application.appliedDate).toLocaleDateString('en-IN') : 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge className={
-                                application.status === 'shortlisted' ? 'bg-green-100 text-green-700 border-green-200' :
-                                  application.status === 'interview' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                                    application.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                                      'bg-gray-100 text-gray-700 border-gray-200'
-                              } variant="outline">
-                                {application.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" disabled className="cursor-not-allowed">
-                                  View Resume (Subscription Required)
-                                </Button>
-                                <Button variant="outline" size="sm" disabled className="cursor-not-allowed">
-                                  <Calendar className="w-4 h-4 mr-1" />
-                                  Schedule (Subscription Required)
-                                </Button>
+                              
+                              <div className="space-y-3">
+                                {apps.map((application: ApplicationResponse) => (
+                                  <div key={application.id} className="border-2 border-blue-200 rounded-lg p-4 bg-white hover:bg-blue-50 transition-colors shadow-sm">
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        {/* Candidate Name - Prominent */}
+                                        <div className="flex items-center gap-3 mb-3 pb-3 border-b">
+                                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <span className="text-blue-600 font-bold">
+                                              {application.candidateName?.charAt(0)?.toUpperCase() || 'A'}
+                                            </span>
+                                          </div>
+                                          <div className="flex-1">
+                                            <h5 className="font-bold text-lg text-gray-900">{application.candidateName || 'Unknown Candidate'}</h5>
+                                            <p className="text-xs text-gray-500">Candidate Application</p>
+                                          </div>
+                                          <Badge className={
+                                            application.status === 'shortlisted' ? 'bg-green-100 text-green-700 border-green-200' :
+                                              application.status === 'interview' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                                application.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                                                  application.status === 'selected' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                                    'bg-gray-100 text-gray-700 border-gray-200'
+                                          } variant="outline">
+                                            {application.status}
+                                          </Badge>
+                                          {application.status === 'applied' && (
+                                            <Badge className="bg-blue-500 text-white animate-pulse">
+                                              New
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Contact Information */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                          <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                            <Mail className="w-4 h-4 text-blue-500" />
+                                            <div>
+                                              <span className="text-xs text-gray-600">Email</span>
+                                              <a 
+                                                href={`mailto:${application.candidateEmail}`} 
+                                                className="block text-blue-600 hover:underline font-medium text-sm"
+                                              >
+                                                {application.candidateEmail}
+                                              </a>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                            <Phone className="w-4 h-4 text-green-500" />
+                                            <div>
+                                              <span className="text-xs text-gray-600">Phone</span>
+                                              <a 
+                                                href={`tel:${application.candidatePhone}`} 
+                                                className="block text-green-600 hover:underline font-medium text-sm"
+                                              >
+                                                {application.candidatePhone || 'N/A'}
+                                              </a>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Additional Info */}
+                                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                                          <div>
+                                            <span className="font-medium">Applied:</span> {application.appliedDate ? new Date(application.appliedDate).toLocaleDateString('en-IN') : 'N/A'}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Notes */}
+                                        {application.notes && (
+                                          <div className="mt-2 text-sm text-gray-700 bg-yellow-50 p-3 rounded border border-yellow-200">
+                                            <span className="font-medium text-yellow-800">Application Notes:</span>
+                                            <p className="mt-1 text-gray-700">{application.notes}</p>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Resume */}
+                                        <div className="mt-3">
+                                          {application.resumeUrl ? (
+                                            <Button 
+                                              variant="default" 
+                                              size="sm"
+                                              onClick={() => {
+                                                const resumeUrl = application.resumeUrl?.startsWith('http') 
+                                                  ? application.resumeUrl 
+                                                  : `${window.location.origin}${application.resumeUrl}`;
+                                                window.open(resumeUrl, '_blank');
+                                              }}
+                                              className="bg-purple-600 hover:bg-purple-700"
+                                            >
+                                              <FileText className="w-4 h-4 mr-2" />
+                                              View/Download Resume
+                                            </Button>
+                                          ) : (
+                                            <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">
+                                              No resume uploaded by candidate
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            </TableCell>
-                          </TableRow>
+                            </div>
+                          </Card>
                         );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                      });
+                    })()}
+                  </div>
+                )}
               </div>
             </Card>
           </TabsContent>
