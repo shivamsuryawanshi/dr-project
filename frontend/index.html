@@ -1,11 +1,124 @@
-
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Build MedExJob.com Website</title>
-    </head>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>MedExJob - India's Premier Medical Job Portal for Doctors & Healthcare Professionals</title>
+    <meta name="title" content="MedExJob - India's Premier Medical Job Portal for Doctors & Healthcare Professionals" />
+    <meta name="description" content="Find your dream medical career at MedExJob.com. India's premier job portal dedicated to Doctors, Nurses, and Paramedical Professionals. Browse 1000+ healthcare job opportunities." />
+    <meta name="keywords" content="medical jobs, doctor jobs, nurse jobs, healthcare careers, MBBS jobs, medical officer jobs, resident doctor jobs, paramedical jobs, healthcare jobs India, hospital jobs, medical recruitment" />
+    <meta name="author" content="MedExJob" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/medex-logo-removebg-preview.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/medex-logo-removebg-preview.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/medex-logo-removebg-preview.png" />
+    <link rel="shortcut icon" href="/medex-logo-removebg-preview.png" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://medexjob.com/" />
+    <meta property="og:title" content="MedExJob - India's Premier Medical Job Portal" />
+    <meta property="og:description" content="Find your dream medical career. India's premier job portal for Doctors, Nurses & Paramedical Professionals. Browse 1000+ healthcare jobs." />
+    <meta property="og:image" content="https://medexjob.com/medex-logo-removebg-preview.png" />
+    <meta property="og:site_name" content="MedExJob" />
+    <meta property="og:locale" content="en_IN" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://medexjob.com/" />
+    <meta name="twitter:title" content="MedExJob - India's Premier Medical Job Portal" />
+    <meta name="twitter:description" content="Find your dream medical career. India's premier job portal for Doctors, Nurses & Paramedical Professionals." />
+    <meta name="twitter:image" content="https://medexjob.com/medex-logo-removebg-preview.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://medexjob.com/" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "MedExJob",
+      "url": "https://medexjob.com",
+      "logo": "https://medexjob.com/medex-logo-removebg-preview.png",
+      "description": "India's premier job portal dedicated to medical professionals",
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "availableLanguage": ["English", "Hindi"]
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - WebSite with SearchAction -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "MedExJob",
+      "url": "https://medexjob.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://medexjob.com/jobs?search={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - JobPosting Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "MedExJob - Medical Job Portal",
+      "description": "Find medical jobs for doctors, nurses, and healthcare professionals in India",
+      "publisher": {
+        "@type": "Organization",
+        "name": "MedExJob",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://medexjob.com/medex-logo-removebg-preview.png"
+        }
+      },
+      "mainEntity": {
+        "@type": "ItemList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Doctor Jobs",
+            "url": "https://medexjob.com/jobs?category=doctor"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Nurse Jobs",
+            "url": "https://medexjob.com/jobs?category=nurse"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Medical Officer Jobs",
+            "url": "https://medexjob.com/jobs?category=medical-officer"
+          }
+        ]
+      }
+    }
+    </script>
+  </head>
 
   <body>
     <div id="root"></div>
@@ -13,5 +126,4 @@
     <!-- Razorpay Checkout Script -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   </body>
-  </html>
-  
+</html>

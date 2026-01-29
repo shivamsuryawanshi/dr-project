@@ -23,3 +23,15 @@ export async function fetchTopJobs() {
   if (!res.ok) throw new Error('Failed to load top jobs');
   return res.json();
 }
+
+export async function fetchRecentActivity() {
+  const res = await fetch(`${API_BASE}/analytics/recent-activity`);
+  if (!res.ok) throw new Error('Failed to load recent activity');
+  return res.json();
+}
+
+export async function fetchUserTrends() {
+  const res = await fetch(`${API_BASE}/analytics/user-trends`);
+  if (!res.ok) throw new Error('Failed to load user trends');
+  return res.json();
+}

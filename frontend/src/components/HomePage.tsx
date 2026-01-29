@@ -270,10 +270,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
                     aria-label="Search jobs by title or company name"
-                    aria-describedby="job-search-keyword-description"
                   />
                 </div>
-                <span id="job-search-keyword-description" className="sr-only">Enter job title or company name to search for available positions</span>
 
                 {/* Location Dropdown */}
                 <div 

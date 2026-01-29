@@ -1,0 +1,27 @@
+# MedExJob.com Robots.txt
+# https://medexjob.com
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://medexjob.com/sitemap.xml
+
+# Disallow admin/dashboard areas from indexing
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+
+# Allow all search engine bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
