@@ -415,7 +415,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-green-100 rounded-full blur-3xl opacity-20"></div>
         
         <div className="container mx-auto px-4 relative z-10">
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-8 items-start">
             {/* Government Jobs */}
             <div className="transform hover:scale-[1.02] transition-transform duration-300">
               <div className="flex items-center justify-between mb-6">
@@ -436,7 +436,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </Button>
               </div>
               {governmentJobs.length > 0 ? (
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4">
                   {governmentJobs.map((job, index) => (
                     <div 
                       key={job.id}
@@ -478,7 +478,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </Button>
               </div>
               {privateJobs.length > 0 ? (
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4">
                   {privateJobs.map((job, index) => (
                     <div 
                       key={job.id}
