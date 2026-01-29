@@ -154,7 +154,7 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
           </div>
 
           {/* Main Content */}
-          <main className="flex-1 max-w-4xl">
+          <main className="flex-1 w-full">
             {/* Introduction Summary */}
             <Card className="p-8 mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-lg">
               <div className="flex items-start gap-4">

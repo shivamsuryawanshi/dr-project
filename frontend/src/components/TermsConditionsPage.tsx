@@ -154,7 +154,7 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
           </div>
 
           {/* Main Content */}
-          <main className="flex-1 max-w-4xl">
+          <main className="flex-1 w-full">
             {/* Introduction Summary */}
             <Card className="p-8 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 shadow-lg">
               <div className="flex items-start gap-4">

@@ -245,19 +245,19 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 <div 
                   className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
                   style={{
-                    gap: 'clamp(0.5rem, 1vw, 0.75rem)',
-                    paddingLeft: 'clamp(0.75rem, 1.5vw, 1rem)',
-                    paddingRight: 'clamp(0.75rem, 1.5vw, 1rem)',
-                    paddingTop: 'clamp(0.625rem, 1vw, 0.875rem)',
-                    paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
-                    borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
-                    minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
-                    height: 'clamp(2.75rem, 3vw, 3.25rem)'
+                    gap: '10px',
+                    paddingLeft: '14px',
+                    paddingRight: '14px',
+                    paddingTop: '10px',
+                    paddingBottom: '10px',
+                    borderRadius: '12px',
+                    minHeight: '48px',
+                    height: '48px'
                   }}
                 >
                   <Search 
                     className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
-                    style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
+                    style={{ width: '18px', height: '18px', minWidth: '18px' }}
                     aria-hidden="true"
                   />
                   <Input
@@ -277,19 +277,19 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 <div 
                   className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
                   style={{
-                    gap: 'clamp(0.5rem, 1vw, 0.75rem)',
-                    paddingLeft: 'clamp(0.75rem, 1.5vw, 1rem)',
-                    paddingRight: 'clamp(0.75rem, 1.5vw, 1rem)',
-                    paddingTop: 'clamp(0.625rem, 1vw, 0.875rem)',
-                    paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
-                    borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
-                    minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
-                    height: 'clamp(2.75rem, 3vw, 3.25rem)'
+                    gap: '10px',
+                    paddingLeft: '14px',
+                    paddingRight: '14px',
+                    paddingTop: '10px',
+                    paddingBottom: '10px',
+                    borderRadius: '12px',
+                    minHeight: '48px',
+                    height: '48px'
                   }}
                 >
                   <MapPin 
                     className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
-                    style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
+                    style={{ width: '18px', height: '18px', minWidth: '18px' }}
                     aria-hidden="true"
                   />
                   <Select value={selectedLocation} onValueChange={setSelectedLocation}>
@@ -415,90 +415,105 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-green-100 rounded-full blur-3xl opacity-20"></div>
         
         <div className="container mx-auto px-4 relative z-10">
-          <div className="grid md:grid-cols-2 gap-8 items-start">
-            {/* Government Jobs */}
-            <div className="transform hover:scale-[1.02] transition-transform duration-300">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl text-gray-900 flex items-center">
-                    <span className="w-2 h-8 bg-blue-600 rounded-full mr-3"></span>
-                    Government Jobs
-                  </h2>
-                  <p className="text-sm text-gray-600 ml-5 mt-1">Official government vacancies</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
-                  onClick={() => onNavigate('govt-jobs')}
-                >
-                  View All
-                </Button>
+          {/* Headers Row */}
+          <div className="grid md:grid-cols-2 gap-8 mb-6">
+            {/* Government Jobs Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl text-gray-900 flex items-center">
+                  <span className="w-2 h-8 bg-blue-600 rounded-full mr-3"></span>
+                  Government Jobs
+                </h2>
+                <p className="text-sm text-gray-600 ml-5 mt-1">Official government vacancies</p>
               </div>
-              {governmentJobs.length > 0 ? (
-                <div className="flex flex-col gap-4">
-                  {governmentJobs.map((job, index) => (
-                    <div 
-                      key={job.id}
-                      className="animate-fade-in-right"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <JobCard
-                        job={job}
-                        onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Card className="p-8 text-center">
-                  <Landmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">No government jobs available at the moment</p>
-                </Card>
-              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
+                onClick={() => onNavigate('govt-jobs')}
+              >
+                View All
+              </Button>
             </div>
 
-            {/* Private Jobs */}
-            <div className="transform hover:scale-[1.02] transition-transform duration-300">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl text-gray-900 flex items-center">
-                    <span className="w-2 h-8 bg-green-600 rounded-full mr-3"></span>
-                    Private Jobs
-                  </h2>
-                  <p className="text-sm text-gray-600 ml-5 mt-1">Top hospitals & healthcare providers</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
-                  onClick={() => onNavigate('private-jobs')}
-                >
-                  View All
-                </Button>
+            {/* Private Jobs Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl text-gray-900 flex items-center">
+                  <span className="w-2 h-8 bg-green-600 rounded-full mr-3"></span>
+                  Private Jobs
+                </h2>
+                <p className="text-sm text-gray-600 ml-5 mt-1">Top hospitals & healthcare providers</p>
               </div>
-              {privateJobs.length > 0 ? (
-                <div className="flex flex-col gap-4">
-                  {privateJobs.map((job, index) => (
-                    <div 
-                      key={job.id}
-                      className="animate-fade-in-left"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <JobCard
-                        job={job}
-                        onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Card className="p-8 text-center">
-                  <BriefcaseIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">No private jobs available at the moment</p>
-                </Card>
-              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
+                onClick={() => onNavigate('private-jobs')}
+              >
+                View All
+              </Button>
             </div>
+          </div>
+
+          {/* Job Cards - Row by Row for Equal Heights */}
+          <div className="flex flex-col gap-4">
+            {(() => {
+              const maxLength = Math.max(governmentJobs.length, privateJobs.length);
+              const rows = [];
+              
+              for (let i = 0; i < maxLength; i++) {
+                const govJob = governmentJobs[i];
+                const privJob = privateJobs[i];
+                
+                rows.push(
+                  <div key={i} className="grid md:grid-cols-2 gap-8">
+                    {/* Government Job Card */}
+                    <div 
+                      className="animate-fade-in-right transform hover:scale-[1.02] transition-transform duration-300"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    >
+                      {govJob ? (
+                        <JobCard
+                          job={govJob}
+                          onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                        />
+                      ) : (
+                        <div className="h-full" /> 
+                      )}
+                    </div>
+                    
+                    {/* Private Job Card */}
+                    <div 
+                      className="animate-fade-in-left transform hover:scale-[1.02] transition-transform duration-300"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    >
+                      {privJob ? (
+                        <JobCard
+                          job={privJob}
+                          onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                        />
+                      ) : (
+                        <div className="h-full" />
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+              
+              return rows.length > 0 ? rows : (
+                <div className="grid md:grid-cols-2 gap-8">
+                  <Card className="p-8 text-center">
+                    <Landmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600 text-sm">No government jobs available at the moment</p>
+                  </Card>
+                  <Card className="p-8 text-center">
+                    <BriefcaseIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600 text-sm">No private jobs available at the moment</p>
+                  </Card>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </section>

@@ -40,7 +40,8 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
       style={{
         background: colors.gradientBg,
         borderColor: colors.borderColor,
-        boxShadow: `0 4px 6px -1px ${colors.shadowColor}, 0 2px 4px -2px ${colors.shadowColor}`
+        boxShadow: `0 4px 6px -1px ${colors.shadowColor}, 0 2px 4px -2px ${colors.shadowColor}`,
+        minHeight: 'clamp(280px, 30vw, 320px)'
       }}
     >
 

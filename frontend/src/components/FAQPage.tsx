@@ -151,14 +151,15 @@ export function FAQPage({ onNavigate }: FAQPageProps) {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               onClick={() => onNavigate('contact')}
-              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              style={{ background: 'linear-gradient(to right, #7c3aed, #6d28d9)', color: 'white' }}
+              className="shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-2"
             >
               Contact Support
             </Button>
             <Button
               variant="outline"
               onClick={() => window.open('mailto:support@medexjob.com')}
-              className="border-purple-200 hover:bg-purple-50 transition-all duration-200"
+              className="border-2 border-purple-600 text-purple-600 hover:bg-purple-50 transition-all duration-200 px-6 py-2"
             >
               Email Us
             </Button>

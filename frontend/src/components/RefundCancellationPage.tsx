@@ -152,7 +152,7 @@ export function RefundCancellationPage({ onNavigate }: RefundCancellationPagePro
           </div>
 
           {/* Main Content */}
-          <main className="flex-1 max-w-4xl">
+          <main className="flex-1 w-full">
             {/* Introduction Summary */}
             <Card className="p-8 mb-8 bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200 shadow-lg">
               <div className="flex items-start gap-4">
@@ -236,33 +236,48 @@ export function RefundCancellationPage({ onNavigate }: RefundCancellationPagePro
 
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">2.2 Service Charges</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">Service Type</th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">Charging Model</th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">Refundable</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700"><strong>Job Posting</strong></td>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700">Per job listing</td>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700"><Badge className="bg-red-600 text-white">No</Badge></td>
-                          </tr>
-                          <tr className="bg-gray-50">
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700"><strong>Featured Listing</strong></td>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700">Additional premium fee</td>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700"><Badge className="bg-red-600 text-white">No</Badge></td>
-                          </tr>
-                          <tr>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700"><strong>Subscription Plans</strong></td>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700">Monthly/Annual</td>
-                            <td className="border border-gray-300 px-4 py-3 text-gray-700"><Badge className="bg-red-600 text-white">No</Badge></td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div className="grid gap-4">
+                      {/* Job Posting Card */}
+                      <div className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:shadow-md transition-all">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">Job Posting</h4>
+                          <p className="text-sm text-gray-600">Per job listing</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-5 h-5 text-red-500" />
+                          <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 border border-red-200">
+                            Non-Refundable
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Featured Listing Card */}
+                      <div className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:shadow-md transition-all">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">Featured Listing</h4>
+                          <p className="text-sm text-gray-600">Additional premium fee</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-5 h-5 text-red-500" />
+                          <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 border border-red-200">
+                            Non-Refundable
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Subscription Plans Card */}
+                      <div className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:shadow-md transition-all">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">Subscription Plans</h4>
+                          <p className="text-sm text-gray-600">Monthly/Annual</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-5 h-5 text-red-500" />
+                          <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 border border-red-200">
+                            Non-Refundable
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
