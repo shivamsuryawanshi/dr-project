@@ -239,7 +239,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
               {/* Mobile: Stack | Tablet: Grid 2-col | Desktop: Grid 3-col with equal widths */}
               <div 
                 className="flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-3 items-stretch"
-                style={{ gap: 'clamp(0.125rem, 0.3vw, 0.375rem)' }}
+                style={{ gap: 'clamp(0.75rem, 1.5vw, 1rem)' }}
               >
                 {/* Keyword Search Input */}
                 <div 
@@ -284,9 +284,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
                     borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
                     minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
-                    height: 'clamp(2.75rem, 3vw, 3.25rem)',
-                    marginTop: 'clamp(-0.5rem, -0.8vw, -1rem)',
-                    marginBottom: 'clamp(0.5rem, 0.8vw, 1rem)'
+                    height: 'clamp(2.75rem, 3vw, 3.25rem)'
                   }}
                 >
                   <MapPin 
