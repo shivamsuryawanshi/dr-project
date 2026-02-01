@@ -70,7 +70,7 @@ ftp:
   port: 21
   username: u284488379
   password: Shivam@3650
-  remote-dir: uploads
+  remote-dir: public_html/uploads
 
 # CORS Configuration
 # CORS Configuration
