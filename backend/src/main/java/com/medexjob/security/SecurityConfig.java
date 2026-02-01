@@ -124,6 +124,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/actuator/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/uploads/**").permitAll() // Allow public access to uploaded files
+                        .requestMatchers("/api/uploads/**").permitAll() // Allow public access to uploaded files via API path
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

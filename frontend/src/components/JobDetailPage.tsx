@@ -44,6 +44,7 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [userApplication, setUserApplication] = useState<any>(null);
   const locationText = job?.location || [job?.city, job?.state].filter(Boolean).join(', ');
   const { jobId } = useParams<{ jobId: string }>();
 
@@ -125,9 +126,11 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
     const checkApplicationStatus = async () => {
       // Always reset state first when jobId or user changes
       setHasApplied(false);
+      setUserApplication(null);
       
       if (!jobId || !isAuthenticated || !token || user?.role !== 'candidate' || !user?.id) {
         setHasApplied(false);
+        setUserApplication(null);
         return;
       }
       
@@ -159,6 +162,12 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
           
           hasApplication = applicationsForThisJob.length > 0;
           console.log('📋 Found', applicationsForThisJob.length, 'application(s) for job', jobId);
+          
+          // Store the application data if found
+          if (hasApplication && applicationsForThisJob[0]) {
+            setUserApplication(applicationsForThisJob[0]);
+            console.log('📄 User application data:', applicationsForThisJob[0]);
+          }
         }
         
         setHasApplied(hasApplication);
@@ -1081,9 +1090,13 @@ export function JobDetailPage({ onNavigate, showApplyDialog: initialShowApplyDia
               <JobDocumentsSection jobId={jobId} />
             )}
 
-            {/* Resume Upload Section - Only for candidates */}
-            {isAuthenticated && user?.role === 'candidate' && jobId && (
-              <ResumeUploadSection jobId={jobId} />
+            {/* Resume Section - Only for candidates who have already applied */}
+            {isAuthenticated && user?.role === 'candidate' && jobId && hasApplied && (
+              <ResumeUploadSection 
+                jobId={jobId} 
+                applicationResumeUrl={userApplication?.resumeUrl} 
+                applicationId={userApplication?.id}
+              />
             )}
           </div>
         </div>

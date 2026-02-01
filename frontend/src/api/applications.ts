@@ -193,6 +193,24 @@ export async function updateApplicationNotes(id: string, notes: string, token: s
   return res.json();
 }
 
+export async function updateApplicationResume(applicationId: string, file: File, token: string) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/applications/${applicationId}/resume`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to update resume' }));
+    throw new Error(error.error || `Failed to update resume (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function deleteApplication(id: string) {
   const res = await fetch(`${API_BASE}/applications/${id}`, {
     method: 'DELETE',

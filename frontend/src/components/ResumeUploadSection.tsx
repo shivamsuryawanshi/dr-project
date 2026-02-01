@@ -5,13 +5,16 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { uploadResume, getMyResume, deleteResume, ResumeResponse } from '../api/resumes';
+import { updateApplicationResume } from '../api/applications';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ResumeUploadSectionProps {
   jobId: string;
+  applicationResumeUrl?: string; // Resume URL from application
+  applicationId?: string; // Application ID for updating resume
 }
 
-export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
+export function ResumeUploadSection({ jobId, applicationResumeUrl, applicationId }: ResumeUploadSectionProps) {
   const { token, user } = useAuth();
   const [resume, setResume] = useState<ResumeResponse | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -21,12 +24,30 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // If applicationResumeUrl is provided, use it directly
+    if (applicationResumeUrl) {
+      const fileName = applicationResumeUrl.split('/').pop() || 'resume';
+      setResume({
+        id: 'application-resume',
+        jobId: jobId,
+        candidateId: user?.id || '',
+        candidateName: user?.name || '',
+        candidateEmail: user?.email || '',
+        fileUrl: applicationResumeUrl,
+        fileName: fileName,
+        fileType: fileName.endsWith('.pdf') ? 'application/pdf' : 'application/msword',
+        uploadedAt: new Date().toISOString()
+      });
+      setLoading(false);
+      return;
+    }
+    
     if (token && user?.role === 'candidate') {
       loadMyResume();
     } else {
       setLoading(false);
     }
-  }, [jobId, token, user]);
+  }, [jobId, token, user, applicationResumeUrl]);
 
   const loadMyResume = async () => {
     if (!token) {
@@ -103,9 +124,28 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
       setError(null);
       setSuccess(null);
 
-      const uploadedResume = await uploadResume(jobId, file, token);
-      setResume(uploadedResume);
-      setSuccess('Resume uploaded successfully!');
+      // If applicationId is provided, update the application resume
+      if (applicationId) {
+        const result = await updateApplicationResume(applicationId, file, token);
+        const fileName = file.name;
+        setResume({
+          id: 'application-resume',
+          jobId: jobId,
+          candidateId: user?.id || '',
+          candidateName: user?.name || '',
+          candidateEmail: user?.email || '',
+          fileUrl: result.resumeUrl,
+          fileName: fileName,
+          fileType: file.type,
+          uploadedAt: new Date().toISOString()
+        });
+        setSuccess('Resume updated successfully!');
+      } else {
+        // Use the old resume API
+        const uploadedResume = await uploadResume(jobId, file, token);
+        setResume(uploadedResume);
+        setSuccess('Resume uploaded successfully!');
+      }
       
       // Clear file input
       if (fileInputRef.current) {
@@ -181,7 +221,7 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
     <Card className="p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
         <FileText className="w-5 h-5" />
-        My Resume
+        Your Applied Resume
       </h3>
 
       {error && (
@@ -261,7 +301,7 @@ export function ResumeUploadSection({ jobId }: ResumeUploadSectionProps) {
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Upload your resume for this job. You can replace it anytime.
+            No resume found for this application. Upload one now.
           </p>
           <input
             ref={fileInputRef}

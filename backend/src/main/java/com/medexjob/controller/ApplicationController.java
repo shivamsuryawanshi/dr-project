@@ -579,6 +579,66 @@ public class ApplicationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}/resume")
+    public ResponseEntity<Map<String, Object>> updateApplicationResume(
+            @PathVariable("id") UUID id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        // Get current authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Authentication required");
+            return ResponseEntity.status(401).body(error);
+        }
+        
+        String email = authentication.getName();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "User not found");
+            return ResponseEntity.status(404).body(error);
+        }
+        
+        User currentUser = userOpt.get();
+        
+        return applicationRepository.findById(id)
+                .map(application -> {
+                    // Verify candidate owns this application
+                    if (application.getCandidateId() == null || 
+                        !application.getCandidateId().equals(currentUser.getId())) {
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("error", "You can only update your own application resume");
+                        return ResponseEntity.status(403).body(error);
+                    }
+                    
+                    try {
+                        // Upload new resume
+                        String fileUrl = fileUploadService.uploadFile(file);
+                        application.setResumeUrl(fileUrl);
+                        Application saved = applicationRepository.save(application);
+                        
+                        logger.info("Resume updated for application {}: {}", id, fileUrl);
+                        
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("message", "Resume updated successfully");
+                        response.put("resumeUrl", fileUrl);
+                        response.put("applicationId", saved.getId().toString());
+                        return ResponseEntity.ok(response);
+                    } catch (IOException e) {
+                        logger.error("Failed to upload resume: {}", e.getMessage());
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("error", "Failed to upload resume: " + e.getMessage());
+                        return ResponseEntity.status(500).body(error);
+                    }
+                })
+                .orElseGet(() -> {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "Application not found");
+                    return ResponseEntity.status(404).body(error);
+                });
+    }
+
     @GetMapping("/employee/{employeeId}")
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getApplicationsByEmployee(
