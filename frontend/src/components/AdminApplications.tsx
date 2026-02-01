@@ -996,8 +996,6 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                                           <FileText className="w-4 h-4 mr-2" />
                                           View Resume
                                         </Button>
-                                          </a>
-                                        </Button>
                                         <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
                                           Click to view or download the candidate's resume
                                         </span>
