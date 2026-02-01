@@ -791,7 +791,6 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                                               <FileText className="w-4 h-4 mr-2" />
                                               View Resume
                                             </Button>
-                                            </Button>
                                           ) : (
                                             <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">
                                               No resume uploaded by candidate
