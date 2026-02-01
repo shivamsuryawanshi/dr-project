@@ -432,7 +432,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
                             }}
                           >
                             <Download className="w-4 h-4 mr-1" />
-                            Download Resume
+                            View Resume
                           </Button>
                         )}
                       </div>
