@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { uploadResume, getMyResume, deleteResume, ResumeResponse } from '../api/resumes';
 import { updateApplicationResume } from '../api/applications';
 import { useAuth } from '../contexts/AuthContext';
+import { openFileInViewer } from '../utils/fileUtils';
 
 interface ResumeUploadSectionProps {
   jobId: string;
@@ -254,7 +255,7 @@ export function ResumeUploadSection({ jobId, applicationResumeUrl, applicationId
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(resume.fileUrl, '_blank')}
+                onClick={() => openFileInViewer(resume.fileUrl)}
               >
                 View
               </Button>

@@ -21,6 +21,7 @@ import { fetchJobs } from '../api/jobs';
 import { fetchApplications, ApplicationResponse } from '../api/applications';
 import { getCurrentSubscription, SubscriptionResponse } from '../api/subscriptions';
 import { fetchNotifications } from '../api/notifications';
+import { openFileInViewer } from '../utils/fileUtils';
 
 interface EmployerDashboardProps {
   onNavigate: (page: string) => void;
@@ -784,16 +785,12 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                                             <Button 
                                               variant="default" 
                                               size="sm"
-                                              onClick={() => {
-                                                const resumeUrl = application.resumeUrl?.startsWith('http') 
-                                                  ? application.resumeUrl 
-                                                  : `${window.location.origin}${application.resumeUrl}`;
-                                                window.open(resumeUrl, '_blank');
-                                              }}
+                                              onClick={() => openFileInViewer(application.resumeUrl!)}
                                               className="bg-purple-600 hover:bg-purple-700"
                                             >
                                               <FileText className="w-4 h-4 mr-2" />
-                                              View/Download Resume
+                                              View Resume
+                                            </Button>
                                             </Button>
                                           ) : (
                                             <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">

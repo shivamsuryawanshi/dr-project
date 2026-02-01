@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { getResumes, ResumeResponse } from '../api/resumes';
 import { useAuth } from '../contexts/AuthContext';
+import { openFileInViewer } from '../utils/fileUtils';
 
 interface JobResumesViewProps {
   jobId: string;
@@ -42,7 +43,7 @@ export function JobResumesView({ jobId }: JobResumesViewProps) {
   };
 
   const handleDownload = (resume: ResumeResponse) => {
-    window.open(resume.fileUrl, '_blank');
+    openFileInViewer(resume.fileUrl);
   };
 
   const getStatusColor = (status?: string) => {

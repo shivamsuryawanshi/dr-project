@@ -15,6 +15,7 @@ import { fetchApplications, ApplicationResponse } from '../api/applications';
 import { fetchJobs, fetchJob } from '../api/jobs';
 import { getSavedJobs, unsaveJob } from '../api/savedJobs';
 import { fetchNotifications } from '../api/notifications';
+import { openFileInViewer } from '../utils/fileUtils';
 
 interface CandidateDashboardProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -424,12 +425,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => {
-                              const resumeUrl = app.resumeUrl?.startsWith('http') 
-                                ? app.resumeUrl 
-                                : `${window.location.origin}${app.resumeUrl}`;
-                              window.open(resumeUrl, '_blank');
-                            }}
+                            onClick={() => openFileInViewer(app.resumeUrl!)}
                           >
                             <Download className="w-4 h-4 mr-1" />
                             View Resume

@@ -19,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ApplicationResponse } from '../api/applications';
 import { fetchJobsByEmployer } from '../api/jobs';
 import { fetchEmployer } from '../api/employers';
+import { openFileInViewer } from '../utils/fileUtils';
 
 interface AdminApplicationsProps {
   onNavigate: (page: string) => void;
@@ -989,25 +990,12 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                                       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                         <Button 
                                           variant="default" 
-                                          asChild
-                                          onClick={() => {
-                                            const resumeUrl = application.resumeUrl?.startsWith('http') 
-                                              ? application.resumeUrl 
-                                              : `${window.location.origin}${application.resumeUrl}`;
-                                            window.open(resumeUrl, '_blank');
-                                          }}
+                                          onClick={() => openFileInViewer(application.resumeUrl!)}
                                           className="w-full sm:w-auto"
                                         >
-                                          <a 
-                                            href={application.resumeUrl?.startsWith('http') 
-                                              ? application.resumeUrl 
-                                              : `${window.location.origin}${application.resumeUrl}`} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-2"
-                                          >
-                                            <FileText className="w-4 h-4" />
-                                            View/Download Resume
+                                          <FileText className="w-4 h-4 mr-2" />
+                                          View Resume
+                                        </Button>
                                           </a>
                                         </Button>
                                         <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
