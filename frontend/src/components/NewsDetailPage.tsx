@@ -124,6 +124,18 @@ export function NewsDetailPage({ onNavigate }: NewsDetailPageProps) {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Featured Image - Responsive */}
+        {news.imageUrl && (
+          <div className="mb-6 rounded-xl overflow-hidden shadow-lg">
+            <img
+              src={news.imageUrl}
+              alt={news.title}
+              className="w-full object-cover h-48 sm:h-64 md:h-80 lg:h-96 transition-all duration-300"
+              loading="lazy"
+            />
+          </div>
+        )}
+
         {/* News Header */}
         <Card className="p-6 md:p-8 mb-6">
           <div className="flex flex-wrap items-center gap-3 mb-4">

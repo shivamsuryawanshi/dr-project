@@ -48,6 +48,9 @@ public class NewsUpdate {
     @Column(name = "show_on_homepage", nullable = false, columnDefinition = "BOOLEAN DEFAULT 0")
     private Boolean showOnHomepage = false;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -118,6 +121,14 @@ public class NewsUpdate {
 
     public void setShowOnHomepage(Boolean showOnHomepage) {
         this.showOnHomepage = showOnHomepage != null ? showOnHomepage : false;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public LocalDateTime getCreatedAt() {

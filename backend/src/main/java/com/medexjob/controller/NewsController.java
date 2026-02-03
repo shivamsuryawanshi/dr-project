@@ -3,10 +3,12 @@ package com.medexjob.controller;
 
 import com.medexjob.entity.NewsUpdate;
 import com.medexjob.repository.NewsUpdateRepository;
+import com.medexjob.service.FileUploadService;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +28,11 @@ public class NewsController {
 
     private static final Logger logger = LoggerFactory.getLogger(NewsController.class);
     private final NewsUpdateRepository newsUpdateRepository;
+    private final FileUploadService fileUploadService;
 
-    public NewsController(NewsUpdateRepository newsUpdateRepository) {
+    public NewsController(NewsUpdateRepository newsUpdateRepository, FileUploadService fileUploadService) {
         this.newsUpdateRepository = newsUpdateRepository;
+        this.fileUploadService = fileUploadService;
     }
 
     @PostConstruct
@@ -158,6 +162,43 @@ public class NewsController {
         return ResponseEntity.noContent().build();
     }
 
+    // Admin: Upload News Image
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> uploadNewsImage(
+            @PathVariable("id") UUID id,
+            @RequestParam("image") MultipartFile image) {
+        try {
+            logger.info("Uploading image for news ID: {}", id);
+            
+            Optional<NewsUpdate> newsOpt = newsUpdateRepository.findById(id);
+            if (newsOpt.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "News not found");
+                return ResponseEntity.notFound().build();
+            }
+            
+            NewsUpdate news = newsOpt.get();
+            
+            // Upload image using FileUploadService (uploads to Hostinger FTP)
+            String imageUrl = fileUploadService.uploadFile(image);
+            
+            // Save image URL to news
+            news.setImageUrl(imageUrl);
+            NewsUpdate saved = newsUpdateRepository.save(news);
+            
+            logger.info("Image uploaded successfully for news ID: {}, URL: {}", id, imageUrl);
+            
+            return ResponseEntity.ok(toResponse(saved));
+        } catch (Exception e) {
+            logger.error("Error uploading news image: {}", e.getMessage(), e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to upload image");
+            error.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
     private NewsUpdate.NewsType parseNewsType(String type) {
         if (type == null || type.isBlank()) {
             return NewsUpdate.NewsType.UPDATE;
@@ -191,6 +232,9 @@ public class NewsController {
             map.put("fullStory", news.getFullStory());
         }
         map.put("showOnHomepage", news.isShowOnHomepage());
+        if (news.getImageUrl() != null) {
+            map.put("imageUrl", news.getImageUrl());
+        }
         if (news.getCreatedAt() != null) {
             map.put("createdAt", news.getCreatedAt().toString());
         }

@@ -10,6 +10,7 @@ export interface PulseUpdate {
   breaking?: boolean;
   fullStory?: string;
   showOnHomepage?: boolean;
+  imageUrl?: string;
   createdAt?: string;
 }
 
@@ -87,4 +88,17 @@ export async function updateNews(id: string, payload: Partial<NewsPayload>): Pro
 // Admin: Delete news
 export async function deleteNews(id: string): Promise<void> {
   await apiClient.delete(`/news/${id}`);
+}
+
+// Admin: Upload news image
+export async function uploadNewsImage(newsId: string, imageFile: File): Promise<PulseUpdate> {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  
+  const res = await apiClient.post(`/news/${newsId}/image`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
 }

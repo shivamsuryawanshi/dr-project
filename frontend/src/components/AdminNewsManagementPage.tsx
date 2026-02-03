@@ -1,6 +1,6 @@
 // AI assisted development
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, ArrowLeft, Loader2, X, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, ArrowLeft, Loader2, X, Save, Upload, Image as ImageIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { fetchAllNews, createNews, updateNews, deleteNews, PulseUpdate, NewsPayload, PulseType } from '../api/news';
+import { fetchAllNews, createNews, updateNews, deleteNews, uploadNewsImage, PulseUpdate, NewsPayload, PulseType } from '../api/news';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AdminNewsManagementPageProps {
@@ -30,6 +30,9 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
     fullStory: '',
     showOnHomepage: false,
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const loadNews = async () => {
     setLoading(true);
@@ -59,6 +62,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
       showOnHomepage: false,
     });
     setEditingNews(null);
+    setSelectedImage(null);
+    setImagePreview(null);
     setShowForm(true);
   };
 
@@ -72,6 +77,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
       fullStory: newsItem.fullStory || '',
       showOnHomepage: newsItem.showOnHomepage || false,
     });
+    setSelectedImage(null);
+    setImagePreview(newsItem.imageUrl || null);
     setShowForm(true);
   };
 
@@ -87,6 +94,34 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file (JPG, PNG, GIF, etc.)');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+      setSelectedImage(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
       alert('Please enter a title');
@@ -94,15 +129,32 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
     }
 
     try {
+      let savedNews: PulseUpdate;
+      
       if (editingNews) {
-        await updateNews(editingNews.id, formData);
-        alert('News updated successfully!');
+        savedNews = await updateNews(editingNews.id, formData);
       } else {
-        await createNews(formData);
-        alert('News created successfully!');
+        savedNews = await createNews(formData);
       }
+
+      // Upload image if selected
+      if (selectedImage && savedNews.id) {
+        setUploadingImage(true);
+        try {
+          await uploadNewsImage(savedNews.id, selectedImage);
+        } catch (imgError: any) {
+          console.error('Image upload failed:', imgError);
+          alert('News saved but image upload failed. You can try uploading the image again by editing the news.');
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
+      alert(editingNews ? 'News updated successfully!' : 'News created successfully!');
       setShowForm(false);
       setEditingNews(null);
+      setSelectedImage(null);
+      setImagePreview(null);
       loadNews();
     } catch (e: any) {
       let errorMessage = 'Failed to save news. Please try again.';
@@ -127,6 +179,8 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
   const handleCancel = () => {
     setShowForm(false);
     setEditingNews(null);
+    setSelectedImage(null);
+    setImagePreview(null);
     setFormData({
       title: '',
       type: 'UPDATE',
@@ -248,6 +302,51 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
                 </div>
               </div>
 
+              {/* Image Upload Section */}
+              <div>
+                <Label>News Image (Featured Image)</Label>
+                <div className="mt-2">
+                  {imagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-48 sm:h-64 object-cover rounded-lg border border-gray-200"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={handleRemoveImage}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 text-gray-400 mb-3" />
+                        <p className="mb-2 text-sm text-gray-500">
+                          <span className="font-semibold">Click to upload</span> news image
+                        </p>
+                        <p className="text-xs text-gray-400">PNG, JPG, GIF up to 5MB</p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  This image will be displayed at the top of the full news story page. Recommended size: 1200x600px
+                </p>
+              </div>
+
               <div>
                 <Label htmlFor="fullStory">Full Story Content</Label>
                 <Textarea
@@ -292,11 +391,24 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingNews ? 'Update News' : 'Create News'}
+                <Button 
+                  onClick={handleSubmit} 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading Image...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      {editingNews ? 'Update News' : 'Create News'}
+                    </>
+                  )}
                 </Button>
-                <Button variant="outline" onClick={handleCancel}>
+                <Button variant="outline" onClick={handleCancel} disabled={uploadingImage}>
                   Cancel
                 </Button>
               </div>
@@ -318,9 +430,25 @@ export function AdminNewsManagementPage({ onNavigate }: AdminNewsManagementPageP
             {news.map((item) => (
               <Card key={item.id} className="p-6">
                 <div className="flex items-start justify-between">
+                  {/* Thumbnail if image exists */}
+                  {item.imageUrl && (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 mr-4">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                      {item.imageUrl && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200">
+                          <ImageIcon className="w-3 h-3 mr-1" />
+                          Image
+                        </Badge>
+                      )}
                       {item.breaking && (
                         <Badge className="bg-red-100 text-red-700 border-red-200">
                           Breaking
