@@ -180,8 +180,8 @@ public class NewsController {
             
             NewsUpdate news = newsOpt.get();
             
-            // Upload image using FileUploadService (uploads to Hostinger FTP)
-            String imageUrl = fileUploadService.uploadFile(image);
+            // Upload image using FileUploadService (uploads to Hostinger FTP in 'news' subfolder)
+            String imageUrl = fileUploadService.uploadFile(image, "news");
             
             // Save image URL to news
             news.setImageUrl(imageUrl);

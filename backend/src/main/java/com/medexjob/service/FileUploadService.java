@@ -92,13 +92,23 @@ public class FileUploadService {
      * Falls back to local storage if FTP fails
      */
     public String uploadFile(MultipartFile file) throws IOException {
+        return uploadFile(file, null); // No subfolder
+    }
+    
+    /**
+     * Upload file to Hostinger FTP server with optional subfolder
+     * Falls back to local storage if FTP fails
+     * @param file The file to upload
+     * @param subfolder Optional subfolder (e.g., "news" for news images)
+     */
+    public String uploadFile(MultipartFile file, String subfolder) throws IOException {
         // Validate file
         validateFile(file);
 
         // Generate unique filename
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.isEmpty()) {
-            originalFilename = "resume";
+            originalFilename = "file";
         }
         String uniqueFilename = UUID.randomUUID().toString() + "_" + sanitizeFilename(originalFilename);
 
@@ -115,7 +125,7 @@ public class FileUploadService {
         // Try FTP first if enabled (production)
         if (useFtp) {
             try {
-                String url = uploadFileToFtp(fileBytes, uniqueFilename, originalFilename);
+                String url = uploadFileToFtp(fileBytes, uniqueFilename, originalFilename, subfolder);
                 logger.info("File successfully uploaded to FTP: {}", url);
                 return url;
             } catch (Exception e) {
@@ -128,7 +138,7 @@ public class FileUploadService {
 
         // Local storage (development) or fallback (production)
         try {
-            String url = uploadFileToLocal(fileBytes, uniqueFilename, originalFilename);
+            String url = uploadFileToLocal(fileBytes, uniqueFilename, originalFilename, subfolder);
             if (useFtp) {
                 logger.warn("File saved to local storage as backup (FTP failed): {}", url);
             } else {
@@ -144,7 +154,7 @@ public class FileUploadService {
     /**
      * Upload file to FTP server
      */
-    private String uploadFileToFtp(byte[] fileBytes, String uniqueFilename, String originalFilename) throws IOException {
+    private String uploadFileToFtp(byte[] fileBytes, String uniqueFilename, String originalFilename, String subfolder) throws IOException {
         FTPClient ftpClient = new FTPClient();
         InputStream inputStream = null;
 
@@ -226,6 +236,25 @@ public class FileUploadService {
             
             logger.info("Successfully changed to upload directory: {}", ftpClient.printWorkingDirectory());
 
+            // If subfolder is specified, navigate to it (create if doesn't exist)
+            if (subfolder != null && !subfolder.trim().isEmpty()) {
+                String subfolderPath = subfolder.trim();
+                // Try to change to subfolder
+                if (!ftpClient.changeWorkingDirectory(subfolderPath)) {
+                    // Subfolder doesn't exist, create it
+                    logger.info("Creating subfolder: {}", subfolderPath);
+                    boolean created = ftpClient.makeDirectory(subfolderPath);
+                    if (created) {
+                        logger.info("Subfolder created successfully: {}", subfolderPath);
+                        ftpClient.changeWorkingDirectory(subfolderPath);
+                    } else {
+                        logger.warn("Failed to create subfolder: {}. Uploading to main uploads folder.", subfolderPath);
+                    }
+                } else {
+                    logger.info("Changed to subfolder: {}", subfolderPath);
+                }
+            }
+
             // Upload file using byte array
             inputStream = new java.io.ByteArrayInputStream(fileBytes);
             logger.info("Uploading file: {} to FTP server", uniqueFilename);
@@ -239,8 +268,11 @@ public class FileUploadService {
 
             logger.info("File uploaded successfully to FTP: {}", uniqueFilename);
 
-            // Generate public URL
-            String publicUrl = baseUrl + "/uploads/" + uniqueFilename;
+            // Generate public URL (include subfolder if used)
+            String urlPath = (subfolder != null && !subfolder.trim().isEmpty()) 
+                ? "/uploads/" + subfolder.trim() + "/" + uniqueFilename 
+                : "/uploads/" + uniqueFilename;
+            String publicUrl = baseUrl + urlPath;
             
             logger.info("File uploaded successfully: {} -> {}", originalFilename, publicUrl);
             
@@ -272,10 +304,16 @@ public class FileUploadService {
     /**
      * Upload file to local storage
      */
-    private String uploadFileToLocal(byte[] fileBytes, String uniqueFilename, String originalFilename) throws IOException {
+    private String uploadFileToLocal(byte[] fileBytes, String uniqueFilename, String originalFilename, String subfolder) throws IOException {
         try {
             // Create upload directory if it doesn't exist
             Path uploadPath = Paths.get(localUploadDir);
+            
+            // If subfolder specified, add it to the path
+            if (subfolder != null && !subfolder.trim().isEmpty()) {
+                uploadPath = uploadPath.resolve(subfolder.trim());
+            }
+            
             if (!Files.exists(uploadPath)) {
                 try {
                     Files.createDirectories(uploadPath);
@@ -302,9 +340,11 @@ public class FileUploadService {
                 throw new IOException("Failed to write file. Please check disk space and permissions: " + writeException.getMessage(), writeException);
             }
 
-            // Generate URL - for local storage, use /api/uploads/ path
-            // The WebConfig will serve files from this path
-            String publicUrl = baseUrl + "/api/uploads/" + uniqueFilename;
+            // Generate URL - for local storage, use /api/uploads/ path (include subfolder if used)
+            String urlPath = (subfolder != null && !subfolder.trim().isEmpty()) 
+                ? "/api/uploads/" + subfolder.trim() + "/" + uniqueFilename 
+                : "/api/uploads/" + uniqueFilename;
+            String publicUrl = baseUrl + urlPath;
             
             logger.info("File uploaded to local storage: {} -> {}", originalFilename, publicUrl);
             
