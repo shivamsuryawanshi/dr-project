@@ -49,12 +49,12 @@ razorpay:
   key-secret: ${RAZORPAY_KEY_SECRET:your_razorpay_key_secret}
 
 file:
-  upload-dir: /opt/medexjob/uploads
+  upload-dir: /opt/medexjob/backend/uploads
   max-size: 10485760
   base-url: https://medexjob.com
-  use-ftp: true  # FTP enabled - files will be uploaded to Hostinger
+  use-ftp: false  # FTP DISABLED - files saved locally on VPS
 
-# FTP Configuration for Hostinger
+# FTP Configuration for Hostinger (NOT USED - kept for reference)
 ftp:
   host: 82.180.143.101
   port: 21
