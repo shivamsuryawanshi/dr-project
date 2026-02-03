@@ -340,10 +340,10 @@ public class FileUploadService {
                 throw new IOException("Failed to write file. Please check disk space and permissions: " + writeException.getMessage(), writeException);
             }
 
-            // Generate URL - for local storage, use /api/uploads/ path (include subfolder if used)
+            // Generate URL - for local storage, use /uploads/ path (served by Nginx)
             String urlPath = (subfolder != null && !subfolder.trim().isEmpty()) 
-                ? "/api/uploads/" + subfolder.trim() + "/" + uniqueFilename 
-                : "/api/uploads/" + uniqueFilename;
+                ? "/uploads/" + subfolder.trim() + "/" + uniqueFilename 
+                : "/uploads/" + uniqueFilename;
             String publicUrl = baseUrl + urlPath;
             
             logger.info("File uploaded to local storage: {} -> {}", originalFilename, publicUrl);
@@ -503,8 +503,8 @@ public class FileUploadService {
         // Extract filename from URL
         String filename = fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
         
-        // Check if it's a local file (contains /api/uploads/)
-        if (fileUrl.contains("/api/uploads/")) {
+        // Check if it's a local file (contains /uploads/)
+        if (fileUrl.contains("/uploads/")) {
             deleteLocalFile(filename);
         } else {
             // Try FTP deletion
