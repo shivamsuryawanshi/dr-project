@@ -786,14 +786,14 @@ export function EmployerDashboard({ onNavigate }: EmployerDashboardProps) {
                                               variant="default" 
                                               size="sm"
                                               onClick={() => openFileInViewer(application.resumeUrl!)}
-                                              className="bg-purple-600 hover:bg-purple-700"
+                                              className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
                                             >
                                               <FileText className="w-4 h-4 mr-2" />
                                               View Resume
                                             </Button>
                                           ) : (
-                                            <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">
-                                              No resume uploaded by candidate
+                                            <div className="text-sm text-orange-700 bg-orange-100 border border-orange-300 p-2 rounded font-medium">
+                                              ⚠️ No resume uploaded by candidate
                                             </div>
                                           )}
                                         </div>

@@ -465,7 +465,7 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onNavigate(userRole === 'employer' ? 'employer-dashboard' : 'dashboard')}
+                  onClick={() => onNavigate(userRole === 'employer' ? 'dashboard/employer' : 'dashboard/admin')}
                   className="lg:hidden"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -506,7 +506,7 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
               
               <Button 
                 variant="outline" 
-                onClick={() => onNavigate(userRole === 'employer' ? 'employer-dashboard' : 'dashboard')}
+                onClick={() => onNavigate(userRole === 'employer' ? 'dashboard/employer' : 'dashboard/admin')}
                 className="hidden lg:flex"
               >
                 Back to Dashboard
@@ -1244,6 +1244,25 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
+                          
+                          {/* View Resume Button - Clearly Visible */}
+                          <div className="mt-3">
+                            {application.resumeUrl ? (
+                              <Button 
+                                variant="default" 
+                                size="sm"
+                                onClick={() => openFileInViewer(application.resumeUrl!)}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                View Resume
+                              </Button>
+                            ) : (
+                              <div className="text-sm text-orange-700 bg-orange-100 border border-orange-300 p-2 rounded font-medium text-center">
+                                ⚠️ No resume uploaded
+                              </div>
+                            )}
+                          </div>
                         </div>
                         </div>
                       </Card>
@@ -1582,6 +1601,25 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                            </div>
+                            
+                            {/* View Resume Button - Clearly Visible */}
+                            <div className="mt-3">
+                              {application.resumeUrl ? (
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={() => openFileInViewer(application.resumeUrl!)}
+                                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  View Resume
+                                </Button>
+                              ) : (
+                                <div className="text-sm text-orange-700 bg-orange-100 border border-orange-300 p-2 rounded font-medium text-center">
+                                  ⚠️ No resume uploaded
+                                </div>
+                              )}
                             </div>
                           </div>
                         </Card>
