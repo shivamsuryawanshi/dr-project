@@ -415,105 +415,92 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-green-100 rounded-full blur-3xl opacity-20"></div>
         
         <div className="container mx-auto px-4 relative z-10">
-          {/* Headers Row */}
-          <div className="grid md:grid-cols-2 gap-8 mb-6">
-            {/* Government Jobs Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl text-gray-900 flex items-center">
-                  <span className="w-2 h-8 bg-blue-600 rounded-full mr-3"></span>
-                  Government Jobs
-                </h2>
-                <p className="text-sm text-gray-600 ml-5 mt-1">Official government vacancies</p>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
-                onClick={() => onNavigate('govt-jobs')}
-              >
-                View All
-              </Button>
-            </div>
-
-            {/* Private Jobs Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl text-gray-900 flex items-center">
-                  <span className="w-2 h-8 bg-green-600 rounded-full mr-3"></span>
-                  Private Jobs
-                </h2>
-                <p className="text-sm text-gray-600 ml-5 mt-1">Top hospitals & healthcare providers</p>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
-                onClick={() => onNavigate('private-jobs')}
-              >
-                View All
-              </Button>
-            </div>
-          </div>
-
-          {/* Job Cards - Row by Row for Equal Heights */}
-          <div className="flex flex-col gap-4">
-            {(() => {
-              const maxLength = Math.max(governmentJobs.length, privateJobs.length);
-              const rows = [];
-              
-              for (let i = 0; i < maxLength; i++) {
-                const govJob = governmentJobs[i];
-                const privJob = privateJobs[i];
-                
-                rows.push(
-                  <div key={i} className="grid md:grid-cols-2 gap-8">
-                    {/* Government Job Card */}
-                    <div 
-                      className="animate-fade-in-right transform hover:scale-[1.02] transition-transform duration-300"
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    >
-                      {govJob ? (
-                        <JobCard
-                          job={govJob}
-                          onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
-                        />
-                      ) : (
-                        <div className="h-full" /> 
-                      )}
-                    </div>
-                    
-                    {/* Private Job Card */}
-                    <div 
-                      className="animate-fade-in-left transform hover:scale-[1.02] transition-transform duration-300"
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    >
-                      {privJob ? (
-                        <JobCard
-                          job={privJob}
-                          onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
-                        />
-                      ) : (
-                        <div className="h-full" />
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-              
-              return rows.length > 0 ? rows : (
-                <div className="grid md:grid-cols-2 gap-8">
-                  <Card className="p-8 text-center">
-                    <Landmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm">No government jobs available at the moment</p>
-                  </Card>
-                  <Card className="p-8 text-center">
-                    <BriefcaseIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm">No private jobs available at the moment</p>
-                  </Card>
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Government Jobs Column */}
+            <div className="space-y-4">
+              {/* Government Jobs Header */}
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-2xl text-gray-900 flex items-center">
+                    <span className="w-2 h-8 bg-blue-600 rounded-full mr-3"></span>
+                    Government Jobs
+                  </h2>
+                  <p className="text-sm text-gray-600 ml-5 mt-1">Official government vacancies</p>
                 </div>
-              );
-            })()}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
+                  onClick={() => onNavigate('govt-jobs')}
+                >
+                  View All
+                </Button>
+              </div>
+              
+              {/* Government Job Cards */}
+              {governmentJobs.length > 0 ? (
+                governmentJobs.map((job, index) => (
+                  <div 
+                    key={job.id}
+                    className="animate-fade-in-right transform hover:scale-[1.02] transition-transform duration-300"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <JobCard
+                      job={job}
+                      onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                    />
+                  </div>
+                ))
+              ) : (
+                <Card className="p-8 text-center">
+                  <Landmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 text-sm">No government jobs available at the moment</p>
+                </Card>
+              )}
+            </div>
+
+            {/* Private Jobs Column */}
+            <div className="space-y-4">
+              {/* Private Jobs Header */}
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-2xl text-gray-900 flex items-center">
+                    <span className="w-2 h-8 bg-green-600 rounded-full mr-3"></span>
+                    Private Jobs
+                  </h2>
+                  <p className="text-sm text-gray-600 ml-5 mt-1">Top hospitals & healthcare providers</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
+                  onClick={() => onNavigate('private-jobs')}
+                >
+                  View All
+                </Button>
+              </div>
+              
+              {/* Private Job Cards */}
+              {privateJobs.length > 0 ? (
+                privateJobs.map((job, index) => (
+                  <div 
+                    key={job.id}
+                    className="animate-fade-in-left transform hover:scale-[1.02] transition-transform duration-300"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <JobCard
+                      job={job}
+                      onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                    />
+                  </div>
+                ))
+              ) : (
+                <Card className="p-8 text-center">
+                  <BriefcaseIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 text-sm">No private jobs available at the moment</p>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
       </section>
