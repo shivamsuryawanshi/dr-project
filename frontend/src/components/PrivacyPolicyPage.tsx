@@ -542,7 +542,7 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                   <div className="bg-green-50 border-l-4 border-green-500 p-5 rounded-r-lg">
                     <p className="font-semibold text-green-900 mb-2">How to Exercise Your Rights</p>
                     <p className="text-sm text-green-800 mb-3">
-                      To exercise any of these rights, please contact us at <strong>privacy@medexjob.com</strong> or use the 
+                      To exercise any of these rights, please contact us at <strong>medexjob1997@gmail.com</strong> or use the 
                       privacy controls in your account settings. We will respond to your request within 30 days.
                     </p>
                     <p className="text-sm text-green-800">
@@ -761,7 +761,7 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                     <p className="font-semibold text-blue-900 mb-2">Governing Law</p>
                     <p className="text-sm text-blue-800">
                       This Privacy Policy is governed by the laws of India. Any disputes shall be subject to the exclusive 
-                      jurisdiction of courts in New Delhi, India.
+                      jurisdiction of courts in Bhopal, Madhya Pradesh, India.
                     </p>
                   </div>
                 </div>
@@ -781,7 +781,7 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                   <div className="border-l-4 border-blue-500 pl-5">
                     <h3 className="font-semibold text-gray-900 mb-2">How do I access my personal data?</h3>
                     <p className="text-gray-700 text-sm">
-                      You can access your data through your account settings or by emailing privacy@medexjob.com. 
+                      You can access your data through your account settings or by emailing medexjob1997@gmail.com. 
                       We will provide your data in a structured format within 30 days.
                     </p>
                   </div>
@@ -839,7 +839,7 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                         <Mail className="w-5 h-5 text-blue-600" />
                         <h3 className="font-semibold text-gray-900">Email</h3>
                       </div>
-                      <p className="text-gray-700">privacy@medexjob.com</p>
+                      <p className="text-gray-700">medexjob1997@gmail.com</p>
                       <p className="text-sm text-gray-600 mt-1">Response within 24-48 hours</p>
                     </div>
                     <div className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -847,7 +847,7 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                         <Phone className="w-5 h-5 text-blue-600" />
                         <h3 className="font-semibold text-gray-900">Phone</h3>
                       </div>
-                      <p className="text-gray-700">+91 98765 43210</p>
+                      <p className="text-gray-700">+91 77279 30382</p>
                       <p className="text-sm text-gray-600 mt-1">Mon-Sat, 9 AM - 6 PM IST</p>
                     </div>
                     <div className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm md:col-span-2">
@@ -856,9 +856,9 @@ export function PrivacyPolicyPage({ onNavigate }: PrivacyPolicyPageProps) {
                         <h3 className="font-semibold text-gray-900">Mailing Address</h3>
                       </div>
                       <p className="text-gray-700">
-                        MedExJob.com<br />
-                        Data Protection Officer<br />
-                        123, Medical Plaza, New Delhi - 110001, India
+                        MedExJob<br />
+                        Tribhuwam Vihar, Bagli Village<br />
+                        Bhopal, Madhya Pradesh – 462043, India
                       </p>
                     </div>
                   </div>

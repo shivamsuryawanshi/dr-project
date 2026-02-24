@@ -10,13 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -149,6 +147,30 @@ public class FileUploadService {
             logger.error("Both FTP and local storage failed for file: {}. Error: {}", originalFilename, e.getMessage(), e);
             throw new IOException("Failed to upload file. Please try again later.", e);
         }
+    }
+
+    /**
+     * Upload raw bytes (server-generated files) to storage with optional subfolder.
+     * Does not perform file-type validation.
+     */
+    public String uploadBytes(byte[] fileBytes, String filename, String subfolder) throws IOException {
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new IllegalArgumentException("File bytes are empty");
+        }
+
+        String originalFilename = filename != null && !filename.isEmpty() ? filename : "file";
+        String uniqueFilename = UUID.randomUUID().toString() + "_" + sanitizeFilename(originalFilename);
+
+        // Try FTP first if enabled
+        if (useFtp) {
+            try {
+                return uploadFileToFtp(fileBytes, uniqueFilename, originalFilename, subfolder);
+            } catch (Exception e) {
+                logger.error("FTP upload failed for server file {}. Falling back to local. Error: {}", originalFilename, e.getMessage(), e);
+            }
+        }
+
+        return uploadFileToLocal(fileBytes, uniqueFilename, originalFilename, subfolder);
     }
     
     /**

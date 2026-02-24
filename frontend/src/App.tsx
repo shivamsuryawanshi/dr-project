@@ -34,6 +34,7 @@ import { NewsPage } from './components/NewsPage';
 import { NewsDetailPage } from './components/NewsDetailPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { AdminPricingManagement } from './components/AdminPricingManagement';
+import { PricingPage } from './components/PricingPage';
 import { Toaster } from './components/ui/sonner';
 
 function AppContent() {
@@ -106,6 +107,7 @@ function AppContent() {
           <Route path="/news/:newsId" element={<NewsDetailPage onNavigate={handleNavigate} />} />
           <Route path="/job-detail/:jobId" element={<JobDetailPage onNavigate={handleNavigate} />} />
           <Route path="/about" element={<AboutPage onNavigate={handleNavigate} />} />
+          <Route path="/pricing" element={<PricingPage onNavigate={handleNavigate} />} />
           <Route path="/faq" element={<FAQPage onNavigate={handleNavigate} />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage onNavigate={handleNavigate} />} />
           <Route path="/terms-conditions" element={<TermsConditionsPage onNavigate={handleNavigate} />} />

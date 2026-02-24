@@ -109,7 +109,7 @@ export const mockJobs: Job[] = [
     title: 'AYUSH Medical Officer',
     organization: 'Ministry of AYUSH',
     sector: 'government',
-    category: 'AYUSH',
+    category: 'Allied Health Professionals',
     location: 'Multiple Locations',
     qualification: 'BAMS/BHMS/BUMS',
     experience: '0-5 years',

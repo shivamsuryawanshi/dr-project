@@ -24,6 +24,9 @@ public class RazorpayService {
     
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
+
+    @Value("${razorpay.webhook-secret:}")
+    private String razorpayWebhookSecret;
     
     private RazorpayClient razorpayClient;
     
@@ -99,6 +102,40 @@ public class RazorpayService {
             return isValid;
         } catch (Exception e) {
             logger.error("Error verifying payment signature", e);
+            return false;
+        }
+    }
+
+    /**
+     * Verify Razorpay webhook signature using HMAC SHA256
+     * @param payload Raw request body
+     * @param receivedSignature Signature from X-Razorpay-Signature header
+     * @return true if signature is valid
+     */
+    public boolean verifyWebhookSignature(String payload, String receivedSignature) {
+        try {
+            if (razorpayWebhookSecret == null || razorpayWebhookSecret.isEmpty()) {
+                logger.error("Razorpay webhook secret is not configured");
+                return false;
+            }
+            if (payload == null || receivedSignature == null) {
+                return false;
+            }
+
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            javax.crypto.spec.SecretKeySpec secretKeySpec =
+                    new javax.crypto.spec.SecretKeySpec(razorpayWebhookSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(secretKeySpec);
+            byte[] digest = mac.doFinal(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String computedSignature = java.util.Base64.getEncoder().encodeToString(digest);
+
+            boolean valid = computedSignature.equals(receivedSignature);
+            if (!valid) {
+                logger.warn("Invalid Razorpay webhook signature");
+            }
+            return valid;
+        } catch (Exception e) {
+            logger.error("Error verifying Razorpay webhook signature", e);
             return false;
         }
     }

@@ -57,6 +57,25 @@ export interface PaymentInitiateResponse {
   razorpayCurrency?: string;
 }
 
+export interface RazorpayConfirmRequest {
+  paymentId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}
+
+export interface RazorpayConfirmResponse {
+  payment: PaymentResponse;
+  subscription?: SubscriptionResponse | null;
+  message: string;
+}
+
+export interface PaymentInvoiceResponse {
+  invoiceNumber: string;
+  fileUrl: string;
+  status: string;
+}
+
 export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanResponse[]> {
   const res = await fetch(`${API_BASE}/subscriptions/plans`, {
     headers: {
@@ -118,6 +137,35 @@ export async function createSubscription(planId: string, token: string): Promise
   return res.json();
 }
 
+export async function getPaymentInvoice(
+  paymentId: string,
+  token: string
+): Promise<PaymentInvoiceResponse> {
+  const res = await fetch(`${API_BASE}/payments/${paymentId}/invoice`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    let errorMessage = `Failed to fetch invoice (${res.status})`;
+    try {
+      const errorData = await res.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(errorMessage);
+  }
+
+  return res.json();
+}
+
 export async function updateSubscription(
   id: string,
   updates: { autoRenew?: boolean },
@@ -167,6 +215,37 @@ export async function initiatePayment(planId: string, token: string): Promise<Pa
 
   if (!res.ok) {
     throw new Error(`Failed to initiate payment (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function confirmRazorpayPayment(
+  data: RazorpayConfirmRequest,
+  token: string
+): Promise<RazorpayConfirmResponse> {
+  const res = await fetch(`${API_BASE}/subscriptions/payments/razorpay/confirm`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    let errorMessage = `Failed to confirm payment (${res.status})`;
+    try {
+      const errorData = await res.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(errorMessage);
   }
 
   return res.json();

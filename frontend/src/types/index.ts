@@ -8,7 +8,7 @@ export type JobCategory =
   | 'Medical Officer' 
   | 'Faculty' 
   | 'Specialist' 
-  | 'AYUSH' 
+  | 'Allied Health Professionals' 
   | 'Paramedical / Nursing';
 
 export type ApplicationStatus = 'applied' | 'shortlisted' | 'interview' | 'rejected' | 'selected';

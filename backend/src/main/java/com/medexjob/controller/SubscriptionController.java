@@ -34,6 +34,7 @@ public class SubscriptionController {
     private final EmployerRepository employerRepository;
     private final com.medexjob.service.RazorpayService razorpayService;
     private final NotificationService notificationService;
+    private final com.medexjob.service.InvoiceService invoiceService;
 
     public SubscriptionController(
             SubscriptionPlanRepository planRepository,
@@ -42,7 +43,8 @@ public class SubscriptionController {
             UserRepository userRepository,
             EmployerRepository employerRepository,
             com.medexjob.service.RazorpayService razorpayService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            com.medexjob.service.InvoiceService invoiceService) {
         this.planRepository = planRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.paymentRepository = paymentRepository;
@@ -50,6 +52,7 @@ public class SubscriptionController {
         this.employerRepository = employerRepository;
         this.razorpayService = razorpayService;
         this.notificationService = notificationService;
+        this.invoiceService = invoiceService;
     }
 
     /**
@@ -90,12 +93,39 @@ public class SubscriptionController {
             }
 
             User user = userOpt.get();
-            String planIdStr = (String) request.get("planId");
-            UUID planId = UUID.fromString(planIdStr);
+            String paymentIdStr = (String) request.get("paymentId");
+            if (paymentIdStr == null) {
+                return ResponseEntity.status(400).body(Map.of("error", "paymentId is required. Use payment confirmation flow."));
+            }
+
+            UUID paymentId = UUID.fromString(paymentIdStr);
+            Optional<Payment> paymentOpt = paymentRepository.findById(paymentId);
+            if (paymentOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Payment not found"));
+            }
+
+            Payment payment = paymentOpt.get();
+            if (!payment.getUserId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied for this payment"));
+            }
+
+            if (payment.getStatus() != Payment.PaymentStatus.SUCCESS) {
+                return ResponseEntity.status(400).body(Map.of("error", "Subscription can only be created for successful payments"));
+            }
+
+            if (payment.getSubscription() != null) {
+                Subscription existing = payment.getSubscription();
+                return ResponseEntity.ok(subscriptionToResponse(existing));
+            }
+
+            UUID planId = payment.getPlanId();
+            if (planId == null) {
+                return ResponseEntity.status(400).body(Map.of("error", "Payment is not linked to a subscription plan"));
+            }
 
             Optional<SubscriptionPlan> planOpt = planRepository.findById(planId);
             if (planOpt.isEmpty()) {
-                return ResponseEntity.status(404).body(Map.of("error", "Subscription plan not found"));
+                return ResponseEntity.status(404).body(Map.of("error", "Subscription plan not found for payment"));
             }
 
             SubscriptionPlan plan = planOpt.get();
@@ -114,9 +144,11 @@ public class SubscriptionController {
                 subscriptionRepository.save(existing);
             }
 
-            // Create new subscription
+            // Create new subscription and link it to payment
             Subscription subscription = new Subscription(user.getId(), plan, startDate, endDate);
             subscription = subscriptionRepository.save(subscription);
+            payment.setSubscription(subscription);
+            paymentRepository.save(payment);
             
             // Auto-create and verify employer if they have a subscription (for demo/testing purposes)
             if (user.getRole() == User.UserRole.EMPLOYER) {
@@ -383,6 +415,7 @@ public class SubscriptionController {
             // Create payment record
             Payment payment = new Payment(user.getId(), amount);
             payment.setPaymentGateway("razorpay");
+            payment.setPlanId(plan.getId());
             payment.setStatus(Payment.PaymentStatus.PENDING);
             
             // Generate transaction ID
@@ -435,62 +468,170 @@ public class SubscriptionController {
 
     /**
      * Payment webhook/callback (for Razorpay)
-     * POST /api/payments/webhook
+     * Legacy endpoint - no longer used
      */
     @PostMapping("/payments/webhook")
     public ResponseEntity<Map<String, Object>> paymentWebhook(@RequestBody Map<String, Object> request) {
-        try {
-            // This would handle Razorpay webhook
-            // For now, basic structure
-            String paymentId = (String) request.get("payment_id");
-            String orderId = (String) request.get("order_id");
-            String signature = (String) request.get("signature");
-            String status = (String) request.get("status");
+        return ResponseEntity.status(410).body(Map.of("error", "This webhook endpoint is deprecated. Use /api/payments/razorpay/webhook"));
+    }
 
-            // Find payment by gateway order ID
-            Optional<Payment> paymentOpt = paymentRepository.findByGatewayOrderId(orderId);
+    /**
+     * Confirm Razorpay payment from frontend after successful checkout
+     * POST /api/subscriptions/payments/razorpay/confirm
+     */
+    @PostMapping("/payments/razorpay/confirm")
+    public ResponseEntity<Map<String, Object>> confirmRazorpayPayment(@RequestBody Map<String, Object> request) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+            }
+
+            String email = authentication.getName();
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+            }
+
+            User user = userOpt.get();
+
+            String paymentIdStr = (String) request.get("paymentId");
+            String razorpayOrderId = (String) request.get("razorpayOrderId");
+            String razorpayPaymentId = (String) request.get("razorpayPaymentId");
+            String razorpaySignature = (String) request.get("razorpaySignature");
+
+            if (paymentIdStr == null || razorpayOrderId == null || razorpayPaymentId == null || razorpaySignature == null) {
+                return ResponseEntity.status(400).body(Map.of("error", "Missing required payment confirmation fields"));
+            }
+
+            UUID paymentUuid;
+            try {
+                paymentUuid = UUID.fromString(paymentIdStr);
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(400).body(Map.of("error", "Invalid paymentId format"));
+            }
+
+            Optional<Payment> paymentOpt = paymentRepository.findById(paymentUuid);
             if (paymentOpt.isEmpty()) {
                 return ResponseEntity.status(404).body(Map.of("error", "Payment not found"));
             }
 
             Payment payment = paymentOpt.get();
-            
-            // Verify signature (would need Razorpay SDK)
-            // For now, update payment status
-            if ("captured".equals(status) || "success".equals(status)) {
-                payment.setStatus(Payment.PaymentStatus.SUCCESS);
-                payment.setGatewayPaymentId(paymentId);
-                payment.setGatewaySignature(signature);
-                payment.setPaidAt(LocalDateTime.now());
-                
-                // Create subscription if payment successful
-                if (payment.getSubscription() == null) {
-                    // Get plan from payment metadata or request
-                    String planIdStr = (String) request.get("planId");
-                    if (planIdStr != null) {
-                        UUID planId = UUID.fromString(planIdStr);
-                        Optional<SubscriptionPlan> planOpt = planRepository.findById(planId);
-                        if (planOpt.isPresent()) {
-                            SubscriptionPlan plan = planOpt.get();
-                            LocalDate startDate = LocalDate.now();
-                            LocalDate endDate = calculateEndDate(startDate, plan.getDuration());
-                            
-                            Subscription subscription = new Subscription(payment.getUserId(), plan, startDate, endDate);
-                            subscription = subscriptionRepository.save(subscription);
-                            payment.setSubscription(subscription);
-                        }
-                    }
-                }
-            } else {
-                payment.setStatus(Payment.PaymentStatus.FAILED);
-                payment.setFailureReason((String) request.get("error_description"));
+
+            // Ensure payment belongs to current user
+            if (!payment.getUserId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied for this payment"));
             }
 
+            // Idempotency: if already successful, return current state
+            if (payment.getStatus() == Payment.PaymentStatus.SUCCESS) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("payment", paymentToResponse(payment));
+
+                Subscription subscription = payment.getSubscription();
+                if (subscription != null) {
+                    response.put("subscription", subscriptionToResponse(subscription));
+                } else {
+                    response.put("subscription", null);
+                }
+
+                response.put("message", "Payment already confirmed");
+                return ResponseEntity.ok(response);
+            }
+
+            // Basic consistency checks
+            if (payment.getGatewayOrderId() == null || !payment.getGatewayOrderId().equals(razorpayOrderId)) {
+                return ResponseEntity.status(400).body(Map.of("error", "Order ID does not match the original payment"));
+            }
+
+            // Verify Razorpay signature
+            boolean validSignature = razorpayService.verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+            if (!validSignature) {
+                payment.setStatus(Payment.PaymentStatus.FAILED);
+                payment.setFailureReason("Invalid Razorpay payment signature");
+                paymentRepository.save(payment);
+
+                return ResponseEntity.status(400).body(Map.of("error", "Payment verification failed"));
+            }
+
+            // Load plan associated with this payment
+            UUID planId = payment.getPlanId();
+            if (planId == null) {
+                payment.setStatus(Payment.PaymentStatus.FAILED);
+                payment.setFailureReason("Missing associated plan for payment");
+                paymentRepository.save(payment);
+                return ResponseEntity.status(400).body(Map.of("error", "Payment is not linked to a subscription plan"));
+            }
+
+            Optional<SubscriptionPlan> planOpt = planRepository.findById(planId);
+            if (planOpt.isEmpty()) {
+                payment.setStatus(Payment.PaymentStatus.FAILED);
+                payment.setFailureReason("Subscription plan not found for payment");
+                paymentRepository.save(payment);
+                return ResponseEntity.status(400).body(Map.of("error", "Subscription plan not found for this payment"));
+            }
+
+            SubscriptionPlan plan = planOpt.get();
+            BigDecimal expectedAmount = plan.getFinalPrice() != null ? plan.getFinalPrice() : plan.getPrice();
+            if (expectedAmount == null || payment.getAmount() == null || payment.getAmount().compareTo(expectedAmount) != 0) {
+                payment.setStatus(Payment.PaymentStatus.FAILED);
+                payment.setFailureReason("Payment amount does not match subscription plan price");
+                paymentRepository.save(payment);
+                return ResponseEntity.status(400).body(Map.of("error", "Payment amount mismatch"));
+            }
+
+            // Mark payment as successful
+            payment.setStatus(Payment.PaymentStatus.SUCCESS);
+            payment.setGatewayPaymentId(razorpayPaymentId);
+            payment.setGatewaySignature(razorpaySignature);
+            payment.setPaidAt(LocalDateTime.now());
+
+            // If subscription already linked, just save and return
+            if (payment.getSubscription() != null) {
+                payment = paymentRepository.save(payment);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("payment", paymentToResponse(payment));
+                response.put("subscription", subscriptionToResponse(payment.getSubscription()));
+                response.put("message", "Payment confirmed and existing subscription linked");
+                return ResponseEntity.ok(response);
+            }
+
+            // Cancel existing active subscription (if any)
+            Optional<Subscription> existingSubscription = subscriptionRepository.findActiveSubscriptionByUser(user.getId(), LocalDate.now());
+            existingSubscription.ifPresent(existing -> {
+                existing.setStatus(Subscription.SubscriptionStatus.CANCELLED);
+                existing.setAutoRenew(false);
+                subscriptionRepository.save(existing);
+            });
+
+            // Create new subscription for this payment and plan
+            LocalDate startDate = LocalDate.now();
+            LocalDate endDate = calculateEndDate(startDate, plan.getDuration());
+
+            Subscription subscription = new Subscription(user.getId(), plan, startDate, endDate);
+            subscription = subscriptionRepository.save(subscription);
+            payment.setSubscription(subscription);
+
+            // Persist payment with linked subscription
             payment = paymentRepository.save(payment);
-            return ResponseEntity.ok(Map.of("message", "Webhook processed"));
+
+            // Generate invoice (best-effort, non-blocking)
+            try {
+                invoiceService.createInvoiceForPayment(payment);
+            } catch (Exception ex) {
+                logger.error("Error generating invoice during payment confirmation for payment {}", payment.getId(), ex);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("payment", paymentToResponse(payment));
+            response.put("subscription", subscriptionToResponse(subscription));
+            response.put("message", "Payment confirmed and subscription activated");
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Error processing payment webhook", e);
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to process webhook"));
+            logger.error("Error confirming Razorpay payment", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to confirm payment"));
         }
     }
 

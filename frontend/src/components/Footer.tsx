@@ -101,15 +101,15 @@ export function Footer({ onNavigate }: FooterProps) {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <Mail className="w-4 h-4 mt-1 flex-shrink-0" />
-                <span>contact@medexjob.com</span>
+                <span>medexjob1997@gmail.com</span>
               </li>
               <li className="flex items-start gap-2">
                 <Phone className="w-4 h-4 mt-1 flex-shrink-0" />
-                <span>+91 98765 43210</span>
+                <span>+91 77279 30382</span>
               </li>
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                <span>123, Medical Plaza, New Delhi, India</span>
+                <span>Tribhuwam Vihar, Bagli Village, Bhopal, Madhya Pradesh – 462043, India</span>
               </li>
             </ul>
           </div>

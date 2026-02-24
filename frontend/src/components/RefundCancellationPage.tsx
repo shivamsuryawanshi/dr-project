@@ -453,7 +453,7 @@ export function RefundCancellationPage({ onNavigate }: RefundCancellationPagePro
                   <ol className="space-y-4 ml-6">
                     <li className="flex items-start gap-3">
                       <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold">1</div>
-                      <span className="text-gray-700 pt-1">Contact our customer support team at <strong>support@medexjob.com</strong> or call <strong>+91 98765 43210</strong></span>
+                      <span className="text-gray-700 pt-1">Contact our customer support team at <strong>medexjob1997@gmail.com</strong> or call <strong>+91 77279 30382</strong></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold">2</div>
@@ -617,7 +617,7 @@ export function RefundCancellationPage({ onNavigate }: RefundCancellationPagePro
                         <Mail className="w-5 h-5 text-red-600" />
                         <h3 className="font-semibold text-gray-900">Email</h3>
                       </div>
-                      <p className="text-gray-700">support@medexjob.com</p>
+                      <p className="text-gray-700">medexjob1997@gmail.com</p>
                       <p className="text-sm text-gray-600 mt-1">Response within 24-48 hours</p>
                     </div>
                     <div className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -625,7 +625,7 @@ export function RefundCancellationPage({ onNavigate }: RefundCancellationPagePro
                         <Phone className="w-5 h-5 text-red-600" />
                         <h3 className="font-semibold text-gray-900">Phone</h3>
                       </div>
-                      <p className="text-gray-700">+91 98765 43210</p>
+                      <p className="text-gray-700">+91 77279 30382</p>
                       <p className="text-sm text-gray-600 mt-1">Mon-Sat, 9 AM - 6 PM IST</p>
                     </div>
                     <div className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm md:col-span-2">

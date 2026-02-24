@@ -110,6 +110,13 @@ export function Header({ currentPage, onNavigate, isAuthenticated, userRole }: H
             >
               About
             </button>
+            <button
+              onClick={() => onNavigate('pricing')}
+              className={`text-sm font-medium transition-colors whitespace-nowrap ${currentPage === 'pricing' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
+            >
+              Pricing
+            </button>
           </nav>
 
           {/* Right Section */}

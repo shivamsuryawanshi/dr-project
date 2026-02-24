@@ -59,7 +59,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
     { name: 'Medical Officer', count: 520 },
     { name: 'Faculty', count: 150 },
     { name: 'Specialist', count: 290 },
-    { name: 'AYUSH', count: 180 },
+    { name: 'Allied Health Professionals', count: 180 },
     { name: 'Paramedical', count: 620 },
     { name: 'Nursing', count: 850 }
   ];
@@ -266,11 +266,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                     Legal Entity
                   </h3>
                   <div className="space-y-2 text-gray-700">
-                    <p><strong>Business Name:</strong> [Business/Individual Name]</p>
-                    <p><strong>Legal Structure:</strong> Individual/Sole Proprietor</p>
-                    <p><strong>Registration Number:</strong> [If applicable]</p>
-                    <p><strong>PAN:</strong> [PAN Number if applicable]</p>
-                    <p><strong>GSTIN:</strong> [If applicable]</p>
+                    <p><strong>Business Name:</strong> MedExJob</p>
+                    <p><strong>Legal Structure:</strong> Individual / Sole Proprietor</p>
                   </div>
                 </div>
                 <div>
@@ -279,10 +276,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                     Registered Address
                   </h3>
                   <div className="space-y-2 text-gray-700">
-                    <p>[Business Name/Individual Name]</p>
-                    <p>[Street Address, Building Name]</p>
-                    <p>[Area/Locality]</p>
-                    <p>[City], [State] - [PIN Code]</p>
+                    <p>Tribhuwam Vihar, Bagli Village</p>
+                    <p>Bhopal, Madhya Pradesh – 462043</p>
                     <p>India</p>
                   </div>
                 </div>

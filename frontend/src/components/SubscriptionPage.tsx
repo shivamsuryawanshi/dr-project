@@ -9,7 +9,8 @@ import {
   initiatePayment,
   getCurrentSubscription,
   SubscriptionPlanResponse,
-  SubscriptionResponse
+  SubscriptionResponse,
+  confirmRazorpayPayment
 } from '../api/subscriptions';
 import { SubscriptionPlan } from '../types';
 import { useState, useEffect } from 'react';
@@ -151,55 +152,45 @@ export function SubscriptionPage({ onNavigate }: SubscriptionPageProps) {
           order_id: paymentData.razorpayOrderId,
           handler: async (response: any) => {
             try {
-              console.log('Payment successful, creating subscription...', response);
-              
-              // Payment successful - create subscription
-              const { createSubscription } = await import('../api/subscriptions');
-              
+              console.log('Payment successful, confirming on backend...', response);
+
               try {
-                const subscriptionResult = await createSubscription(plan.id, token);
-                console.log('Subscription created successfully:', subscriptionResult);
-                
-                // Show success message
+                const confirmResult = await confirmRazorpayPayment(
+                  {
+                    paymentId: paymentData.paymentId,
+                    razorpayOrderId: response.razorpay_order_id,
+                    razorpayPaymentId: response.razorpay_payment_id,
+                    razorpaySignature: response.razorpay_signature,
+                  },
+                  token
+                );
+
+                const activatedSubscription =
+                  confirmResult.subscription || (await getCurrentSubscription(token));
+                setCurrentSubscription(activatedSubscription);
+
                 alert(
-                  `Payment successful!\n\n` +
+                  `Payment successful and verified!\n\n` +
                   `Plan: ${plan.name}\n` +
                   `Amount: ₹${plan.price.toLocaleString()}\n` +
                   `Payment ID: ${response.razorpay_payment_id}\n\n` +
                   `Subscription activated. Redirecting to dashboard...`
                 );
 
-                // Refresh subscription data
-                const subscription = await getCurrentSubscription(token);
-                setCurrentSubscription(subscription);
-                
-                // Redirect to job posting page after successful subscription
                 setTimeout(() => {
                   onNavigate('employer-post-job');
                 }, 1000);
-              } catch (createErr: any) {
-                console.error('Subscription creation error details:', createErr);
-                
-                // Try to get detailed error message
-                let errorMessage = 'Subscription creation failed';
-                if (createErr.message) {
-                  errorMessage = createErr.message;
-                } else if (createErr.response) {
-                  try {
-                    const errorData = await createErr.response.json();
-                    errorMessage = errorData.error || errorData.message || errorMessage;
-                  } catch {
-                    errorMessage = `Error ${createErr.response.status}: ${createErr.response.statusText}`;
-                  }
-                }
-                
-                console.error('Error creating subscription after payment:', errorMessage);
+              } catch (confirmErr: any) {
+                console.error('Payment confirmation error details:', confirmErr);
+                const errorMessage =
+                  confirmErr?.message || 'Payment could not be verified. Please contact support.';
                 alert(
-                  `Payment successful but subscription creation failed.\n\n` +
+                  `Payment captured but verification failed.\n\n` +
                   `Error: ${errorMessage}\n\n` +
                   `Payment ID: ${response.razorpay_payment_id}\n` +
                   `Please contact support with this Payment ID.`
                 );
+                setError(errorMessage);
               }
             } catch (err: any) {
               console.error('Unexpected error in payment handler:', err);
@@ -251,28 +242,10 @@ export function SubscriptionPage({ onNavigate }: SubscriptionPageProps) {
           setProcessingPayment(null);
         }
       } else {
-        // Fallback: Create subscription directly (for testing without Razorpay)
-        try {
-          const { createSubscription } = await import('../api/subscriptions');
-          await createSubscription(plan.id, token);
-          
-          alert(
-            `Subscription activated successfully!\n\n` +
-            `Plan: ${plan.name}\n` +
-            `Amount: ₹${plan.price.toLocaleString()}\n` +
-            `Transaction ID: ${paymentData.transactionId}\n\n` +
-            `You can now post jobs. Redirecting...`
-          );
-
-          const subscription = await getCurrentSubscription(token);
-          setCurrentSubscription(subscription);
-          onNavigate('dashboard/employer');
-        } catch (subscriptionErr: any) {
-          console.error('Error creating subscription:', subscriptionErr);
-          setError(subscriptionErr.message || 'Failed to create subscription. Please try again.');
-        } finally {
-          setProcessingPayment(null);
-        }
+        // Fallback when Razorpay order is not created
+        console.error('Razorpay order was not created for this payment. Cannot continue.');
+        setError('Unable to initiate payment with Razorpay. Please try again later or contact support.');
+        setProcessingPayment(null);
       }
     } catch (err: any) {
       console.error('Error initiating payment:', err);

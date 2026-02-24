@@ -66,7 +66,7 @@ const faqData: FAQItem[] = [
   },
   {
     question: "How do I contact customer support?",
-    answer: "You can contact us through the 'Contact Us' section on our website, or email us at support@medexjob.com. We also have a comprehensive help center with guides and tutorials."
+    answer: "You can contact us through the 'Contact Us' section on our website, or email us at medexjob1997@gmail.com. We also have a comprehensive help center with guides and tutorials."
   },
   {
     question: "What if I have issues with my account?",
@@ -158,7 +158,7 @@ export function FAQPage({ onNavigate }: FAQPageProps) {
             </Button>
             <Button
               variant="outline"
-              onClick={() => window.open('mailto:support@medexjob.com')}
+              onClick={() => window.open('mailto:medexjob1997@gmail.com')}
               className="border-2 border-purple-600 text-purple-600 hover:bg-purple-50 transition-all duration-200 px-6 py-2"
             >
               Email Us

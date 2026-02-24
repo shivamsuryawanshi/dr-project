@@ -78,7 +78,7 @@ export function JobPostingForm({ onCancel, onSave, initialData }: JobPostingForm
     'Medical Officer',
     'Faculty',
     'Specialist',
-    'AYUSH',
+    'Allied Health Professionals',
     'Paramedical / Nursing'
   ];
 

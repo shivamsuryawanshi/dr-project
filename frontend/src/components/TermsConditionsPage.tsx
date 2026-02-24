@@ -590,7 +590,7 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
                   <p className="text-gray-700 leading-relaxed text-lg">
                     These Terms shall be interpreted and governed by the laws of India, without regard to its conflict of law provisions. 
                     Any disputes arising from these Terms or your use of MedExJob.com shall be subject to the exclusive jurisdiction 
-                    of the courts in New Delhi, India.
+                    of the courts in Bhopal, Madhya Pradesh, India.
                   </p>
                   <div className="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-r-lg">
                     <p className="text-gray-700 mb-2">
@@ -650,7 +650,7 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
                         <Mail className="w-5 h-5 text-green-600" />
                         <h3 className="font-semibold text-gray-900">Email</h3>
                       </div>
-                      <p className="text-gray-700">legal@medexjob.com</p>
+                      <p className="text-gray-700">medexjob1997@gmail.com</p>
                       <p className="text-sm text-gray-600 mt-1">Response within 24-48 hours</p>
                     </div>
                     <div className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -658,7 +658,7 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
                         <Phone className="w-5 h-5 text-green-600" />
                         <h3 className="font-semibold text-gray-900">Phone</h3>
                       </div>
-                      <p className="text-gray-700">+91 98765 43210</p>
+                      <p className="text-gray-700">+91 77279 30382</p>
                       <p className="text-sm text-gray-600 mt-1">Mon-Sat, 9 AM - 6 PM IST</p>
                     </div>
                     <div className="p-5 bg-white rounded-lg border border-gray-200 shadow-sm md:col-span-2">
@@ -667,9 +667,9 @@ export function TermsConditionsPage({ onNavigate }: TermsConditionsPageProps) {
                         <h3 className="font-semibold text-gray-900">Mailing Address</h3>
                       </div>
                       <p className="text-gray-700">
-                        MedExJob.com<br />
-                        Legal Department<br />
-                        123, Medical Plaza, New Delhi - 110001, India
+                        MedExJob<br />
+                        Tribhuwam Vihar, Bagli Village<br />
+                        Bhopal, Madhya Pradesh – 462043, India
                       </p>
                     </div>
                   </div>

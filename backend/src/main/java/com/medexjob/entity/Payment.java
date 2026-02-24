@@ -23,6 +23,9 @@ public class Payment {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @Column(name = "plan_id")
+    private UUID planId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscription_id")
     private Subscription subscription;
@@ -92,6 +95,14 @@ public class Payment {
 
     public void setUserId(UUID userId) {
         this.userId = userId;
+    }
+
+    public UUID getPlanId() {
+        return planId;
+    }
+
+    public void setPlanId(UUID planId) {
+        this.planId = planId;
     }
 
     public Subscription getSubscription() {

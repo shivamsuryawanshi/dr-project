@@ -73,7 +73,7 @@ export function JobAlerts() {
     'Medical Officer',
     'Faculty',
     'Specialist',
-    'AYUSH',
+    'Allied Health Professionals',
     'Paramedical / Nursing'
   ];
 
@@ -476,7 +476,7 @@ function CreateAlertForm({ initialData, onSave, onCancel }: CreateAlertFormProps
     'Medical Officer',
     'Faculty',
     'Specialist',
-    'AYUSH',
+    'Allied Health Professionals',
     'Paramedical / Nursing'
   ];
 

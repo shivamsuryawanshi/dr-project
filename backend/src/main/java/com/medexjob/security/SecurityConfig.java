@@ -111,6 +111,7 @@ public class SecurityConfig {
                         // Subscription endpoints
                         .requestMatchers(HttpMethod.GET, "/api/subscriptions/plans").permitAll()
                         .requestMatchers("/api/subscriptions/**").authenticated()
+                        .requestMatchers("/api/payments/razorpay/webhook").permitAll()
                         .requestMatchers("/api/payments/**").authenticated()
                         // Employer endpoints - bypass Spring Security pattern matching, let controller handle authorization
                         // Use regex or custom matcher to avoid pattern parsing issues

@@ -41,8 +41,8 @@ export function ContactUsPage({ onNavigate }: ContactUsPageProps) {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">Email Support</h3>
                   <p className="text-gray-600 mb-2">For general inquiries and support</p>
-                  <a href="mailto:support@medexjob.com" className="text-blue-600 hover:text-blue-700 font-medium">
-                    support@medexjob.com
+                  <a href="mailto:medexjob1997@gmail.com" className="text-blue-600 hover:text-blue-700 font-medium">
+                    medexjob1997@gmail.com
                   </a>
                 </div>
               </div>
@@ -54,8 +54,8 @@ export function ContactUsPage({ onNavigate }: ContactUsPageProps) {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">Phone Support</h3>
                   <p className="text-gray-600 mb-2">Call us during business hours</p>
-                  <a href="tel:+91XXXXXXXXXX" className="text-green-600 hover:text-green-700 font-medium">
-                    +91-XXXXXXXXXX
+                  <a href="tel:+917727930382" className="text-green-600 hover:text-green-700 font-medium">
+                    +91 77279 30382
                   </a>
                 </div>
               </div>
@@ -67,10 +67,9 @@ export function ContactUsPage({ onNavigate }: ContactUsPageProps) {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">Business Address</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    [Business Name/Individual Name]<br />
-                    [Street Address, Building Name]<br />
-                    [Area/Locality]<br />
-                    [City], [State] - [PIN Code]<br />
+                    MedExJob<br />
+                    Tribhuwam Vihar, Bagli Village<br />
+                    Bhopal, Madhya Pradesh – 462043<br />
                     India
                   </p>
                 </div>
@@ -133,7 +132,7 @@ export function ContactUsPage({ onNavigate }: ContactUsPageProps) {
                   id="phone"
                   name="phone"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="+91-XXXXXXXXXX"
+                  placeholder="+91 77279 30382"
                 />
               </div>
 
@@ -190,19 +189,15 @@ export function ContactUsPage({ onNavigate }: ContactUsPageProps) {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Legal Entity Details</h3>
               <div className="space-y-2 text-gray-700">
-                <p><strong>Business Name:</strong> [Business/Individual Name]</p>
-                <p><strong>Legal Structure:</strong> Individual/Sole Proprietor</p>
-                <p><strong>Registration Number:</strong> [If applicable]</p>
-                <p><strong>PAN:</strong> [PAN Number if applicable]</p>
+                <p><strong>Business Name:</strong> MedExJob</p>
+                <p><strong>Legal Structure:</strong> Individual / Sole Proprietor</p>
               </div>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Contact Channels</h3>
               <div className="space-y-2 text-gray-700">
-                <p><strong>Customer Support:</strong> support@medexjob.com</p>
-                <p><strong>Legal/Grievances:</strong> legal@medexjob.com</p>
-                <p><strong>Business Inquiries:</strong> business@medexjob.com</p>
-                <p><strong>Phone:</strong> +91-XXXXXXXXXX</p>
+                <p><strong>Email:</strong> medexjob1997@gmail.com</p>
+                <p><strong>Phone:</strong> +91 77279 30382</p>
               </div>
             </div>
           </div>
@@ -215,9 +210,9 @@ export function ContactUsPage({ onNavigate }: ContactUsPageProps) {
             If you have any complaints or grievances regarding our services, please contact our Grievance Officer:
           </p>
           <div className="space-y-2 text-gray-700">
-            <p><strong>Grievance Officer:</strong> [Name]</p>
-            <p><strong>Email:</strong> grievance@medexjob.com</p>
-            <p><strong>Phone:</strong> +91-XXXXXXXXXX</p>
+            <p><strong>Grievance Officer:</strong> Shivam Suryawanshi</p>
+            <p><strong>Email:</strong> medexjob1997@gmail.com</p>
+            <p><strong>Phone:</strong> +91 77279 30382</p>
             <p><strong>Response Time:</strong> Within 7 working days</p>
           </div>
           <p className="text-sm text-gray-600 mt-4">
