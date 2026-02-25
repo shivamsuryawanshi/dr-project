@@ -14,7 +14,17 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "jobs")
+@Table(name = "jobs", indexes = {
+    @Index(name = "idx_job_title", columnList = "title"),
+    @Index(name = "idx_job_status", columnList = "status"),
+    @Index(name = "idx_job_location", columnList = "location"),
+    @Index(name = "idx_job_speciality", columnList = "speciality"),
+    @Index(name = "idx_job_sector", columnList = "sector"),
+    @Index(name = "idx_job_category", columnList = "category"),
+    @Index(name = "idx_job_created_at", columnList = "created_at"),
+    @Index(name = "idx_job_status_created", columnList = "status, created_at"),
+    @Index(name = "idx_job_employer", columnList = "employer_id")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class Job {
     

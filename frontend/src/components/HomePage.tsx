@@ -1,22 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, TrendingUp, Shield, Users, ChevronRight, MapPin, Briefcase as BriefcaseIcon, Building2, UserCheck, Calendar, Landmark, GraduationCap, AlarmClock, Sparkles, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from './ui/select';
 import { JobCard } from './JobCard';
-// AI assisted development
-import { fetchJobs, fetchJobsMeta } from '../api/jobs';
+import { fetchJobs, fetchJobsMeta, fetchJobOptions } from '../api/jobs';
 import { fetchHomepageNews, PulseUpdate } from '../api/news';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { 
-  normalizeSearchQuery, 
-  buildSearchUrl, 
   saveSearchHistory, 
-  trackSearch, 
-  validateSearchQuery,
-  useDebounce 
+  trackSearch
 } from '../utils/searchUtils';
 
 interface HomePageProps {
@@ -78,26 +72,33 @@ function StatCard({ icon: Icon, end, label, suffix = '' }: { icon: any, end: num
 }
 
 export function HomePage({ onNavigate }: HomePageProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedJobOption, setSelectedJobOption] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
   const [governmentJobs, setGovernmentJobs] = useState<any[]>([]);
   const [privateJobs, setPrivateJobs] = useState<any[]>([]);
   const [newsUpdates, setNewsUpdates] = useState<PulseUpdate[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [jobTitles, setJobTitles] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load featured, latest, government, private jobs and news
+    // Load featured, latest, government, private jobs, news, and job options
     (async () => {
       try {
-        const [feat, latest, gov, priv, meta, news] = await Promise.all([
+        const [feat, latest, gov, priv, meta, news, jobOptions] = await Promise.all([
           fetchJobs({ featured: true, size: 6, status: 'active' }).then(r => r.content ?? []),
           fetchJobs({ size: 6, sort: 'createdAt,desc', status: 'active' }).then(r => r.content ?? []),
-          fetchJobs({ sector: 'government', size: 10, status: 'active' }).then(r => r.content ?? []), // Fetch more to ensure we get 3 after filtering
-          fetchJobs({ sector: 'private', size: 10, status: 'active' }).then(r => r.content ?? []), // Fetch more to ensure we get 3 after filtering
+          fetchJobs({ sector: 'government', size: 10, status: 'active' }).then(r => r.content ?? []),
+          fetchJobs({ sector: 'private', size: 10, status: 'active' }).then(r => r.content ?? []),
           fetchJobsMeta(),
           fetchHomepageNews(),
+          fetchJobOptions(),
         ]);
+        
+        // Set job options for dropdown
+        setJobTitles(jobOptions.titles || []);
+        setCompanies(jobOptions.companies || []);
 
         // Combine featured and latest jobs, removing duplicates, limit to 6
         const featuredArray = Array.isArray(feat) ? feat : [];
@@ -155,44 +156,29 @@ export function HomePage({ onNavigate }: HomePageProps) {
     })();
   }, []);
 
-  // Optimized search handler with validation, history, and analytics
+  // Handle search - only works when a selection is made
   const handleSearch = useCallback(() => {
-    // Validate search query
-    const validation = validateSearchQuery(searchQuery);
-    if (!validation.valid) {
-      // You can show a toast/alert here if needed
-      console.warn('Search validation failed:', validation.error);
+    // Must have a job option selected to search
+    if (!selectedJobOption) {
       return;
     }
     
-    // Normalize and optimize the search query
-    const normalizedQuery = normalizeSearchQuery(searchQuery);
-    
     // Save to search history
-    saveSearchHistory(normalizedQuery, selectedLocation);
+    saveSearchHistory(selectedJobOption, selectedLocation);
+    trackSearch(selectedJobOption, selectedLocation, 0);
     
-    // Build optimized search URL
-    const url = buildSearchUrl(normalizedQuery, selectedLocation);
+    // Build URL params
+    const params = new URLSearchParams();
+    params.set('search', selectedJobOption);
     
-    // Track search analytics (before navigation)
-    trackSearch(normalizedQuery, selectedLocation, 0);
-    
-    // Navigate to jobs page with search results
-    // Use onNavigate for better SPA navigation instead of window.location
-    if (normalizedQuery || selectedLocation) {
-      onNavigate(url.replace('/jobs', 'jobs'));
-    } else {
-      onNavigate('jobs');
+    if (selectedLocation) {
+      params.set('location', selectedLocation);
     }
-  }, [searchQuery, selectedLocation, onNavigate]);
-  
-  // Handle Enter key press with debouncing
-  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSearch();
-    }
-  }, [handleSearch]);
+    
+    // Navigate to jobs page with search params
+    const queryString = params.toString();
+    onNavigate(`jobs?${queryString}`);
+  }, [selectedJobOption, selectedLocation, onNavigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -241,7 +227,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 className="flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-3 items-stretch"
                 style={{ gap: 'clamp(0.75rem, 1.5vw, 1rem)' }}
               >
-                {/* Keyword Search Input */}
+                {/* Job Title / Company Dropdown - Same style as Location */}
                 <div 
                   className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
                   style={{
@@ -255,22 +241,56 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     height: '48px'
                   }}
                 >
-                  <Search 
+                  <BriefcaseIcon 
                     className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
                     style={{ width: '18px', height: '18px', minWidth: '18px' }}
                     aria-hidden="true"
                   />
-                  <Input
-                    id="job-search-keyword"
-                    type="text"
-                    placeholder="Job title or company"
-                    className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full placeholder:text-gray-500 dark:placeholder:text-gray-400 min-w-0"
-                    style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    aria-label="Search jobs by title or company name"
-                  />
+                  <Select value={selectedJobOption} onValueChange={setSelectedJobOption}>
+                    <SelectTrigger 
+                      id="job-search-title"
+                      className="flex-1 border-0 focus:ring-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full min-w-0 pl-0"
+                      style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                      aria-label="Select job title or company"
+                    >
+                      <SelectValue placeholder="Job Title or Company" className="placeholder:text-gray-500 dark:placeholder:text-gray-400" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[20rem]">
+                      {jobTitles.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Job Titles</SelectLabel>
+                          {jobTitles.map((title) => (
+                            <SelectItem 
+                              key={`title-${title}`} 
+                              value={title}
+                              style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                            >
+                              {title}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {companies.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Companies</SelectLabel>
+                          {companies.map((company) => (
+                            <SelectItem 
+                              key={`company-${company}`} 
+                              value={company}
+                              style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                            >
+                              {company}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {jobTitles.length === 0 && companies.length === 0 && (
+                        <div className="py-4 text-center text-gray-500 text-sm">
+                          No options available
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Location Dropdown */}
@@ -315,11 +335,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   </Select>
                 </div>
 
-                {/* Search Button */}
+                {/* Search Button - Disabled until job option is selected */}
                 <Button 
                   id="job-search-submit"
                   type="button"
-                  className="w-full md:col-span-2 lg:col-span-1 lg:min-w-[240px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 shadow-sm hover:shadow-md flex items-center justify-center"
+                  disabled={!selectedJobOption}
+                  className="w-full md:col-span-2 lg:col-span-1 lg:min-w-[240px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 shadow-sm hover:shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   style={{
                     gap: 'clamp(0.5rem, 1vw, 0.75rem)',
                     paddingLeft: 'clamp(1rem, 2vw, 2rem)',
@@ -332,16 +353,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     fontSize: 'clamp(0.85rem, 1vw, 1rem)'
                   }}
                   onClick={handleSearch}
-                  aria-label="Search for jobs"
+                  aria-label={selectedJobOption ? "Search for jobs" : "Select a job title or company first"}
                 >
                   <Search 
                     className="flex-shrink-0" 
                     style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
                     aria-hidden="true" 
                   />
-                  <span>Search Jobs</span>
+                  <span>{selectedJobOption ? 'Search Jobs' : 'Select to Search'}</span>
                 </Button>
               </div>
+              
+              {/* Helper text */}
+              <p className="text-blue-100 text-sm mt-3 text-center">
+                Select a job title or company from the dropdown, then click Search.
+              </p>
             </div>
           </div>
         </div>

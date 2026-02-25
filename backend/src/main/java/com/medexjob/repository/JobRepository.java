@@ -4,6 +4,7 @@ import com.medexjob.entity.Job;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface JobRepository extends JpaRepository<Job, UUID> {
+public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificationExecutor<Job> {
     
     // Find jobs by status
     Page<Job> findByStatus(Job.JobStatus status, Pageable pageable);
@@ -36,9 +37,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     // Find active jobs
     Page<Job> findByStatusAndLastDateAfter(Job.JobStatus status, LocalDate date, Pageable pageable);
     
-    // Enhanced search jobs - searches across multiple fields with word-by-word matching
-    // Searches in: title, description, qualification, speciality, requirements, benefits, location, and employer company name
-    // Uses word-by-word matching for better results (like Google/YouTube)
+    // Enhanced search jobs - searches across multiple fields with partial matching
+    // Searches in: title, description, qualification, speciality, requirements, benefits, location, experience, and employer company name
+    // Case-insensitive LIKE search for partial matches (e.g., "doctor" matches "Senior Doctor")
     @Query("SELECT DISTINCT j FROM Job j LEFT JOIN j.employer e WHERE " +
            "(:status IS NULL OR j.status = :status) AND " +
            "(" +
@@ -49,20 +50,21 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
            "LOWER(COALESCE(j.requirements, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(COALESCE(j.benefits, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+           "LOWER(COALESCE(j.experience, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(e.companyName, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
            ") " +
            "ORDER BY " +
            "CASE WHEN LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
-           "CASE WHEN LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
-           "CASE WHEN LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(COALESCE(e.companyName, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(COALESCE(j.speciality, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
            "j.createdAt DESC")
     Page<Job> searchJobs(@Param("keyword") String keyword, @Param("status") Job.JobStatus status, Pageable pageable);
     
-    // Enhanced search jobs with location filter - searches across multiple fields with word-by-word matching
-    // Location must match exactly or start with the provided location (case-insensitive)
+    // Enhanced search jobs with location filter - searches across multiple fields with partial matching
+    // Location uses partial matching (contains) for flexibility
     @Query("SELECT DISTINCT j FROM Job j LEFT JOIN j.employer e WHERE " +
            "(:status IS NULL OR j.status = :status) AND " +
-           "(LOWER(TRIM(j.location)) = LOWER(TRIM(:location)) OR LOWER(TRIM(j.location)) LIKE LOWER(CONCAT(TRIM(:location), '%'))) AND " +
+           "(LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :location, '%'))) AND " +
            "(" +
            "LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
@@ -71,12 +73,13 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
            "LOWER(COALESCE(j.requirements, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(COALESCE(j.benefits, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+           "LOWER(COALESCE(j.experience, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(COALESCE(e.companyName, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
            ") " +
            "ORDER BY " +
            "CASE WHEN LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
-           "CASE WHEN LOWER(e.companyName) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
-           "CASE WHEN LOWER(COALESCE(j.location, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(COALESCE(e.companyName, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
+           "CASE WHEN LOWER(COALESCE(j.speciality, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 1 ELSE 2 END, " +
            "j.createdAt DESC")
     Page<Job> searchJobsWithLocation(@Param("keyword") String keyword, @Param("location") String location, @Param("status") Job.JobStatus status, Pageable pageable);
     
@@ -125,6 +128,24 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     // Distinct locations (for meta)
     @Query("SELECT DISTINCT j.location FROM Job j WHERE j.location IS NOT NULL AND j.location <> ''")
     List<String> findDistinctLocations();
+    
+    // Get all distinct job titles from active jobs (for dropdown)
+    @Query("SELECT DISTINCT j.title FROM Job j WHERE j.status = :status AND j.title IS NOT NULL AND j.title <> '' ORDER BY j.title ASC")
+    List<String> findDistinctTitlesByStatus(@Param("status") Job.JobStatus status);
+    
+    // Convenience method for active jobs
+    default List<String> findAllDistinctTitles() {
+        return findDistinctTitlesByStatus(Job.JobStatus.ACTIVE);
+    }
+    
+    // Get all distinct company names from active jobs (for dropdown)
+    @Query("SELECT DISTINCT e.companyName FROM Job j JOIN j.employer e WHERE j.status = :status AND e.companyName IS NOT NULL AND e.companyName <> '' ORDER BY e.companyName ASC")
+    List<String> findDistinctCompanyNamesByStatus(@Param("status") Job.JobStatus status);
+    
+    // Convenience method for active jobs
+    default List<String> findAllDistinctCompanyNames() {
+        return findDistinctCompanyNamesByStatus(Job.JobStatus.ACTIVE);
+    }
 }
 
 

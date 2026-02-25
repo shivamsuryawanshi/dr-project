@@ -2,16 +2,25 @@ package com.medexjob.service;
 
 import com.medexjob.entity.Job;
 import com.medexjob.repository.JobRepository;
-import org.springframework.data.domain.*;
+import com.medexjob.repository.JobSpecifications;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * Service for advanced job search using JPA Specifications.
+ * Provides dynamic filtering that only applies criteria when values are present.
+ */
 @Service
 public class JobSearchService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(JobSearchService.class);
     
     private final JobRepository jobRepository;
     
@@ -20,134 +29,152 @@ public class JobSearchService {
     }
     
     /**
-     * Enhanced search that splits query into words and matches ALL words (AND logic)
-     * Like Google/YouTube search - all words must be present somewhere in the job fields
+     * Advanced search using JPA Specifications for dynamic filtering.
+     * 
+     * Key features:
+     * - Only applies filters when values are present (not null/empty)
+     * - Case-insensitive partial matching for text fields
+     * - Searches across: title, company name, description, speciality, qualification
+     * - Properly handles status enum comparison
+     * 
+     * @param searchQuery The search term (can be job title or company name)
+     * @param location The location filter
+     * @param status The job status filter
+     * @param pageable Pagination parameters
+     * @return Page of matching jobs
      */
     @Transactional(readOnly = true)
     public Page<Job> searchJobsAdvanced(String searchQuery, String location, Job.JobStatus status, Pageable pageable) {
-        if (searchQuery == null || searchQuery.isBlank()) {
-            if (location != null && !location.isBlank()) {
-                return jobRepository.findByLocationContainingIgnoreCase(location, pageable);
-            }
-            return jobRepository.findAll(pageable);
+        // Comprehensive logging for debugging
+        logger.info("╔══════════════════════════════════════════════════════════════╗");
+        logger.info("║              JOB SEARCH SERVICE - DEBUG                      ║");
+        logger.info("╠══════════════════════════════════════════════════════════════╣");
+        logger.info("║ Input Parameters:                                            ║");
+        logger.info("║   searchQuery: '{}' (length: {}, isBlank: {})", 
+            searchQuery, 
+            searchQuery != null ? searchQuery.length() : 0,
+            searchQuery == null || searchQuery.isBlank());
+        logger.info("║   location: '{}' (length: {}, isBlank: {})", 
+            location,
+            location != null ? location.length() : 0,
+            location == null || location.isBlank());
+        logger.info("║   status: {} (enum value)", status);
+        logger.info("║   pageable: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+        
+        // Log byte representation to detect encoding issues
+        if (searchQuery != null && !searchQuery.isEmpty()) {
+            logger.info("║   searchQuery bytes: {}", Arrays.toString(searchQuery.getBytes()));
         }
         
-        // Split search query into individual words (remove empty strings)
-        List<String> words = Arrays.stream(searchQuery.trim().split("\\s+"))
-                .filter(word -> !word.isBlank())
-                .map(String::trim)
-                .collect(Collectors.toList());
+        // Sanitize inputs
+        String sanitizedSearch = sanitizeInput(searchQuery);
+        String sanitizedLocation = sanitizeInput(location);
         
-        if (words.isEmpty()) {
-            return jobRepository.findAll(pageable);
-        }
+        logger.info("║ Sanitized Parameters:                                        ║");
+        logger.info("║   sanitizedSearch: '{}' (length: {})", 
+            sanitizedSearch, 
+            sanitizedSearch != null ? sanitizedSearch.length() : 0);
+        logger.info("║   sanitizedLocation: '{}' (length: {})", 
+            sanitizedLocation,
+            sanitizedLocation != null ? sanitizedLocation.length() : 0);
         
-        // For single word, use the existing optimized query
-        if (words.size() == 1) {
-            String keyword = words.get(0);
-            if (location != null && !location.isBlank()) {
-                return jobRepository.searchJobsWithLocation(keyword, location.trim(), status, pageable);
-            } else {
-                return jobRepository.searchJobs(keyword, status, pageable);
-            }
-        }
+        // Build specification
+        Specification<Job> spec = JobSpecifications.buildSearchSpec(sanitizedSearch, sanitizedLocation, status);
         
-        // For multiple words, we need to match ALL words (AND logic)
-        // Use native query approach - search for jobs that contain all words
-        // This is more complex, so we'll use a different strategy:
-        // 1. Search with the full phrase first (exact match gets priority)
-        // 2. Then search with individual words and filter results
+        logger.info("║ Executing query with Specification...                        ║");
         
-        String fullPhrase = searchQuery.trim();
-        Page<Job> result;
+        // Execute query
+        Page<Job> result = jobRepository.findAll(spec, pageable);
         
-        if (location != null && !location.isBlank()) {
-            // Try full phrase search first
-            result = jobRepository.searchJobsWithLocation(fullPhrase, location.trim(), status, pageable);
-            
-            // If no results or need more, search with individual words
-            if (result.getContent().isEmpty() || result.getTotalElements() < pageable.getPageSize()) {
-                // Search with first word and filter by location
-                Page<Job> firstWordResults = jobRepository.searchJobsWithLocation(words.get(0), location.trim(), status, pageable);
-                
-                // Filter to only include jobs that contain ALL words
-                List<Job> filteredJobs = firstWordResults.getContent().stream()
-                        .filter(job -> containsAllWords(job, words))
-                        .collect(Collectors.toList());
-                
-                // Note: This approach has limitations with pagination
-                // For production, consider using full-text search or Elasticsearch
-                return createFilteredPage(filteredJobs, pageable, firstWordResults.getTotalElements());
-            }
+        logger.info("╠══════════════════════════════════════════════════════════════╣");
+        logger.info("║ Query Results:                                               ║");
+        logger.info("║   Total elements: {}", result.getTotalElements());
+        logger.info("║   Total pages: {}", result.getTotalPages());
+        logger.info("║   Current page content size: {}", result.getContent().size());
+        
+        // Log first few results for verification
+        if (!result.getContent().isEmpty()) {
+            logger.info("║ Sample Results (first 3):                                    ║");
+            result.getContent().stream().limit(3).forEach(job -> {
+                String companyName = job.getEmployer() != null ? job.getEmployer().getCompanyName() : "N/A";
+                logger.info("║   - Title: '{}', Company: '{}', Status: {}", 
+                    job.getTitle(), companyName, job.getStatus());
+            });
         } else {
-            // Try full phrase search first
-            result = jobRepository.searchJobs(fullPhrase, status, pageable);
+            logger.info("║   No jobs found matching criteria                            ║");
             
-            // If no results or need more, search with individual words
-            if (result.getContent().isEmpty() || result.getTotalElements() < pageable.getPageSize()) {
-                // Search with first word
-                Page<Job> firstWordResults = jobRepository.searchJobs(words.get(0), status, pageable);
-                
-                // Filter to only include jobs that contain ALL words
-                List<Job> filteredJobs = firstWordResults.getContent().stream()
-                        .filter(job -> containsAllWords(job, words))
-                        .collect(Collectors.toList());
-                
-                return createFilteredPage(filteredJobs, pageable, firstWordResults.getTotalElements());
+            // Additional debugging when no results
+            logger.info("║ Debugging - checking database state:                         ║");
+            long totalJobs = jobRepository.count();
+            long activeJobs = jobRepository.countByStatus(Job.JobStatus.ACTIVE);
+            logger.info("║   Total jobs in DB: {}", totalJobs);
+            logger.info("║   Active jobs in DB: {}", activeJobs);
+            
+            // If we have active jobs but no results, the filter might be too restrictive
+            if (activeJobs > 0 && sanitizedSearch != null) {
+                logger.info("║   Possible issue: Search term '{}' may not match any titles", sanitizedSearch);
+                // Try to find similar titles
+                var titles = jobRepository.findDistinctTitlesByStatus(Job.JobStatus.ACTIVE);
+                logger.info("║   Available titles in DB: {}", titles.size() > 5 ? titles.subList(0, 5) + "..." : titles);
             }
         }
+        
+        logger.info("╚══════════════════════════════════════════════════════════════╝");
         
         return result;
     }
     
     /**
-     * Check if a job contains all search words in any of its searchable fields
+     * Sanitize input by trimming whitespace and handling null values.
+     * Returns null if input is null or blank after trimming.
      */
-    private boolean containsAllWords(Job job, List<String> words) {
-        String searchableText = buildSearchableText(job);
-        String lowerSearchableText = searchableText.toLowerCase();
-        
-        return words.stream()
-                .allMatch(word -> lowerSearchableText.contains(word.toLowerCase()));
-    }
-    
-    /**
-     * Build a searchable text string from all relevant job fields
-     */
-    private String buildSearchableText(Job job) {
-        StringBuilder sb = new StringBuilder();
-        
-        if (job.getTitle() != null) sb.append(job.getTitle()).append(" ");
-        if (job.getDescription() != null) sb.append(job.getDescription()).append(" ");
-        if (job.getQualification() != null) sb.append(job.getQualification()).append(" ");
-        if (job.getSpeciality() != null) sb.append(job.getSpeciality()).append(" ");
-        if (job.getRequirements() != null) sb.append(job.getRequirements()).append(" ");
-        if (job.getBenefits() != null) sb.append(job.getBenefits()).append(" ");
-        if (job.getLocation() != null) sb.append(job.getLocation()).append(" ");
-        if (job.getEmployer() != null && job.getEmployer().getCompanyName() != null) {
-            sb.append(job.getEmployer().getCompanyName()).append(" ");
+    private String sanitizeInput(String input) {
+        if (input == null) {
+            return null;
         }
-        
-        return sb.toString();
+        String trimmed = input.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
     
     /**
-     * Create a filtered page from a list of jobs
-     * Note: This is a simplified pagination - for production, use proper pagination
+     * Search jobs by title only (for exact dropdown selection).
      */
-    private Page<Job> createFilteredPage(List<Job> jobs, Pageable pageable, long totalElements) {
-        int page = pageable.getPageNumber();
-        int size = pageable.getPageSize();
-        int start = page * size;
-        int end = Math.min(start + size, jobs.size());
+    @Transactional(readOnly = true)
+    public Page<Job> searchByTitle(String title, Job.JobStatus status, Pageable pageable) {
+        logger.info("Searching by title: '{}', status: {}", title, status);
         
-        List<Job> pagedJobs = start < jobs.size() ? jobs.subList(start, end) : List.of();
+        Specification<Job> spec = Specification
+            .where(JobSpecifications.titleContains(title))
+            .and(JobSpecifications.hasStatus(status));
         
-        return new org.springframework.data.domain.PageImpl<>(
-                pagedJobs,
-                pageable,
-                Math.min(jobs.size(), totalElements)
-        );
+        return jobRepository.findAll(spec, pageable);
+    }
+    
+    /**
+     * Search jobs by company name only.
+     */
+    @Transactional(readOnly = true)
+    public Page<Job> searchByCompany(String companyName, Job.JobStatus status, Pageable pageable) {
+        logger.info("Searching by company: '{}', status: {}", companyName, status);
+        
+        Specification<Job> spec = Specification
+            .where(JobSpecifications.companyNameContains(companyName))
+            .and(JobSpecifications.hasStatus(status));
+        
+        return jobRepository.findAll(spec, pageable);
+    }
+    
+    /**
+     * Search jobs by location only.
+     */
+    @Transactional(readOnly = true)
+    public Page<Job> searchByLocation(String location, Job.JobStatus status, Pageable pageable) {
+        logger.info("Searching by location: '{}', status: {}", location, status);
+        
+        Specification<Job> spec = Specification
+            .where(JobSpecifications.locationContains(location))
+            .and(JobSpecifications.hasStatus(status));
+        
+        return jobRepository.findAll(spec, pageable);
     }
 }
-

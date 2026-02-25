@@ -11,7 +11,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "employers")
+@Table(name = "employers", indexes = {
+    @Index(name = "idx_employer_company_name", columnList = "company_name"),
+    @Index(name = "idx_employer_user", columnList = "user_id"),
+    @Index(name = "idx_employer_verification_status", columnList = "verification_status")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class Employer {
     

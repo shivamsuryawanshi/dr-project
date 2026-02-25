@@ -63,6 +63,13 @@ public class JobController {
             @RequestParam(value = "size", defaultValue = "20") int size,
             @RequestParam(value = "sort", defaultValue = "createdAt,desc") String sort
     ) {
+        // DEBUG: Log all incoming parameters
+        logger.info("=== JOB LIST REQUEST ===");
+        logger.info("search: '{}' (length: {})", search, search != null ? search.length() : 0);
+        logger.info("location: '{}' (length: {})", location, location != null ? location.length() : 0);
+        logger.info("sector: '{}', category: '{}', status: '{}'", sector, category, status);
+        logger.info("featured: {}, page: {}, size: {}", featured, page, size);
+        
         String[] sortParts = sort.split(",");
         Sort.Direction dir = (sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc")) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(dir, sortParts[0]));
@@ -80,26 +87,30 @@ public class JobController {
             // Default to ACTIVE when status is not provided (for public job listing)
             statusFilter = Job.JobStatus.ACTIVE;
         }
+        logger.info("Parsed status filter: {}", statusFilter);
 
         Job.ExperienceLevel expLevel = (experienceLevel != null && !experienceLevel.isBlank()) ? parseExperienceLevel(experienceLevel) : null;
         Job.DutyType duty = (dutyType != null && !dutyType.isBlank()) ? parseDutyType(dutyType) : null;
 
         if (Boolean.TRUE.equals(featured)) {
+            logger.info("Fetching featured jobs");
             result = jobRepository.findByIsFeaturedTrueAndStatus(statusFilter != null ? statusFilter : Job.JobStatus.ACTIVE, pageable);
         } else if (search != null && !search.isBlank()) {
             // Use enhanced search service for powerful Google/YouTube-like search
-            // Searches across: title, description, qualification, speciality, requirements, benefits, and company name
-            // Handles word-by-word matching and relevance scoring
+            logger.info("Using search service with query: '{}', location: '{}'", search.trim(), location);
             result = jobSearchService.searchJobsAdvanced(search.trim(), location != null ? location.trim() : null, statusFilter, pageable);
         } else if (sector != null || category != null || location != null || expLevel != null || speciality != null || duty != null) {
             Job.JobSector s = (sector != null && !sector.isBlank()) ? parseSector(sector) : null;
             Job.JobCategory c = (category != null && !category.isBlank()) ? mapCategoryFromLabel(category) : null;
+            logger.info("Fetching by criteria - sector: {}, category: {}, location: {}", s, c, location);
             result = jobRepository.findJobsByCriteria(s, c, location, expLevel, speciality, duty, statusFilter, pageable);
         } else {
-            // If status filter is provided, use it; otherwise return all jobs (for employer dashboard)
+            logger.info("Fetching all jobs with status filter: {}", statusFilter);
             result = statusFilter != null ? jobRepository.findByStatus(statusFilter, pageable) : jobRepository.findAll(pageable);
         }
 
+        logger.info("=== RESULT: {} jobs found ===", result.getTotalElements());
+        
         Map<String, Object> body = new HashMap<>();
         body.put("content", result.getContent().stream().map(this::toResponse).collect(Collectors.toList()));
         body.put("page", result.getNumber());
@@ -168,6 +179,148 @@ public class JobController {
             body.put("error", ex.getClass().getName());
             body.put("message", ex.getMessage());
             return ResponseEntity.internalServerError().body(body);
+        }
+    }
+
+    // Get all job search options (titles + company names) for dropdown
+    @GetMapping("/options")
+    public ResponseEntity<Map<String, Object>> getJobOptions() {
+        logger.info("=== FETCHING JOB OPTIONS ===");
+        
+        try {
+            // Get all distinct job titles from active jobs
+            List<String> titles = jobRepository.findAllDistinctTitles();
+            logger.info("Found {} distinct job titles: {}", titles.size(), titles);
+            
+            // Get all distinct company names from active jobs
+            List<String> companies = jobRepository.findAllDistinctCompanyNames();
+            logger.info("Found {} distinct company names: {}", companies.size(), companies);
+            
+            // Sort alphabetically
+            titles.sort(String.CASE_INSENSITIVE_ORDER);
+            companies.sort(String.CASE_INSENSITIVE_ORDER);
+            
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("titles", titles);
+            response.put("companies", companies);
+            
+            // Also include total active jobs count for debugging
+            long activeJobsCount = jobRepository.countByStatus(Job.JobStatus.ACTIVE);
+            response.put("_debug_activeJobsCount", activeJobsCount);
+            
+            logger.info("Returning {} titles and {} companies for job options (active jobs: {})", 
+                titles.size(), companies.size(), activeJobsCount);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error fetching job options: {}", e.getMessage(), e);
+            Map<String, Object> emptyResponse = new LinkedHashMap<>();
+            emptyResponse.put("titles", Collections.emptyList());
+            emptyResponse.put("companies", Collections.emptyList());
+            emptyResponse.put("_debug_error", e.getMessage());
+            return ResponseEntity.ok(emptyResponse);
+        }
+    }
+    
+    // Debug endpoint to test search directly
+    @GetMapping("/debug-search")
+    public ResponseEntity<Map<String, Object>> debugSearch(
+            @RequestParam(value = "q", required = false) String query,
+            @RequestParam(value = "location", required = false) String location
+    ) {
+        logger.info("=== DEBUG SEARCH ===");
+        logger.info("Query: '{}', Location: '{}'", query, location);
+        
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("receivedQuery", query);
+        response.put("receivedLocation", location);
+        response.put("queryLength", query != null ? query.length() : 0);
+        response.put("queryBytes", query != null ? Arrays.toString(query.getBytes()) : null);
+        
+        try {
+            // Test 1: Count all jobs by status
+            long activeCount = jobRepository.countByStatus(Job.JobStatus.ACTIVE);
+            long pendingCount = jobRepository.countByStatus(Job.JobStatus.PENDING);
+            long draftCount = jobRepository.countByStatus(Job.JobStatus.DRAFT);
+            long closedCount = jobRepository.countByStatus(Job.JobStatus.CLOSED);
+            response.put("jobCounts", Map.of(
+                "ACTIVE", activeCount,
+                "PENDING", pendingCount,
+                "DRAFT", draftCount,
+                "CLOSED", closedCount,
+                "TOTAL", jobRepository.count()
+            ));
+            
+            // Test 2: Get ALL job titles (not just distinct) to see what's in DB
+            List<String> allTitles = jobRepository.findAllDistinctTitles();
+            response.put("allDistinctTitles", allTitles);
+            response.put("titleCount", allTitles.size());
+            
+            // Test 3: Get sample of ALL jobs (regardless of status)
+            Pageable samplePageable = PageRequest.of(0, 5);
+            Page<Job> allJobsSample = jobRepository.findAll(samplePageable);
+            List<Map<String, Object>> allJobsInfo = allJobsSample.getContent().stream()
+                .map(j -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", j.getId().toString());
+                    m.put("title", j.getTitle());
+                    m.put("titleLength", j.getTitle() != null ? j.getTitle().length() : 0);
+                    m.put("titleBytes", j.getTitle() != null ? Arrays.toString(j.getTitle().getBytes()) : null);
+                    m.put("status", j.getStatus().name());
+                    m.put("company", j.getEmployer() != null ? j.getEmployer().getCompanyName() : "N/A");
+                    return m;
+                })
+                .collect(Collectors.toList());
+            response.put("sampleJobs", allJobsInfo);
+            
+            // Test 4: If query provided, test search
+            if (query != null && !query.isBlank()) {
+                String trimmedQuery = query.trim();
+                Pageable pageable = PageRequest.of(0, 10);
+                
+                // Test with ACTIVE status
+                Page<Job> searchResultActive = jobRepository.searchJobs(trimmedQuery, Job.JobStatus.ACTIVE, pageable);
+                response.put("searchResultActiveCount", searchResultActive.getTotalElements());
+                
+                // Test with NULL status (all jobs)
+                Page<Job> searchResultAll = jobRepository.searchJobs(trimmedQuery, null, pageable);
+                response.put("searchResultAllCount", searchResultAll.getTotalElements());
+                
+                List<Map<String, String>> foundJobs = searchResultActive.getContent().stream()
+                    .map(j -> {
+                        Map<String, String> m = new LinkedHashMap<>();
+                        m.put("title", j.getTitle());
+                        m.put("company", j.getEmployer() != null ? j.getEmployer().getCompanyName() : "N/A");
+                        m.put("status", j.getStatus().name());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+                response.put("foundJobsActive", foundJobs);
+                
+                // Test 5: Check if exact title exists (case-insensitive)
+                boolean exactTitleExists = allTitles.stream()
+                    .anyMatch(t -> t.equalsIgnoreCase(trimmedQuery));
+                response.put("exactTitleExistsInActive", exactTitleExists);
+                
+                // Test 6: Check character-by-character comparison
+                if (!allTitles.isEmpty()) {
+                    String firstTitle = allTitles.get(0);
+                    response.put("firstTitleFromDB", firstTitle);
+                    response.put("firstTitleLength", firstTitle.length());
+                    response.put("queryEqualsFirstTitle", trimmedQuery.equalsIgnoreCase(firstTitle));
+                    response.put("queryContainsInFirstTitle", firstTitle.toLowerCase().contains(trimmedQuery.toLowerCase()));
+                }
+            }
+            
+            logger.info("Debug search response: {}", response);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Debug search error: {}", e.getMessage(), e);
+            response.put("error", e.getMessage());
+            response.put("errorType", e.getClass().getName());
+            response.put("stackTrace", Arrays.toString(e.getStackTrace()).substring(0, Math.min(500, Arrays.toString(e.getStackTrace()).length())));
+            return ResponseEntity.ok(response);
         }
     }
 
