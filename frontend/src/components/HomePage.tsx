@@ -1,17 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search, TrendingUp, Shield, Users, ChevronRight, MapPin, Briefcase as BriefcaseIcon, Building2, UserCheck, Calendar, Landmark, GraduationCap, AlarmClock, Sparkles, Newspaper } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Badge } from './ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from './ui/select';
-import { JobCard } from './JobCard';
-import { fetchJobs, fetchJobsMeta, fetchJobOptions } from '../api/jobs';
-import { fetchHomepageNews, PulseUpdate } from '../api/news';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { 
-  saveSearchHistory, 
-  trackSearch
-} from '../utils/searchUtils';
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  TrendingUp,
+  Shield,
+  Users,
+  ChevronRight,
+  MapPin,
+  Briefcase as BriefcaseIcon,
+  Building2,
+  UserCheck,
+  Calendar,
+  Landmark,
+  GraduationCap,
+  AlarmClock,
+  Sparkles,
+  Newspaper,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from "./ui/select";
+import { JobCard } from "./JobCard";
+import { fetchJobs, fetchJobsMeta, fetchJobOptions } from "../api/jobs";
+import { fetchHomepageNews, PulseUpdate } from "../api/news";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { saveSearchHistory, trackSearch } from "../utils/searchUtils";
 
 interface HomePageProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -28,7 +49,7 @@ function useCounter(end: number, duration: number = 2000) {
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
       const progress = Math.min((currentTime - startTime) / duration, 1);
-      
+
       setCount(Math.floor(progress * end));
 
       if (progress < 1) {
@@ -44,36 +65,49 @@ function useCounter(end: number, duration: number = 2000) {
   return count;
 }
 
-function StatCard({ icon: Icon, end, label, suffix = '' }: { icon: any, end: number, label: string, suffix?: string }) {
+function StatCard({
+  icon: Icon,
+  end,
+  label,
+  suffix = "",
+}: {
+  icon: any;
+  end: number;
+  label: string;
+  suffix?: string;
+}) {
   const count = useCounter(end);
-  
+
   return (
     <div className="text-center transform hover:scale-105 transition-transform duration-300">
       <div className="flex flex-col items-center justify-center mb-3">
         {/* Icon with explicit styling for visibility */}
         <div className="mb-3 flex items-center justify-center">
-          <Icon 
-            className="w-12 h-12 md:w-14 md:h-14 text-blue-600 flex-shrink-0" 
+          <Icon
+            className="w-12 h-12 md:w-14 md:h-14 text-blue-600 flex-shrink-0"
             strokeWidth={2.5}
             fill="none"
             stroke="currentColor"
-            style={{ color: '#2563EB' }}
+            style={{ color: "#2563EB" }}
           />
         </div>
         {/* Number */}
         <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-blue-600 mb-1">
-          {count.toLocaleString()}{suffix}
+          {count.toLocaleString()}
+          {suffix}
         </div>
       </div>
       {/* Label */}
-      <div className="text-gray-600 text-sm md:text-base font-medium">{label}</div>
+      <div className="text-gray-600 text-sm md:text-base font-medium">
+        {label}
+      </div>
     </div>
   );
 }
 
 export function HomePage({ onNavigate }: HomePageProps) {
-  const [selectedJobOption, setSelectedJobOption] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedJobOption, setSelectedJobOption] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
   const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
   const [governmentJobs, setGovernmentJobs] = useState<any[]>([]);
   const [privateJobs, setPrivateJobs] = useState<any[]>([]);
@@ -86,16 +120,29 @@ export function HomePage({ onNavigate }: HomePageProps) {
     // Load featured, latest, government, private jobs, news, and job options
     (async () => {
       try {
-        const [feat, latest, gov, priv, meta, news, jobOptions] = await Promise.all([
-          fetchJobs({ featured: true, size: 6, status: 'active' }).then(r => r.content ?? []),
-          fetchJobs({ size: 6, sort: 'createdAt,desc', status: 'active' }).then(r => r.content ?? []),
-          fetchJobs({ sector: 'government', size: 10, status: 'active' }).then(r => r.content ?? []),
-          fetchJobs({ sector: 'private', size: 10, status: 'active' }).then(r => r.content ?? []),
-          fetchJobsMeta(),
-          fetchHomepageNews(),
-          fetchJobOptions(),
-        ]);
-        
+        const [feat, latest, gov, priv, meta, news, jobOptions] =
+          await Promise.all([
+            fetchJobs({ featured: true, size: 6, status: "active" }).then(
+              (r) => r.content ?? [],
+            ),
+            fetchJobs({
+              size: 6,
+              sort: "createdAt,desc",
+              status: "active",
+            }).then((r) => r.content ?? []),
+            fetchJobs({
+              sector: "government",
+              size: 10,
+              status: "active",
+            }).then((r) => r.content ?? []),
+            fetchJobs({ sector: "private", size: 10, status: "active" }).then(
+              (r) => r.content ?? [],
+            ),
+            fetchJobsMeta(),
+            fetchHomepageNews(),
+            fetchJobOptions(),
+          ]);
+
         // Set job options for dropdown
         setJobTitles(jobOptions.titles || []);
         setCompanies(jobOptions.companies || []);
@@ -103,48 +150,53 @@ export function HomePage({ onNavigate }: HomePageProps) {
         // Combine featured and latest jobs, removing duplicates, limit to 6
         const featuredArray = Array.isArray(feat) ? feat : [];
         const latestArray = Array.isArray(latest) ? latest : [];
-        
+
         // Create a map to track job IDs to avoid duplicates
         const jobMap = new Map();
-        
+
         // First add featured jobs
-        featuredArray.forEach(job => {
+        featuredArray.forEach((job) => {
           if (job.id) jobMap.set(job.id, job);
         });
-        
+
         // Then add latest jobs (up to 6 total)
-        latestArray.forEach(job => {
+        latestArray.forEach((job) => {
           if (job.id && jobMap.size < 6) {
             jobMap.set(job.id, job);
           }
         });
-        
+
         // Convert map to array and limit to 6
         const combinedJobs = Array.from(jobMap.values()).slice(0, 6);
         setFeaturedJobs(combinedJobs);
-        
+
         // Filter government jobs - ensure only government sector jobs are included
-        const filteredGovJobs = Array.isArray(gov) 
-          ? gov.filter(job => {
-              const jobSector = job.sector?.toLowerCase() || '';
-              return jobSector === 'government';
-            }).slice(0, 3)
+        const filteredGovJobs = Array.isArray(gov)
+          ? gov
+              .filter((job) => {
+                const jobSector = job.sector?.toLowerCase() || "";
+                return jobSector === "government";
+              })
+              .slice(0, 3)
           : [];
         setGovernmentJobs(filteredGovJobs);
-        
+
         // Filter private jobs - ensure only private sector jobs are included
-        const filteredPrivateJobs = Array.isArray(priv) 
-          ? priv.filter(job => {
-              const jobSector = job.sector?.toLowerCase() || '';
-              return jobSector === 'private';
-            }).slice(0, 3)
+        const filteredPrivateJobs = Array.isArray(priv)
+          ? priv
+              .filter((job) => {
+                const jobSector = job.sector?.toLowerCase() || "";
+                return jobSector === "private";
+              })
+              .slice(0, 3)
           : [];
         setPrivateJobs(filteredPrivateJobs);
         setNewsUpdates(Array.isArray(news) ? news.slice(0, 6) : []);
 
-        const locs: string[] = Array.isArray(meta?.locations) ? meta.locations : [];
+        const locs: string[] = Array.isArray(meta?.locations)
+          ? meta.locations
+          : [];
         setLocations(locs);
-
       } catch (e) {
         // Set empty arrays on error, no mock data fallback
         setFeaturedJobs([]);
@@ -162,19 +214,19 @@ export function HomePage({ onNavigate }: HomePageProps) {
     if (!selectedJobOption) {
       return;
     }
-    
+
     // Save to search history
     saveSearchHistory(selectedJobOption, selectedLocation);
     trackSearch(selectedJobOption, selectedLocation, 0);
-    
+
     // Build URL params
     const params = new URLSearchParams();
-    params.set('search', selectedJobOption);
-    
+    params.set("search", selectedJobOption);
+
     if (selectedLocation) {
-      params.set('location', selectedLocation);
+      params.set("location", selectedLocation);
     }
-    
+
     // Navigate to jobs page with search params
     const queryString = params.toString();
     onNavigate(`jobs?${queryString}`);
@@ -183,7 +235,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Better Visible Background */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-16 md:py-24 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-16 md:py-24 overflow-visible">
         {/* Background Image with Better Visibility */}
         <div className="absolute inset-0">
           <ImageWithFallback
@@ -197,7 +249,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div
+            className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
@@ -205,85 +260,94 @@ export function HomePage({ onNavigate }: HomePageProps) {
             {/* <div className="inline-block mb-4 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 animate-fade-in">
               <span className="text-sm"></span>
             </div> */}
-            
+
             <h1 className="text-5xl md:text-6xl mb-6 animate-fade-in-up">
               Find Your Dream Medical Career
             </h1>
-            <p className="text-xl text-blue-100 mb-10 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              India's Premier Job Portal for Doctors, Nurses & Paramedical Professionals
+            <p
+              className="text-xl text-blue-100 mb-10 animate-fade-in-up"
+              style={{ animationDelay: "0.2s" }}
+            >
+              India's Premier Job Portal for Doctors, Nurses & Paramedical
+              Professionals
             </p>
 
             {/* Enhanced Search Bar - Refined */}
-            <div 
+            <div
               className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up max-w-6xl mx-auto px-4 sm:px-6"
-              style={{ 
-                animationDelay: '0.4s',
-                borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
-                padding: 'clamp(0.75rem, 1.5vw, 1.25rem)'
+              style={{
+                animationDelay: "0.4s",
+                borderRadius: "clamp(0.5rem, 1vw, 1.5rem)",
+                padding: "clamp(0.75rem, 1.5vw, 1.25rem)",
               }}
             >
               {/* Mobile: Stack | Tablet: Grid 2-col | Desktop: Grid 3-col with equal widths */}
-              <div 
+              <div
                 className="flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-3 items-stretch"
-                style={{ gap: 'clamp(0.75rem, 1.5vw, 1rem)' }}
+                style={{ gap: "clamp(0.75rem, 1.5vw, 1rem)" }}
               >
                 {/* Job Title / Company Dropdown - Same style as Location */}
-                <div 
+                <div
                   className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
                   style={{
-                    gap: '10px',
-                    paddingLeft: '14px',
-                    paddingRight: '14px',
-                    paddingTop: '10px',
-                    paddingBottom: '10px',
-                    borderRadius: '12px',
-                    minHeight: '48px',
-                    height: '48px'
+                    gap: "10px",
+                    paddingLeft: "14px",
+                    paddingRight: "14px",
+                    paddingTop: "10px",
+                    paddingBottom: "10px",
+                    borderRadius: "12px",
+                    minHeight: "48px",
+                    height: "48px",
                   }}
                 >
-                  <BriefcaseIcon 
-                    className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
-                    style={{ width: '18px', height: '18px', minWidth: '18px' }}
+                  <BriefcaseIcon
+                    className="text-gray-400 dark:text-gray-500 flex-shrink-0"
+                    style={{ width: "18px", height: "18px", minWidth: "18px" }}
                     aria-hidden="true"
                   />
-                  <Select value={selectedJobOption} onValueChange={setSelectedJobOption}>
-                    <SelectTrigger 
+                  <Select
+                    value={selectedJobOption}
+                    onValueChange={setSelectedJobOption}
+                  >
+                    <SelectTrigger
                       id="job-search-title"
                       className="flex-1 border-0 focus:ring-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full min-w-0 pl-0"
-                      style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                      style={{ fontSize: "clamp(0.85rem, 1vw, 1rem)" }}
                       aria-label="Select job title or company"
                     >
-                      <SelectValue placeholder="Job Title or Company" className="placeholder:text-gray-500 dark:placeholder:text-gray-400" />
+                      <SelectValue
+                        placeholder="Job Title or Company"
+                        className="placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                      />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[20rem]">
+                    <SelectContent
+                      position="popper"
+                      sideOffset={4}
+                      className="overflow-y-auto"
+                      style={{ maxHeight: "18rem", overflowY: "scroll" }}
+                    >
                       {jobTitles.length > 0 && (
                         <SelectGroup>
                           <SelectLabel>Job Titles</SelectLabel>
                           {jobTitles.map((title) => (
-                            <SelectItem 
-                              key={`title-${title}`} 
-                              value={title}
-                              style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
-                            >
+                            <SelectItem key={title} value={title}>
                               {title}
                             </SelectItem>
                           ))}
                         </SelectGroup>
                       )}
+
                       {companies.length > 0 && (
                         <SelectGroup>
                           <SelectLabel>Companies</SelectLabel>
                           {companies.map((company) => (
-                            <SelectItem 
-                              key={`company-${company}`} 
-                              value={company}
-                              style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
-                            >
+                            <SelectItem key={company} value={company}>
                               {company}
                             </SelectItem>
                           ))}
                         </SelectGroup>
                       )}
+
                       {jobTitles.length === 0 && companies.length === 0 && (
                         <div className="py-4 text-center text-gray-500 text-sm">
                           No options available
@@ -294,39 +358,49 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </div>
 
                 {/* Location Dropdown */}
-                <div 
+                <div
                   className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
                   style={{
-                    gap: '10px',
-                    paddingLeft: '14px',
-                    paddingRight: '14px',
-                    paddingTop: '10px',
-                    paddingBottom: '10px',
-                    borderRadius: '12px',
-                    minHeight: '48px',
-                    height: '48px'
+                    gap: "10px",
+                    paddingLeft: "14px",
+                    paddingRight: "14px",
+                    paddingTop: "10px",
+                    paddingBottom: "10px",
+                    borderRadius: "12px",
+                    minHeight: "48px",
+                    height: "48px",
                   }}
                 >
-                  <MapPin 
-                    className="text-gray-400 dark:text-gray-500 flex-shrink-0" 
-                    style={{ width: '18px', height: '18px', minWidth: '18px' }}
+                  <MapPin
+                    className="text-gray-400 dark:text-gray-500 flex-shrink-0"
+                    style={{ width: "18px", height: "18px", minWidth: "18px" }}
                     aria-hidden="true"
                   />
-                  <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                    <SelectTrigger 
+                  <Select
+                    value={selectedLocation}
+                    onValueChange={setSelectedLocation}
+                  >
+                    <SelectTrigger
                       id="job-search-location"
                       className="flex-1 border-0 focus:ring-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full min-w-0 pl-0"
-                      style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                      style={{ fontSize: "clamp(0.85rem, 1vw, 1rem)" }}
                       aria-label="Select job location"
                     >
-                      <SelectValue placeholder="Select Location" className="placeholder:text-gray-500 dark:placeholder:text-gray-400" />
+                      <SelectValue
+                        placeholder="Select Location"
+                        className="placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                      />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[20rem]">
+                    <SelectContent
+                      position="popper"
+                      className="overflow-y-auto"
+                      style={{ maxHeight: "18rem", overflowY: "scroll" }}
+                    >
                       {locations.map((location) => (
-                        <SelectItem 
-                          key={location} 
+                        <SelectItem
+                          key={location}
                           value={location}
-                          style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)' }}
+                          style={{ fontSize: "clamp(0.85rem, 1vw, 1rem)" }}
                         >
                           {location}
                         </SelectItem>
@@ -336,37 +410,47 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </div>
 
                 {/* Search Button - Disabled until job option is selected */}
-                <Button 
+                <Button
                   id="job-search-submit"
                   type="button"
                   disabled={!selectedJobOption}
                   className="w-full md:col-span-2 lg:col-span-1 lg:min-w-[240px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 shadow-sm hover:shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   style={{
-                    gap: 'clamp(0.5rem, 1vw, 0.75rem)',
-                    paddingLeft: 'clamp(1rem, 2vw, 2rem)',
-                    paddingRight: 'clamp(1rem, 2vw, 2rem)',
-                    paddingTop: 'clamp(0.625rem, 1vw, 0.875rem)',
-                    paddingBottom: 'clamp(0.625rem, 1vw, 0.875rem)',
-                    borderRadius: 'clamp(0.5rem, 1vw, 1.5rem)',
-                    minHeight: 'clamp(2.75rem, 3vw, 3.25rem)',
-                    height: 'clamp(2.75rem, 3vw, 3.25rem)',
-                    fontSize: 'clamp(0.85rem, 1vw, 1rem)'
+                    gap: "clamp(0.5rem, 1vw, 0.75rem)",
+                    paddingLeft: "clamp(1rem, 2vw, 2rem)",
+                    paddingRight: "clamp(1rem, 2vw, 2rem)",
+                    paddingTop: "clamp(0.625rem, 1vw, 0.875rem)",
+                    paddingBottom: "clamp(0.625rem, 1vw, 0.875rem)",
+                    borderRadius: "clamp(0.5rem, 1vw, 1.5rem)",
+                    minHeight: "clamp(2.75rem, 3vw, 3.25rem)",
+                    height: "clamp(2.75rem, 3vw, 3.25rem)",
+                    fontSize: "clamp(0.85rem, 1vw, 1rem)",
                   }}
                   onClick={handleSearch}
-                  aria-label={selectedJobOption ? "Search for jobs" : "Select a job title or company first"}
+                  aria-label={
+                    selectedJobOption
+                      ? "Search for jobs"
+                      : "Select a job title or company first"
+                  }
                 >
-                  <Search 
-                    className="flex-shrink-0" 
-                    style={{ width: 'clamp(1rem, 1.2vw, 1.25rem)', height: 'clamp(1rem, 1.2vw, 1.25rem)' }}
-                    aria-hidden="true" 
+                  <Search
+                    className="flex-shrink-0"
+                    style={{
+                      width: "clamp(1rem, 1.2vw, 1.25rem)",
+                      height: "clamp(1rem, 1.2vw, 1.25rem)",
+                    }}
+                    aria-hidden="true"
                   />
-                  <span>{selectedJobOption ? 'Search Jobs' : 'Select to Search'}</span>
+                  <span>
+                    {selectedJobOption ? "Search Jobs" : "Select to Search"}
+                  </span>
                 </Button>
               </div>
-              
+
               {/* Helper text */}
               <p className="text-blue-100 text-sm mt-3 text-center">
-                Select a job title or company from the dropdown, then click Search.
+                Select a job title or company from the dropdown, then click
+                Search.
               </p>
             </div>
           </div>
@@ -377,13 +461,28 @@ export function HomePage({ onNavigate }: HomePageProps) {
       <section className="py-16 bg-white border-b relative overflow-hidden">
         {/* Decorative background */}
         <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none"></div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <StatCard icon={BriefcaseIcon} end={5000} label="Active Jobs" suffix="+" />
-            <StatCard icon={Building2} end={2000} label="Hospitals" suffix="+" />
+            <StatCard
+              icon={BriefcaseIcon}
+              end={5000}
+              label="Active Jobs"
+              suffix="+"
+            />
+            <StatCard
+              icon={Building2}
+              end={2000}
+              label="Hospitals"
+              suffix="+"
+            />
             <StatCard icon={Users} end={50000} label="Candidates" suffix="+" />
-            <StatCard icon={UserCheck} end={10000} label="Placements" suffix="+" />
+            <StatCard
+              icon={UserCheck}
+              end={10000}
+              label="Placements"
+              suffix="+"
+            />
           </div>
         </div>
       </section>
@@ -396,12 +495,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
               <h2 className="text-3xl text-gray-900 mb-2">Latest Jobs</h2>
               <p className="text-gray-600">Latest job opportunities for you</p>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => onNavigate('jobs')}
+            <Button
+              variant="outline"
+              onClick={() => onNavigate("jobs")}
               className="group hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300"
             >
-              View All 
+              View All
               <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
@@ -409,14 +508,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
           {featuredJobs.length > 0 ? (
             <div className="grid md:grid-cols-2 gap-6">
               {featuredJobs.map((job, index) => (
-                <div 
+                <div
                   key={job.id}
                   className="animate-fade-in-up"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <JobCard
                     job={job}
-                    onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                    onViewDetails={(jobId) => onNavigate("job-detail", jobId)}
                   />
                 </div>
               ))}
@@ -424,9 +523,13 @@ export function HomePage({ onNavigate }: HomePageProps) {
           ) : (
             <Card className="p-12 text-center">
               <BriefcaseIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Jobs Available Yet</h3>
-              <p className="text-gray-600 mb-6">Check back soon for latest job opportunities</p>
-              <Button onClick={() => onNavigate('jobs')} variant="outline">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No Jobs Available Yet
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Check back soon for latest job opportunities
+              </p>
+              <Button onClick={() => onNavigate("jobs")} variant="outline">
                 Browse All Jobs
               </Button>
             </Card>
@@ -439,7 +542,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         {/* Decorative Elements */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-20"></div>
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-green-100 rounded-full blur-3xl opacity-20"></div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid md:grid-cols-2 gap-8">
             {/* Government Jobs Column */}
@@ -451,36 +554,40 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     <span className="w-2 h-8 bg-blue-600 rounded-full mr-3"></span>
                     Government Jobs
                   </h2>
-                  <p className="text-sm text-gray-600 ml-5 mt-1">Official government vacancies</p>
+                  <p className="text-sm text-gray-600 ml-5 mt-1">
+                    Official government vacancies
+                  </p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
-                  onClick={() => onNavigate('govt-jobs')}
+                  onClick={() => onNavigate("govt-jobs")}
                 >
                   View All
                 </Button>
               </div>
-              
+
               {/* Government Job Cards */}
               {governmentJobs.length > 0 ? (
                 governmentJobs.map((job, index) => (
-                  <div 
+                  <div
                     key={job.id}
                     className="animate-fade-in-right transform hover:scale-[1.02] transition-transform duration-300"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <JobCard
                       job={job}
-                      onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                      onViewDetails={(jobId) => onNavigate("job-detail", jobId)}
                     />
                   </div>
                 ))
               ) : (
                 <Card className="p-8 text-center">
                   <Landmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">No government jobs available at the moment</p>
+                  <p className="text-gray-600 text-sm">
+                    No government jobs available at the moment
+                  </p>
                 </Card>
               )}
             </div>
@@ -494,36 +601,40 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     <span className="w-2 h-8 bg-green-600 rounded-full mr-3"></span>
                     Private Jobs
                   </h2>
-                  <p className="text-sm text-gray-600 ml-5 mt-1">Top hospitals & healthcare providers</p>
+                  <p className="text-sm text-gray-600 ml-5 mt-1">
+                    Top hospitals & healthcare providers
+                  </p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
-                  onClick={() => onNavigate('private-jobs')}
+                  onClick={() => onNavigate("private-jobs")}
                 >
                   View All
                 </Button>
               </div>
-              
+
               {/* Private Job Cards */}
               {privateJobs.length > 0 ? (
                 privateJobs.map((job, index) => (
-                  <div 
+                  <div
                     key={job.id}
                     className="animate-fade-in-left transform hover:scale-[1.02] transition-transform duration-300"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <JobCard
                       job={job}
-                      onViewDetails={(jobId) => onNavigate('job-detail', jobId)}
+                      onViewDetails={(jobId) => onNavigate("job-detail", jobId)}
                     />
                   </div>
                 ))
               ) : (
                 <Card className="p-8 text-center">
                   <BriefcaseIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">No private jobs available at the moment</p>
+                  <p className="text-gray-600 text-sm">
+                    No private jobs available at the moment
+                  </p>
                 </Card>
               )}
             </div>
@@ -556,11 +667,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     Latest News & Updates
                   </h2>
                   <p className="text-lg text-gray-600 max-w-2xl">
-                    Stay informed with the latest medical notifications, exam updates, and industry news
+                    Stay informed with the latest medical notifications, exam
+                    updates, and industry news
                   </p>
                 </div>
               </div>
-
             </div>
 
             {/* News Cards - Job Cards Style with Equal Space */}
@@ -569,12 +680,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 {(() => {
                   // Get all news (breaking + regular) - max 4 cards, all equal size
                   const allNews = newsUpdates.slice(0, 4);
-                  
+
                   const formatDate = (dateStr: string) => {
-                    if (!dateStr) return '';
+                    if (!dateStr) return "";
                     const d = new Date(dateStr);
                     if (Number.isNaN(d.getTime())) return dateStr;
-                    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    return d.toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    });
                   };
 
                   const getIcon = (type: string) => {
@@ -583,7 +698,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       EXAM: GraduationCap,
                       PRIVATE: BriefcaseIcon,
                       DEADLINE: AlarmClock,
-                      UPDATE: Sparkles
+                      UPDATE: Sparkles,
                     };
                     return iconMap[type] || Sparkles;
                   };
@@ -591,55 +706,73 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   return allNews.map((update, index) => {
                     const Icon = getIcon(update.type);
                     const isBreaking = update.breaking;
-                    
+
                     // Alternate between green and blue, but red for breaking
-                    let borderColor, badgeBg, badgeText, iconColor, buttonBg, headlineColor;
-                    
+                    let borderColor,
+                      badgeBg,
+                      badgeText,
+                      iconColor,
+                      buttonBg,
+                      headlineColor;
+
                     if (isBreaking) {
                       // Red for breaking
-                      borderColor = '#ef4444';
-                      badgeBg = 'linear-gradient(to right, #dc2626, #b91c1c)';
-                      badgeText = 'Breaking';
-                      iconColor = '#dc2626';
-                      buttonBg = 'linear-gradient(to right, #dc2626, #b91c1c)';
-                      headlineColor = '#dc2626';
+                      borderColor = "#ef4444";
+                      badgeBg = "linear-gradient(to right, #dc2626, #b91c1c)";
+                      badgeText = "Breaking";
+                      iconColor = "#dc2626";
+                      buttonBg = "linear-gradient(to right, #dc2626, #b91c1c)";
+                      headlineColor = "#dc2626";
                     } else {
                       // Alternate green and blue
                       const isGreen = index % 2 === 0;
                       if (isGreen) {
-                        borderColor = '#10b981';
-                        badgeBg = 'linear-gradient(to right, #10b981, #059669)';
-                        badgeText = update.type === 'PRIVATE' ? 'Vacancies' : update.type || 'Update';
-                        iconColor = '#10b981';
-                        buttonBg = 'linear-gradient(to right, #10b981, #059669)';
-                        headlineColor = '#059669';
+                        borderColor = "#10b981";
+                        badgeBg = "linear-gradient(to right, #10b981, #059669)";
+                        badgeText =
+                          update.type === "PRIVATE"
+                            ? "Vacancies"
+                            : update.type || "Update";
+                        iconColor = "#10b981";
+                        buttonBg =
+                          "linear-gradient(to right, #10b981, #059669)";
+                        headlineColor = "#059669";
                       } else {
-                        borderColor = '#2563eb';
-                        badgeBg = 'linear-gradient(to right, #2563eb, #1d4ed8)';
-                        badgeText = update.type === 'GOVT' ? 'Government' : update.type || 'Update';
-                        iconColor = '#2563eb';
-                        buttonBg = 'linear-gradient(to right, #2563eb, #1d4ed8)';
-                        headlineColor = '#1d4ed8';
+                        borderColor = "#2563eb";
+                        badgeBg = "linear-gradient(to right, #2563eb, #1d4ed8)";
+                        badgeText =
+                          update.type === "GOVT"
+                            ? "Government"
+                            : update.type || "Update";
+                        iconColor = "#2563eb";
+                        buttonBg =
+                          "linear-gradient(to right, #2563eb, #1d4ed8)";
+                        headlineColor = "#1d4ed8";
                       }
                     }
-                    
+
                     return (
                       <Card
                         key={update.id}
                         className="relative h-full cursor-pointer overflow-hidden rounded-2xl border-2 p-5 md:p-6 shadow-md transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-xl focus-visible:-translate-y-2 focus-visible:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-200 group"
                         style={{
-                          background: '#ffffff',
+                          background: "#ffffff",
                           borderColor: borderColor,
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)'
+                          boxShadow:
+                            "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
                         }}
-                        onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
+                        onClick={() =>
+                          update.fullStory
+                            ? onNavigate(`news/${update.id}`)
+                            : onNavigate("news")
+                        }
                       >
                         <div className="relative flex h-full flex-col gap-4">
                           {/* Header */}
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0 space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span 
+                                <span
                                   className="!border-0 shadow-md hover:shadow-lg transition-all duration-200 px-4 py-1.5 text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 rounded-md inline-flex text-white"
                                   style={{ background: badgeBg }}
                                 >
@@ -653,7 +786,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                                 )}
                               </div>
                               <div className="flex items-center gap-3">
-                                <h3 
+                                <h3
                                   className="text-lg md:text-xl font-bold group-hover:opacity-80 transition-opacity line-clamp-2"
                                   style={{ color: headlineColor }}
                                 >
@@ -671,14 +804,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
                             </span>
                             <span className="inline-flex items-center gap-2 bg-purple-100/90 border border-purple-200 text-purple-700 rounded-full px-3 py-1.5 shadow-sm hover:bg-purple-200 transition-colors">
                               <Icon className="w-4 h-4 text-purple-600" />
-                              {update.type || 'Update'}
+                              {update.type || "Update"}
                             </span>
                           </div>
 
                           {/* Description */}
                           <div className="flex-1">
                             <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-                              Stay informed with the latest medical updates, policy changes, and critical notifications affecting healthcare professionals.
+                              Stay informed with the latest medical updates,
+                              policy changes, and critical notifications
+                              affecting healthcare professionals.
                             </p>
                           </div>
 
@@ -687,14 +822,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
                             <span className="text-xs text-gray-500">
                               Tap to read full story
                             </span>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (update.fullStory) {
                                   onNavigate(`news/${update.id}`);
                                 } else {
-                                  onNavigate('news');
+                                  onNavigate("news");
                                 }
                               }}
                               className="inline-flex min-w-[140px] items-center justify-center gap-2 text-white shadow-lg hover:shadow-xl transition-all"
@@ -713,9 +848,13 @@ export function HomePage({ onNavigate }: HomePageProps) {
             ) : (
               <Card className="p-12 text-center">
                 <Newspaper className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No News Updates Yet</h3>
-                <p className="text-gray-600 mb-6">Check back soon for the latest medical news and updates</p>
-                <Button variant="outline" onClick={() => onNavigate('news')}>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No News Updates Yet
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Check back soon for the latest medical news and updates
+                </p>
+                <Button variant="outline" onClick={() => onNavigate("news")}>
                   View News Page
                 </Button>
               </Card>
@@ -724,13 +863,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </section>
       )}
 
-
       {/* Why Choose Us - More Interactive */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl text-gray-900 mb-3">Why Choose MedExJob.com?</h2>
-            <p className="text-gray-600">Your trusted partner in medical career advancement</p>
+            <h2 className="text-3xl text-gray-900 mb-3">
+              Why Choose MedExJob.com?
+            </h2>
+            <p className="text-gray-600">
+              Your trusted partner in medical career advancement
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -738,24 +880,36 @@ export function HomePage({ onNavigate }: HomePageProps) {
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:bg-blue-600 transition-all duration-300">
                 <Shield className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">Verified Employers</h3>
-              <p className="text-gray-600">All employers are verified to ensure authentic job postings</p>
+              <h3 className="text-xl text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                Verified Employers
+              </h3>
+              <p className="text-gray-600">
+                All employers are verified to ensure authentic job postings
+              </p>
             </Card>
 
             <Card className="p-8 text-center group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border-t-4 border-t-green-600">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:bg-green-600 transition-all duration-300">
                 <TrendingUp className="w-8 h-8 text-green-600 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Latest Opportunities</h3>
-              <p className="text-gray-600">Get instant alerts for the latest government and private jobs</p>
+              <h3 className="text-xl text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
+                Latest Opportunities
+              </h3>
+              <p className="text-gray-600">
+                Get instant alerts for the latest government and private jobs
+              </p>
             </Card>
 
             <Card className="p-8 text-center group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border-t-4 border-t-purple-600">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:bg-purple-600 transition-all duration-300">
                 <Users className="w-8 h-8 text-purple-600 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">Direct Applications</h3>
-              <p className="text-gray-600">Apply directly and track your application status in real-time</p>
+              <h3 className="text-xl text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                Direct Applications
+              </h3>
+              <p className="text-gray-600">
+                Apply directly and track your application status in real-time
+              </p>
             </Card>
           </div>
         </div>
@@ -766,24 +920,37 @@ export function HomePage({ onNavigate }: HomePageProps) {
         {/* Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute top-10 left-10 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div
+            className="absolute bottom-10 right-10 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
         </div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h2 className="text-4xl mb-4 animate-fade-in-up">Ready to Start Your Medical Career?</h2>
-          <p className="text-xl text-blue-100 mb-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>Join thousands of medical professionals who found their dream jobs</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <Button 
-              size="lg" 
+          <h2 className="text-4xl mb-4 animate-fade-in-up">
+            Ready to Start Your Medical Career?
+          </h2>
+          <p
+            className="text-xl text-blue-100 mb-8 animate-fade-in-up"
+            style={{ animationDelay: "0.2s" }}
+          >
+            Join thousands of medical professionals who found their dream jobs
+          </p>
+          <div
+            className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up"
+            style={{ animationDelay: "0.4s" }}
+          >
+            <Button
+              size="lg"
               className="bg-white text-blue-600 hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
-              onClick={() => onNavigate('register')}
+              onClick={() => onNavigate("register")}
             >
               Register as Candidate
             </Button>
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="bg-white text-blue-600 hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
-              onClick={() => onNavigate('register')}
+              onClick={() => onNavigate("register")}
             >
               Register as Employer
             </Button>
