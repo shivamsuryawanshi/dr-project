@@ -184,6 +184,11 @@ export async function createJob(payload: JobPayload) {
   return res.data;
 }
 
+export async function getJobById(id: string) {
+  const res = await apiClient.get(`/jobs/${id}`);
+  return res.data;
+}
+
 export async function updateJob(id: string, payload: Partial<JobPayload>) {
   const res = await apiClient.put(`/jobs/${id}`, payload);
   return res.data;

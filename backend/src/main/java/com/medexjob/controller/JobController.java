@@ -353,8 +353,8 @@ public class JobController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> detail(@PathVariable("id") UUID id) {
+        // Allow viewing all job statuses for editing (admins need to edit pending/draft jobs)
         return jobRepository.findById(id)
-                .filter(j -> j.getStatus() == Job.JobStatus.ACTIVE || j.getStatus() == Job.JobStatus.DRAFT)
                 .map(j -> ResponseEntity.ok(toResponse(j)))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -600,50 +600,80 @@ public class JobController {
     // Admin: Update Job
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> update(@PathVariable("id") UUID id, @RequestBody JobRequest req) {
-        return jobRepository.findById(id)
-                .map(existing -> {
-                    Job.JobStatus oldStatus = existing.getStatus();
-                    
-                    // Get existing employer or resolve/create new one
-                    Employer employer = existing.getEmployer();
-                    if (employer == null) {
-                        employer = resolveOrCreateEmployer(req.organization(), req.type());
-                    }
-                    applyRequestToJob(req, existing, employer);
-                    if (req.status() != null) existing.setStatus(parseStatus(req.status()));
-                    if (req.featured() != null) existing.setIsFeatured(req.featured());
-                    if (req.views() != null) existing.setViews(req.views());
-                    if (req.applications() != null) existing.setApplicationsCount(req.applications());
-                    
-                    // If status changed to ACTIVE, set approval info
-                    if (req.status() != null && parseStatus(req.status()) == Job.JobStatus.ACTIVE && oldStatus != Job.JobStatus.ACTIVE) {
-                        existing.setApprovedAt(LocalDateTime.now());
-                        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                        if (auth != null) {
-                            Optional<User> adminUser = userRepository.findByEmail(auth.getName());
-                            adminUser.ifPresent(existing::setApprovedBy);
-                        }
-                    }
-                    
-                    Job saved = jobRepository.save(existing);
-                    
-                    // Notify employer if status changed
-                    if (req.status() != null && saved.getStatus() != oldStatus && employer.getUser() != null) {
-                        try {
-                            notificationService.notifyEmployerJobStatus(
-                                employer.getUser().getId(),
-                                saved.getTitle(),
-                                saved.getStatus().name(),
-                                saved.getId()
-                            );
-                        } catch (Exception e) {
-                            logger.error("❌ Error creating job status notification: {}", e.getMessage(), e);
-                        }
-                    }
-                    
-                    return ResponseEntity.ok(toResponse(saved));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        logger.info("=== UPDATE JOB REQUEST ===");
+        logger.info("Job ID: {}", id);
+        logger.info("Request payload: title={}, sector={}, category={}, status={}", 
+            req.title(), req.sector(), req.category(), req.status());
+        
+        try {
+            Optional<Job> existingOpt = jobRepository.findById(id);
+            if (existingOpt.isEmpty()) {
+                logger.warn("Job not found with ID: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+            
+            Job existing = existingOpt.get();
+            Job.JobStatus oldStatus = existing.getStatus();
+            
+            // Get existing employer or resolve/create new one
+            Employer employer = existing.getEmployer();
+            if (employer == null) {
+                employer = resolveOrCreateEmployer(req.organization(), req.type());
+            }
+            
+            // Apply updates only for non-null fields (preserving existing values)
+            applyRequestToJobForUpdate(req, existing, employer);
+            
+            // Handle admin-specific fields
+            if (req.status() != null && !req.status().isBlank()) {
+                existing.setStatus(parseStatus(req.status()));
+            }
+            if (req.featured() != null) existing.setIsFeatured(req.featured());
+            if (req.views() != null) existing.setViews(req.views());
+            if (req.applications() != null) existing.setApplicationsCount(req.applications());
+            
+            // If status changed to ACTIVE, set approval info
+            if (existing.getStatus() == Job.JobStatus.ACTIVE && oldStatus != Job.JobStatus.ACTIVE) {
+                existing.setApprovedAt(LocalDateTime.now());
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null) {
+                    Optional<User> adminUser = userRepository.findByEmail(auth.getName());
+                    adminUser.ifPresent(existing::setApprovedBy);
+                }
+            }
+            
+            logger.info("Saving updated job: {}", existing.getTitle());
+            Job saved = jobRepository.save(existing);
+            logger.info("Job saved successfully with ID: {}", saved.getId());
+            
+            // Notify employer if status changed
+            if (saved.getStatus() != oldStatus && employer != null && employer.getUser() != null) {
+                try {
+                    notificationService.notifyEmployerJobStatus(
+                        employer.getUser().getId(),
+                        saved.getTitle(),
+                        saved.getStatus().name(),
+                        saved.getId()
+                    );
+                } catch (Exception e) {
+                    logger.error("Error creating job status notification: {}", e.getMessage(), e);
+                }
+            }
+            
+            return ResponseEntity.ok(toResponse(saved));
+            
+        } catch (Exception e) {
+            logger.error("=== ERROR UPDATING JOB ===");
+            logger.error("Job ID: {}", id);
+            logger.error("Exception type: {}", e.getClass().getName());
+            logger.error("Error message: {}", e.getMessage());
+            logger.error("Full stack trace:", e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to update job: " + e.getMessage());
+            errorResponse.put("type", e.getClass().getSimpleName());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 
     // Admin: Delete Job
@@ -654,7 +684,7 @@ public class JobController {
         return ResponseEntity.noContent().build();
     }
 
-    // Helper: map request onto entity
+    // Helper: map request onto entity (for CREATE - sets all fields with defaults)
     private void applyRequestToJob(JobRequest req, Job job, Employer employer) {
         // If employer is provided (from authenticated user), use it; otherwise resolve/create
         if (employer != null) {
@@ -667,8 +697,8 @@ public class JobController {
 
         job.setTitle(req.title());
         job.setDescription(Optional.ofNullable(req.description()).orElse(""));
-        job.setSector(parseSector(req.sector()));
-        job.setCategory(mapCategoryFromLabel(Optional.ofNullable(req.category()).orElse("")));
+        job.setSector(parseSectorWithDefault(req.sector()));
+        job.setCategory(mapCategoryFromLabelWithDefault(Optional.ofNullable(req.category()).orElse("")));
         job.setLocation(Optional.ofNullable(req.location()).orElse(""));
         job.setQualification(Optional.ofNullable(req.qualification()).orElse(""));
         job.setExperience(Optional.ofNullable(req.experience()).orElse(""));
@@ -698,6 +728,90 @@ public class JobController {
         job.setContactEmail(email != null && !email.isBlank() ? email : "noreply@medexjob.com");
         String phone = req.contactPhone();
         job.setContactPhone(phone != null && !phone.isBlank() ? phone : "0000000000");
+    }
+
+    // Helper: map request onto entity for UPDATE - preserves existing values when request fields are null/empty
+    private void applyRequestToJobForUpdate(JobRequest req, Job job, Employer employer) {
+        // Update employer only if organization changed
+        if (req.organization() != null && !req.organization().isBlank()) {
+            if (employer != null) {
+                job.setEmployer(employer);
+            } else {
+                Employer resolvedEmployer = resolveOrCreateEmployer(req.organization(), req.type());
+                job.setEmployer(resolvedEmployer);
+            }
+        }
+
+        // Update only non-null/non-blank fields (preserve existing values)
+        if (req.title() != null && !req.title().isBlank()) {
+            job.setTitle(req.title());
+        }
+        if (req.description() != null) {
+            job.setDescription(req.description());
+        }
+        if (req.sector() != null && !req.sector().isBlank()) {
+            Job.JobSector parsedSector = parseSector(req.sector());
+            if (parsedSector != null) {
+                job.setSector(parsedSector);
+            }
+        }
+        if (req.category() != null && !req.category().isBlank()) {
+            Job.JobCategory parsedCategory = mapCategoryFromLabel(req.category());
+            if (parsedCategory != null) {
+                job.setCategory(parsedCategory);
+            }
+        }
+        if (req.location() != null && !req.location().isBlank()) {
+            job.setLocation(req.location());
+        }
+        if (req.qualification() != null) {
+            job.setQualification(req.qualification());
+        }
+        if (req.experience() != null) {
+            job.setExperience(req.experience());
+        }
+        if (req.experienceLevel() != null && !req.experienceLevel().isBlank()) {
+            job.setExperienceLevel(parseExperienceLevel(req.experienceLevel()));
+        }
+        if (req.speciality() != null) {
+            job.setSpeciality(req.speciality());
+        }
+        if (req.dutyType() != null && !req.dutyType().isBlank()) {
+            job.setDutyType(parseDutyType(req.dutyType()));
+        }
+        if (req.numberOfPosts() != null) {
+            job.setNumberOfPosts(req.numberOfPosts());
+        }
+        if (req.salary() != null) {
+            job.setSalaryRange(req.salary());
+        }
+        if (req.pdfUrl() != null) {
+            job.setPdfUrl(req.pdfUrl());
+        }
+        if (req.applyLink() != null) {
+            job.setApplyLink(req.applyLink());
+        }
+        if (req.requirements() != null) {
+            job.setRequirements(req.requirements());
+        }
+        if (req.benefits() != null) {
+            job.setBenefits(req.benefits());
+        }
+        // Handle lastDate - only update if provided
+        if (req.lastDate() != null && !req.lastDate().isBlank()) {
+            try { 
+                job.setLastDate(java.time.LocalDate.parse(req.lastDate())); 
+            } catch (Exception e) {
+                logger.warn("Failed to parse lastDate: {}", req.lastDate());
+            }
+        }
+        // Contact details - only update if provided
+        if (req.contactEmail() != null && !req.contactEmail().isBlank()) {
+            job.setContactEmail(req.contactEmail());
+        }
+        if (req.contactPhone() != null && !req.contactPhone().isBlank()) {
+            job.setContactPhone(req.contactPhone());
+        }
     }
 
     private Employer resolveOrCreateEmployer(String organization, String type) {
@@ -751,11 +865,23 @@ public class JobController {
 
     // Placeholder: Assumes JobSector enum exists and has a valueOf method
     private Job.JobSector parseSector(String sector) {
-        if (sector == null) return null;
+        if (sector == null || sector.isBlank()) return null;
         try {
             return Job.JobSector.valueOf(sector.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return Job.JobSector.PRIVATE; // Default or throw
+            logger.warn("Unknown sector value: '{}', returning null", sector);
+            return null;
+        }
+    }
+
+    // Parse sector with default value - used for CREATE operations
+    private Job.JobSector parseSectorWithDefault(String sector) {
+        if (sector == null || sector.isBlank()) return Job.JobSector.PRIVATE;
+        try {
+            return Job.JobSector.valueOf(sector.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            logger.warn("Unknown sector value: '{}', defaulting to PRIVATE", sector);
+            return Job.JobSector.PRIVATE;
         }
     }
 
@@ -789,19 +915,32 @@ public class JobController {
         }
     }
 
-    // Placeholder: Assumes JobCategory enum exists
+    // Placeholder: Assumes JobCategory enum exists - returns null for unknown
     private Job.JobCategory mapCategoryFromLabel(String label) {
-        if (label == null) return null;
+        if (label == null || label.isBlank()) return null;
         return switch (label.toLowerCase().trim()) {
-            case "junior resident" -> Job.JobCategory.JUNIOR_RESIDENT;
-            case "senior resident" -> Job.JobCategory.SENIOR_RESIDENT;
-            case "medical officer" -> Job.JobCategory.MEDICAL_OFFICER;
+            case "junior resident", "junior_resident" -> Job.JobCategory.JUNIOR_RESIDENT;
+            case "senior resident", "senior_resident" -> Job.JobCategory.SENIOR_RESIDENT;
+            case "medical officer", "medical_officer" -> Job.JobCategory.MEDICAL_OFFICER;
             case "faculty" -> Job.JobCategory.FACULTY;
             case "specialist" -> Job.JobCategory.SPECIALIST;
             case "ayush" -> Job.JobCategory.AYUSH;
-            case "paramedical / nursing" -> Job.JobCategory.PARAMEDICAL_NURSING;
-            default -> null; // Or throw exception / handle error
+            case "paramedical / nursing", "paramedical_nursing", "paramedical" -> Job.JobCategory.PARAMEDICAL_NURSING;
+            default -> {
+                logger.warn("Unknown category label: '{}', returning null", label);
+                yield null;
+            }
         };
+    }
+
+    // Map category with default - used for CREATE operations
+    private Job.JobCategory mapCategoryFromLabelWithDefault(String label) {
+        Job.JobCategory category = mapCategoryFromLabel(label);
+        if (category == null) {
+            logger.warn("Unknown category label: '{}', defaulting to MEDICAL_OFFICER", label);
+            return Job.JobCategory.MEDICAL_OFFICER;
+        }
+        return category;
     }
 
     // === END OF REQUIRED HELPER METHOD PLACEHOLDERS ===
