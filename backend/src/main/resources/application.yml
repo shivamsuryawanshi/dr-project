@@ -49,7 +49,7 @@ spring:
 
 # JWT Configuration
 jwt:
-  secret: "ThisIsMySuperSecretKeyForMedExJobComBackendApiWhichIsSecureAndLongEnoughForHS512"
+  secret: 'ThisIsMySuperSecretKeyForMedExJobComBackendApiWhichIsSecureAndLongEnoughForHS512'
   expiration: 604800000 # 7 days in milliseconds
 
 # Razorpay Configuration
@@ -78,7 +78,7 @@ ftp:
 cors:
   allowed-origins: http://localhost:5173,http://localhost:3000,https://medexjob.com,http://medexjob.com,https://www.medexjob.com,http://www.medexjob.com
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-  allowed-headers: "*"
+  allowed-headers: '*'
   allow-credentials: true
 
 # Logging
@@ -88,10 +88,13 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
   file:
     name: logs/medexjob.log
+  password: ''
+  enabled: true
+  scheme: http
 
 # Actuator
 management:

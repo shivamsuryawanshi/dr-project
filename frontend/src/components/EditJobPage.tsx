@@ -4,7 +4,12 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { JobPostingForm } from "./JobPostingForm";
-import { getJobById, updateJob } from "../api/jobs";
+import {
+  getJobById,
+  updateJob,
+  uploadJobDocument,
+  uploadJobImage,
+} from "../api/jobs";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -56,6 +61,8 @@ export function EditJobPage({ onNavigate }: EditJobPageProps) {
           contactEmail: data.contactEmail || "",
           contactPhone: data.contactPhone || "",
           pdfUrl: data.pdfUrl || "",
+          jobDocumentUrl: data.jobDocumentUrl || "",
+          jobImageUrl: data.jobImageUrl || "",
           applyLink: data.applyLink || "",
           status: data.status || "pending",
           featured: data.featured || false,
@@ -94,6 +101,27 @@ export function EditJobPage({ onNavigate }: EditJobPageProps) {
       };
 
       await updateJob(jobId, payload);
+
+      // Upload PDF document if provided
+      if (formData.pdfFile) {
+        try {
+          await uploadJobDocument(jobId, formData.pdfFile);
+          console.log("Job document uploaded successfully");
+        } catch (uploadError: any) {
+          console.error("Error uploading job document:", uploadError);
+        }
+      }
+
+      // Upload image if provided
+      if (formData.imageFile) {
+        try {
+          await uploadJobImage(jobId, formData.imageFile);
+          console.log("Job image uploaded successfully");
+        } catch (uploadError: any) {
+          console.error("Error uploading job image:", uploadError);
+        }
+      }
+
       toast.success("Job updated successfully!");
 
       // Navigate back to admin jobs page

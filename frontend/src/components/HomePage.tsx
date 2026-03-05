@@ -1,11 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
-  Search,
   TrendingUp,
   Shield,
   Users,
   ChevronRight,
-  MapPin,
   Briefcase as BriefcaseIcon,
   Building2,
   UserCheck,
@@ -19,20 +17,11 @@ import {
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-  SelectLabel,
-} from "./ui/select";
 import { JobCard } from "./JobCard";
-import { fetchJobs, fetchJobsMeta, fetchJobOptions } from "../api/jobs";
+import SearchBar from "./SearchBar";
+import { fetchJobs, fetchJobsMeta } from "../api/jobs";
 import { fetchHomepageNews, PulseUpdate } from "../api/news";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { saveSearchHistory, trackSearch } from "../utils/searchUtils";
 
 interface HomePageProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -106,46 +95,35 @@ function StatCard({
 }
 
 export function HomePage({ onNavigate }: HomePageProps) {
-  const [selectedJobOption, setSelectedJobOption] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("");
   const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
   const [governmentJobs, setGovernmentJobs] = useState<any[]>([]);
   const [privateJobs, setPrivateJobs] = useState<any[]>([]);
   const [newsUpdates, setNewsUpdates] = useState<PulseUpdate[]>([]);
-  const [locations, setLocations] = useState<string[]>([]);
-  const [jobTitles, setJobTitles] = useState<string[]>([]);
-  const [companies, setCompanies] = useState<string[]>([]);
 
   useEffect(() => {
     // Load featured, latest, government, private jobs, news, and job options
     (async () => {
       try {
-        const [feat, latest, gov, priv, meta, news, jobOptions] =
-          await Promise.all([
-            fetchJobs({ featured: true, size: 6, status: "active" }).then(
-              (r) => r.content ?? [],
-            ),
-            fetchJobs({
-              size: 6,
-              sort: "createdAt,desc",
-              status: "active",
-            }).then((r) => r.content ?? []),
-            fetchJobs({
-              sector: "government",
-              size: 10,
-              status: "active",
-            }).then((r) => r.content ?? []),
-            fetchJobs({ sector: "private", size: 10, status: "active" }).then(
-              (r) => r.content ?? [],
-            ),
-            fetchJobsMeta(),
-            fetchHomepageNews(),
-            fetchJobOptions(),
-          ]);
-
-        // Set job options for dropdown
-        setJobTitles(jobOptions.titles || []);
-        setCompanies(jobOptions.companies || []);
+        const [feat, latest, gov, priv, meta, news] = await Promise.all([
+          fetchJobs({ featured: true, size: 6, status: "active" }).then(
+            (r) => r.content ?? [],
+          ),
+          fetchJobs({
+            size: 6,
+            sort: "createdAt,desc",
+            status: "active",
+          }).then((r) => r.content ?? []),
+          fetchJobs({
+            sector: "government",
+            size: 10,
+            status: "active",
+          }).then((r) => r.content ?? []),
+          fetchJobs({ sector: "private", size: 10, status: "active" }).then(
+            (r) => r.content ?? [],
+          ),
+          fetchJobsMeta(),
+          fetchHomepageNews(),
+        ]);
 
         // Combine featured and latest jobs, removing duplicates, limit to 6
         const featuredArray = Array.isArray(feat) ? feat : [];
@@ -192,45 +170,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
           : [];
         setPrivateJobs(filteredPrivateJobs);
         setNewsUpdates(Array.isArray(news) ? news.slice(0, 6) : []);
-
-        const locs: string[] = Array.isArray(meta?.locations)
-          ? meta.locations
-          : [];
-        setLocations(locs);
       } catch (e) {
         // Set empty arrays on error, no mock data fallback
         setFeaturedJobs([]);
         setGovernmentJobs([]);
         setPrivateJobs([]);
-        setLocations([]);
         setNewsUpdates([]);
       }
     })();
   }, []);
-
-  // Handle search - only works when a selection is made
-  const handleSearch = useCallback(() => {
-    // Must have a job option selected to search
-    if (!selectedJobOption) {
-      return;
-    }
-
-    // Save to search history
-    saveSearchHistory(selectedJobOption, selectedLocation);
-    trackSearch(selectedJobOption, selectedLocation, 0);
-
-    // Build URL params
-    const params = new URLSearchParams();
-    params.set("search", selectedJobOption);
-
-    if (selectedLocation) {
-      params.set("location", selectedLocation);
-    }
-
-    // Navigate to jobs page with search params
-    const queryString = params.toString();
-    onNavigate(`jobs?${queryString}`);
-  }, [selectedJobOption, selectedLocation, onNavigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -272,186 +220,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
               Professionals
             </p>
 
-            {/* Enhanced Search Bar - Refined */}
+            {/* Job Search Bar */}
             <div
-              className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up max-w-6xl mx-auto px-4 sm:px-6"
-              style={{
-                animationDelay: "0.4s",
-                borderRadius: "clamp(0.5rem, 1vw, 1.5rem)",
-                padding: "clamp(0.75rem, 1.5vw, 1.25rem)",
-              }}
+              className="animate-fade-in-up max-w-4xl mx-auto"
+              style={{ animationDelay: "0.4s" }}
             >
-              {/* Mobile: Stack | Tablet: Grid 2-col | Desktop: Grid 3-col with equal widths */}
-              <div
-                className="flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-3 items-stretch"
-                style={{ gap: "clamp(0.75rem, 1.5vw, 1rem)" }}
-              >
-                {/* Job Title / Company Dropdown - Same style as Location */}
-                <div
-                  className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
-                  style={{
-                    gap: "10px",
-                    paddingLeft: "14px",
-                    paddingRight: "14px",
-                    paddingTop: "10px",
-                    paddingBottom: "10px",
-                    borderRadius: "12px",
-                    minHeight: "48px",
-                    height: "48px",
-                  }}
-                >
-                  <BriefcaseIcon
-                    className="text-gray-400 dark:text-gray-500 flex-shrink-0"
-                    style={{ width: "18px", height: "18px", minWidth: "18px" }}
-                    aria-hidden="true"
-                  />
-                  <Select
-                    value={selectedJobOption}
-                    onValueChange={setSelectedJobOption}
-                  >
-                    <SelectTrigger
-                      id="job-search-title"
-                      className="flex-1 border-0 focus:ring-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full min-w-0 pl-0"
-                      style={{ fontSize: "clamp(0.85rem, 1vw, 1rem)" }}
-                      aria-label="Select job title or company"
-                    >
-                      <SelectValue
-                        placeholder="Job Title or Company"
-                        className="placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                      />
-                    </SelectTrigger>
-                    <SelectContent
-                      position="popper"
-                      sideOffset={4}
-                      className="overflow-y-auto"
-                      style={{ maxHeight: "18rem", overflowY: "scroll" }}
-                    >
-                      {jobTitles.length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Job Titles</SelectLabel>
-                          {jobTitles.map((title) => (
-                            <SelectItem key={title} value={title}>
-                              {title}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-
-                      {companies.length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Companies</SelectLabel>
-                          {companies.map((company) => (
-                            <SelectItem key={company} value={company}>
-                              {company}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-
-                      {jobTitles.length === 0 && companies.length === 0 && (
-                        <div className="py-4 text-center text-gray-500 text-sm">
-                          No options available
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Location Dropdown */}
-                <div
-                  className="flex items-center bg-white border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-800/50 transition-all min-w-[240px]"
-                  style={{
-                    gap: "10px",
-                    paddingLeft: "14px",
-                    paddingRight: "14px",
-                    paddingTop: "10px",
-                    paddingBottom: "10px",
-                    borderRadius: "12px",
-                    minHeight: "48px",
-                    height: "48px",
-                  }}
-                >
-                  <MapPin
-                    className="text-gray-400 dark:text-gray-500 flex-shrink-0"
-                    style={{ width: "18px", height: "18px", minWidth: "18px" }}
-                    aria-hidden="true"
-                  />
-                  <Select
-                    value={selectedLocation}
-                    onValueChange={setSelectedLocation}
-                  >
-                    <SelectTrigger
-                      id="job-search-location"
-                      className="flex-1 border-0 focus:ring-0 text-gray-900 dark:text-gray-100 bg-transparent p-0 h-full min-w-0 pl-0"
-                      style={{ fontSize: "clamp(0.85rem, 1vw, 1rem)" }}
-                      aria-label="Select job location"
-                    >
-                      <SelectValue
-                        placeholder="Select Location"
-                        className="placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                      />
-                    </SelectTrigger>
-                    <SelectContent
-                      position="popper"
-                      className="overflow-y-auto"
-                      style={{ maxHeight: "18rem", overflowY: "scroll" }}
-                    >
-                      {locations.map((location) => (
-                        <SelectItem
-                          key={location}
-                          value={location}
-                          style={{ fontSize: "clamp(0.85rem, 1vw, 1rem)" }}
-                        >
-                          {location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Search Button - Disabled until job option is selected */}
-                <Button
-                  id="job-search-submit"
-                  type="button"
-                  disabled={!selectedJobOption}
-                  className="w-full md:col-span-2 lg:col-span-1 lg:min-w-[240px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 shadow-sm hover:shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  style={{
-                    gap: "clamp(0.5rem, 1vw, 0.75rem)",
-                    paddingLeft: "clamp(1rem, 2vw, 2rem)",
-                    paddingRight: "clamp(1rem, 2vw, 2rem)",
-                    paddingTop: "clamp(0.625rem, 1vw, 0.875rem)",
-                    paddingBottom: "clamp(0.625rem, 1vw, 0.875rem)",
-                    borderRadius: "clamp(0.5rem, 1vw, 1.5rem)",
-                    minHeight: "clamp(2.75rem, 3vw, 3.25rem)",
-                    height: "clamp(2.75rem, 3vw, 3.25rem)",
-                    fontSize: "clamp(0.85rem, 1vw, 1rem)",
-                  }}
-                  onClick={handleSearch}
-                  aria-label={
-                    selectedJobOption
-                      ? "Search for jobs"
-                      : "Select a job title or company first"
-                  }
-                >
-                  <Search
-                    className="flex-shrink-0"
-                    style={{
-                      width: "clamp(1rem, 1.2vw, 1.25rem)",
-                      height: "clamp(1rem, 1.2vw, 1.25rem)",
-                    }}
-                    aria-hidden="true"
-                  />
-                  <span>
-                    {selectedJobOption ? "Search Jobs" : "Select to Search"}
-                  </span>
-                </Button>
-              </div>
-
-              {/* Helper text */}
-              <p className="text-blue-100 text-sm mt-3 text-center">
-                Select a job title or company from the dropdown, then click
-                Search.
-              </p>
+              <SearchBar showLabels={true} />
             </div>
           </div>
         </div>

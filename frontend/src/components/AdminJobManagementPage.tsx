@@ -29,7 +29,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { JobCategory, JobSector } from "../types"; // Assuming these types are available
 import { Label } from "./ui/label";
-import { fetchJobs, deleteJob, updateJob, createJob } from "../api/jobs";
+import {
+  fetchJobs,
+  deleteJob,
+  updateJob,
+  createJob,
+  uploadJobDocument,
+  uploadJobImage,
+} from "../api/jobs";
 import {
   fetchApplications,
   updateApplicationStatus,
@@ -267,13 +274,38 @@ export function AdminJobManagementPage({
         type: "hospital", // Defaulting for now, ideally selected in form or derived
       };
 
+      let savedJobId: string | null = null;
+
       if (editingJob) {
         if (!token) throw new Error("Authentication token not found.");
         await updateJob(editingJob.id, payload);
+        savedJobId = editingJob.id;
       } else {
         if (!token) throw new Error("Authentication token not found.");
-        await createJob(payload);
+        const createdJob = await createJob(payload);
+        savedJobId = createdJob?.id;
       }
+
+      // Upload PDF document if provided
+      if (savedJobId && jobData.pdfFile) {
+        try {
+          await uploadJobDocument(savedJobId, jobData.pdfFile);
+          console.log("Job document uploaded successfully");
+        } catch (uploadError: any) {
+          console.error("Error uploading job document:", uploadError);
+        }
+      }
+
+      // Upload image if provided
+      if (savedJobId && jobData.imageFile) {
+        try {
+          await uploadJobImage(savedJobId, jobData.imageFile);
+          console.log("Job image uploaded successfully");
+        } catch (uploadError: any) {
+          console.error("Error uploading job image:", uploadError);
+        }
+      }
+
       alert(`Job ${editingJob ? "updated" : "created"} successfully!`);
       loadJobs(); // Refresh the list after save
     } catch (e: any) {

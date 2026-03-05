@@ -1,5 +1,5 @@
 # AI assisted development
-version: '3.8'
+version: "3.8"
 
 services:
   # MySQL Database
@@ -20,7 +20,17 @@ services:
     networks:
       - medexjob-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpassword}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${DB_ROOT_PASSWORD:-rootpassword}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,7 +79,15 @@ services:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/api/actuator/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8081/api/actuator/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -89,7 +107,15 @@ services:
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80/health",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -103,4 +129,3 @@ volumes:
 networks:
   medexjob-network:
     driver: bridge
-

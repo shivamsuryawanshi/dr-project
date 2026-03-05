@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*; // Contains @CrossOrigin
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,8 +41,9 @@ public class JobController {
     private final NotificationService notificationService;
     private final JobSearchService jobSearchService;
     private final PasswordEncoder passwordEncoder;
+    private final com.medexjob.service.FileUploadService fileUploadService;
 
-    public JobController(JobRepository jobRepository, EmployerRepository employerRepository, UserRepository userRepository, SubscriptionRepository subscriptionRepository, NotificationService notificationService, JobSearchService jobSearchService, PasswordEncoder passwordEncoder) {
+    public JobController(JobRepository jobRepository, EmployerRepository employerRepository, UserRepository userRepository, SubscriptionRepository subscriptionRepository, NotificationService notificationService, JobSearchService jobSearchService, PasswordEncoder passwordEncoder, com.medexjob.service.FileUploadService fileUploadService) {
         this.jobRepository = jobRepository;
         this.employerRepository = employerRepository;
         this.userRepository = userRepository;
@@ -49,6 +51,7 @@ public class JobController {
         this.notificationService = notificationService;
         this.jobSearchService = jobSearchService;
         this.passwordEncoder = passwordEncoder;
+        this.fileUploadService = fileUploadService;
     }
 
     @GetMapping
@@ -684,6 +687,111 @@ public class JobController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Upload job document (PDF only) for a specific job
+     * POST /api/jobs/{id}/upload-document
+     */
+    @PostMapping("/{id}/upload-document")
+    public ResponseEntity<Map<String, Object>> uploadJobDocument(
+            @PathVariable("id") UUID id,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            logger.info("Uploading job document for job: {}", id);
+            
+            // Validate file type - only PDF allowed
+            String contentType = file.getContentType();
+            String originalFilename = file.getOriginalFilename();
+            if (contentType == null || !contentType.equals("application/pdf")) {
+                String extension = originalFilename != null && originalFilename.contains(".") 
+                    ? originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase() 
+                    : "";
+                if (!extension.equals("pdf")) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Only PDF files are allowed for job documents"));
+                }
+            }
+            
+            // Check if job exists
+            Optional<Job> jobOpt = jobRepository.findById(id);
+            if (jobOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Job not found"));
+            }
+            
+            Job job = jobOpt.get();
+            
+            // Upload file using existing FileUploadService
+            String fileUrl = fileUploadService.uploadFile(file, "job-documents");
+            logger.info("Job document uploaded successfully. URL: {}", fileUrl);
+            
+            // Update job with the document URL
+            job.setJobDocumentUrl(fileUrl);
+            jobRepository.save(job);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Document uploaded successfully",
+                "jobDocumentUrl", fileUrl,
+                "jobId", id.toString()
+            ));
+        } catch (Exception e) {
+            logger.error("Error uploading job document: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to upload document: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Upload job image (jpg, jpeg, png, webp only) for a specific job
+     * POST /api/jobs/{id}/upload-image
+     */
+    @PostMapping("/{id}/upload-image")
+    public ResponseEntity<Map<String, Object>> uploadJobImage(
+            @PathVariable("id") UUID id,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            logger.info("Uploading job image for job: {}", id);
+            
+            // Validate file type - only images allowed
+            String contentType = file.getContentType();
+            String originalFilename = file.getOriginalFilename();
+            List<String> allowedContentTypes = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
+            List<String> allowedExtensions = Arrays.asList("jpg", "jpeg", "png", "webp");
+            
+            String extension = originalFilename != null && originalFilename.contains(".") 
+                ? originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase() 
+                : "";
+            
+            boolean isValidType = (contentType != null && allowedContentTypes.contains(contentType.toLowerCase())) 
+                || allowedExtensions.contains(extension);
+            
+            if (!isValidType) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Only jpg, jpeg, png, webp images are allowed"));
+            }
+            
+            // Check if job exists
+            Optional<Job> jobOpt = jobRepository.findById(id);
+            if (jobOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Job not found"));
+            }
+            
+            Job job = jobOpt.get();
+            
+            // Upload file using existing FileUploadService
+            String fileUrl = fileUploadService.uploadFile(file, "job-images");
+            logger.info("Job image uploaded successfully. URL: {}", fileUrl);
+            
+            // Update job with the image URL
+            job.setJobImageUrl(fileUrl);
+            jobRepository.save(job);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Image uploaded successfully",
+                "jobImageUrl", fileUrl,
+                "jobId", id.toString()
+            ));
+        } catch (Exception e) {
+            logger.error("Error uploading job image: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to upload image: " + e.getMessage()));
+        }
+    }
+
     // Helper: map request onto entity (for CREATE - sets all fields with defaults)
     private void applyRequestToJob(JobRequest req, Job job, Employer employer) {
         // If employer is provided (from authenticated user), use it; otherwise resolve/create
@@ -708,6 +816,8 @@ public class JobController {
         job.setNumberOfPosts(Optional.ofNullable(req.numberOfPosts()).orElse(1));
         job.setSalaryRange(req.salary());
         job.setPdfUrl(req.pdfUrl());
+        job.setJobDocumentUrl(req.jobDocumentUrl());
+        job.setJobImageUrl(req.jobImageUrl());
         job.setApplyLink(req.applyLink());
         job.setRequirements(req.requirements()); // Set requirements
         job.setBenefits(req.benefits()); // Set benefits
@@ -787,6 +897,12 @@ public class JobController {
         }
         if (req.pdfUrl() != null) {
             job.setPdfUrl(req.pdfUrl());
+        }
+        if (req.jobDocumentUrl() != null) {
+            job.setJobDocumentUrl(req.jobDocumentUrl());
+        }
+        if (req.jobImageUrl() != null) {
+            job.setJobImageUrl(req.jobImageUrl());
         }
         if (req.applyLink() != null) {
             job.setApplyLink(req.applyLink());
@@ -963,6 +1079,8 @@ public class JobController {
         String requirements,
         String benefits,
         String pdfUrl,
+        String jobDocumentUrl,
+        String jobImageUrl,
         String applyLink,
         String status,
         Boolean featured,
@@ -1002,6 +1120,8 @@ public class JobController {
         m.put("lastDate", j.getLastDate() != null ? j.getLastDate().toString() : null);
         m.put("postedDate", j.getCreatedAt() != null ? j.getCreatedAt().toString() : null);
         m.put("pdfUrl", j.getPdfUrl());
+        m.put("jobDocumentUrl", j.getJobDocumentUrl());
+        m.put("jobImageUrl", j.getJobImageUrl());
         m.put("applyLink", j.getApplyLink());
         m.put("status", j.getStatus().name().toLowerCase());
         m.put("featured", Boolean.TRUE.equals(j.getIsFeatured()));

@@ -168,6 +168,8 @@ export interface JobPayload {
   description: string;
   lastDate: string; // yyyy-MM-dd
   pdfUrl?: string;
+  jobDocumentUrl?: string;
+  jobImageUrl?: string;
   applyLink?: string;
   status?: 'active' | 'closed' | 'pending' | 'draft';
   featured?: boolean;
@@ -249,4 +251,40 @@ export async function debugSearch(query: string, location?: string): Promise<any
     console.error('Debug search error:', err);
     return null;
   }
+}
+
+/**
+ * Upload job document (PDF) for a specific job
+ * @param jobId The job ID to upload the document for
+ * @param file The PDF file to upload
+ * @returns The uploaded document URL
+ */
+export async function uploadJobDocument(jobId: string, file: File): Promise<{ jobDocumentUrl: string; jobId: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await apiClient.post(`/jobs/${jobId}/upload-document`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
+}
+
+/**
+ * Upload job image (jpg, jpeg, png, webp) for a specific job
+ * @param jobId The job ID to upload the image for
+ * @param file The image file to upload
+ * @returns The uploaded image URL
+ */
+export async function uploadJobImage(jobId: string, file: File): Promise<{ jobImageUrl: string; jobId: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await apiClient.post(`/jobs/${jobId}/upload-image`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
 }

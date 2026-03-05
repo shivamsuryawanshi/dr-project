@@ -8,7 +8,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
-import { createJob } from "./api/jobs";
+import { createJob, uploadJobDocument, uploadJobImage } from "./api/jobs";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -245,7 +245,37 @@ function AppContent() {
                             applications: 0,
                             type: "hospital",
                           };
-                          await createJob(payload);
+                          const createdJob = await createJob(payload);
+                          const jobId = createdJob?.id;
+
+                          // Upload PDF document if provided
+                          if (jobId && jobData.pdfFile) {
+                            try {
+                              await uploadJobDocument(jobId, jobData.pdfFile);
+                              console.log("Job document uploaded successfully");
+                            } catch (uploadError: any) {
+                              console.error(
+                                "Error uploading job document:",
+                                uploadError,
+                              );
+                              // Don't fail the whole operation, just log the error
+                            }
+                          }
+
+                          // Upload image if provided
+                          if (jobId && jobData.imageFile) {
+                            try {
+                              await uploadJobImage(jobId, jobData.imageFile);
+                              console.log("Job image uploaded successfully");
+                            } catch (uploadError: any) {
+                              console.error(
+                                "Error uploading job image:",
+                                uploadError,
+                              );
+                              // Don't fail the whole operation, just log the error
+                            }
+                          }
+
                           alert("Job created successfully!");
                           handleNavigate("dashboard/employer");
                         } catch (e: any) {
@@ -330,7 +360,35 @@ function AppContent() {
                           applications: jobData.applications || 0,
                           type: "hospital",
                         };
-                        await createJob(payload);
+                        const createdJob = await createJob(payload);
+                        const jobId = createdJob?.id;
+
+                        // Upload PDF document if provided
+                        if (jobId && jobData.pdfFile) {
+                          try {
+                            await uploadJobDocument(jobId, jobData.pdfFile);
+                            console.log("Job document uploaded successfully");
+                          } catch (uploadError: any) {
+                            console.error(
+                              "Error uploading job document:",
+                              uploadError,
+                            );
+                          }
+                        }
+
+                        // Upload image if provided
+                        if (jobId && jobData.imageFile) {
+                          try {
+                            await uploadJobImage(jobId, jobData.imageFile);
+                            console.log("Job image uploaded successfully");
+                          } catch (uploadError: any) {
+                            console.error(
+                              "Error uploading job image:",
+                              uploadError,
+                            );
+                          }
+                        }
+
                         alert("Job created successfully!");
                         handleNavigate("admin-jobs");
                       } catch (e: any) {

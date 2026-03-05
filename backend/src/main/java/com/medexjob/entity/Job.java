@@ -111,6 +111,14 @@ public class Job {
     private String pdfUrl;
     
     @Size(max = 500)
+    @Column(name = "job_document_url")
+    private String jobDocumentUrl;
+    
+    @Size(max = 500)
+    @Column(name = "job_image_url")
+    private String jobImageUrl;
+    
+    @Size(max = 500)
     @Column(name = "apply_link")
     private String applyLink;
     
@@ -332,6 +340,22 @@ public class Job {
     
     public void setPdfUrl(String pdfUrl) {
         this.pdfUrl = pdfUrl;
+    }
+    
+    public String getJobDocumentUrl() {
+        return jobDocumentUrl;
+    }
+    
+    public void setJobDocumentUrl(String jobDocumentUrl) {
+        this.jobDocumentUrl = jobDocumentUrl;
+    }
+    
+    public String getJobImageUrl() {
+        return jobImageUrl;
+    }
+    
+    public void setJobImageUrl(String jobImageUrl) {
+        this.jobImageUrl = jobImageUrl;
     }
     
     public String getApplyLink() {
