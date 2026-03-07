@@ -14,6 +14,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -82,7 +83,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGlobalException(Exception ex, WebRequest request) {
         // Log the exception for debugging purposes
-        ex.printStackTrace(); // Add this to see the actual error in logs
-        return new ResponseEntity<>(Map.of("error", "An unexpected error occurred.", "details", ex.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        logger.error("Unexpected error: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());
+        
+        // Check if it's a common exception type and provide meaningful message
+        String errorMessage = "An unexpected error occurred.";
+        String errorType = ex.getClass().getSimpleName();
+        
+        if (ex instanceof org.springframework.dao.DataIntegrityViolationException) {
+            errorMessage = "Data integrity violation. This may be due to duplicate data or invalid reference.";
+        } else if (ex instanceof org.springframework.transaction.TransactionSystemException) {
+            errorMessage = "Database transaction error. Please check your input and try again.";
+        } else if (ex instanceof java.util.NoSuchElementException) {
+            errorMessage = "The requested resource was not found.";
+        } else if (ex instanceof IllegalArgumentException) {
+            errorMessage = ex.getMessage() != null ? ex.getMessage() : "Invalid argument provided.";
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", errorMessage);
+        response.put("type", errorType);
+        
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

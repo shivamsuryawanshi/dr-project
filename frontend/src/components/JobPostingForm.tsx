@@ -124,6 +124,17 @@ export function JobPostingForm({
     "Kochi",
     "Bhubaneswar",
     "Indore",
+    "AIIMS Delhi",
+    "AIIMS Bhopal",
+    "AIIMS Jodhpur",
+    "AIIMS Rishikesh",
+    "PGIMER Chandigarh",
+    "JIPMER Puducherry",
+    "CMC Vellore",
+    "NIMHANS Bangalore",
+    "Remote",
+    "Pan India",
+    "Multiple Locations",
   ];
 
   // Fetch current subscription to show job posting limit
@@ -175,6 +186,14 @@ export function JobPostingForm({
     console.log("Job data:", formData);
     if (onSave) {
       onSave(formData);
+    }
+  };
+
+  const handleSaveAsDraft = () => {
+    // Save the job with draft status
+    console.log("Saving job as draft:", formData);
+    if (onSave) {
+      onSave({ ...formData, status: "draft" } as any);
     }
   };
 
@@ -275,23 +294,23 @@ export function JobPostingForm({
 
         <div className="md:col-span-2">
           <Label htmlFor="location">Location *</Label>
-          <Select
+          <Input
+            id="location"
+            name="location"
+            placeholder="Enter job location (City, Hospital, or Remote)"
             value={formData.location}
-            onValueChange={(value: string) =>
-              handleInputChange("location", value)
-            }
-          >
-            <SelectTrigger className="mt-1">
-              <SelectValue placeholder="Select location" />
-            </SelectTrigger>
-            <SelectContent>
-              {locations.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(e) => handleInputChange("location", e.target.value)}
+            className="mt-1"
+            list="locationSuggestions"
+          />
+          <datalist id="locationSuggestions">
+            {locations.map((location) => (
+              <option key={location} value={location} />
+            ))}
+          </datalist>
+          <p className="text-xs text-gray-500 mt-1">
+            Type any location or select from suggestions
+          </p>
         </div>
       </div>
     </div>
@@ -700,9 +719,7 @@ export function JobPostingForm({
           </Button>
 
           <div className="flex gap-3">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              {" "}
-              {/* Use onCancel for the 'Save as Draft' or 'Cancel' action */}
+            <Button type="button" variant="outline" onClick={handleSaveAsDraft}>
               <Save className="w-4 h-4 mr-2" />
               Save as Draft
             </Button>

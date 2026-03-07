@@ -288,3 +288,115 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ jobIm
   });
   return res.data;
 }
+
+// ==================== ADMIN JOB API FUNCTIONS ====================
+
+/**
+ * Fetch all jobs for admin (including all statuses)
+ */
+export async function fetchAdminJobs(params: {
+  search?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+} = {}) {
+  try {
+    const res = await apiClient.get('/admin/jobs', { params });
+    return res.data;
+  } catch (err: any) {
+    console.error('Error fetching admin jobs:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Fetch a single job by ID for admin
+ */
+export async function fetchAdminJob(id: string) {
+  try {
+    const res = await apiClient.get(`/admin/jobs/${id}`);
+    return res.data;
+  } catch (err: any) {
+    console.error('Error fetching admin job:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Create a new job as admin (without subscription requirement)
+ */
+export async function createAdminJob(payload: JobPayload) {
+  try {
+    const res = await apiClient.post('/admin/jobs', payload);
+    return res.data;
+  } catch (err: any) {
+    console.error('Error creating admin job:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Update a job as admin
+ */
+export async function updateAdminJob(id: string, payload: Partial<JobPayload>) {
+  try {
+    const res = await apiClient.put(`/admin/jobs/${id}`, payload);
+    return res.data;
+  } catch (err: any) {
+    console.error('Error updating admin job:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Update job status (DRAFT, ACTIVE, CLOSED, PENDING)
+ */
+export async function updateAdminJobStatus(id: string, status: string) {
+  try {
+    const res = await apiClient.put(`/admin/jobs/${id}/status`, { status });
+    return res.data;
+  } catch (err: any) {
+    console.error('Error updating job status:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Publish a job (change status to ACTIVE)
+ */
+export async function publishAdminJob(id: string) {
+  try {
+    const res = await apiClient.put(`/admin/jobs/${id}/publish`);
+    return res.data;
+  } catch (err: any) {
+    console.error('Error publishing job:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Delete a job (soft delete)
+ */
+export async function deleteAdminJob(id: string) {
+  try {
+    const res = await apiClient.delete(`/admin/jobs/${id}`);
+    return res.data;
+  } catch (err: any) {
+    console.error('Error deleting job:', err);
+    throw err.response?.data || err;
+  }
+}
+
+/**
+ * Create a sample job for testing
+ */
+export async function createSampleJob() {
+  try {
+    const res = await apiClient.post('/admin/jobs/sample');
+    return res.data;
+  } catch (err: any) {
+    console.error('Error creating sample job:', err);
+    throw err.response?.data || err;
+  }
+}

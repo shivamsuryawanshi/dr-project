@@ -9,7 +9,12 @@ import {
   useParams,
 } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
-import { createJob, uploadJobDocument, uploadJobImage } from "./api/jobs";
+import {
+  createJob,
+  createAdminJob,
+  uploadJobDocument,
+  uploadJobImage,
+} from "./api/jobs";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -45,6 +50,7 @@ import { AdminPricingManagement } from "./components/AdminPricingManagement";
 import { PricingPage } from "./components/PricingPage";
 import { EditJobPage } from "./components/EditJobPage";
 import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner";
 
 // Wrapper component to extract employerId from URL params
 function EmployerManagementPageWrapper({
@@ -246,7 +252,7 @@ function AppContent() {
                       onSave={async (jobData: any) => {
                         try {
                           if (!token) {
-                            alert(
+                            toast.error(
                               "Authentication token not found. Please login again.",
                             );
                             return;
@@ -290,7 +296,7 @@ function AppContent() {
                             }
                           }
 
-                          alert("Job created successfully!");
+                          toast.success("Job created successfully!");
                           handleNavigate("dashboard/employer");
                         } catch (e: any) {
                           console.error("Error creating job:", e);
@@ -312,7 +318,7 @@ function AppContent() {
                                 errorMessage.includes("Unauthorized") ||
                                 errorMessage.includes("login")
                               ) {
-                                alert(
+                                toast.error(
                                   "Your session has expired. Please login again.",
                                 );
                                 handleNavigate("logout");
@@ -322,7 +328,7 @@ function AppContent() {
                           } else if (e.message) {
                             errorMessage = e.message;
                           }
-                          alert(`Error creating job: ${errorMessage}`);
+                          toast.error(`Error creating job: ${errorMessage}`);
                         }
                       }}
                     />
@@ -361,7 +367,7 @@ function AppContent() {
                     onSave={async (jobData: any) => {
                       try {
                         if (!token) {
-                          alert(
+                          toast.error(
                             "Authentication token not found. Please login again.",
                           );
                           return;
@@ -374,7 +380,8 @@ function AppContent() {
                           applications: jobData.applications || 0,
                           type: "hospital",
                         };
-                        const createdJob = await createJob(payload);
+                        // Use admin API for job creation (no subscription required)
+                        const createdJob = await createAdminJob(payload);
                         const jobId = createdJob?.id;
 
                         // Upload PDF document if provided
@@ -403,11 +410,13 @@ function AppContent() {
                           }
                         }
 
-                        alert("Job created successfully!");
+                        toast.success("Job created successfully!");
                         handleNavigate("admin-jobs");
                       } catch (e: any) {
                         console.error("Error creating job:", e);
-                        alert(`Error creating job: ${e.message}`);
+                        const errorMsg =
+                          e?.error || e?.message || "Unknown error";
+                        toast.error(`Error creating job: ${errorMsg}`);
                       }
                     }}
                   />

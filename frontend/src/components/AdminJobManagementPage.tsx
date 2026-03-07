@@ -30,10 +30,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { JobCategory, JobSector } from "../types"; // Assuming these types are available
 import { Label } from "./ui/label";
 import {
-  fetchJobs,
-  deleteJob,
-  updateJob,
-  createJob,
+  fetchAdminJobs,
+  deleteAdminJob,
+  updateAdminJob,
+  updateAdminJobStatus,
+  createAdminJob,
+  createSampleJob,
+  publishAdminJob,
   uploadJobDocument,
   uploadJobImage,
 } from "../api/jobs";
@@ -102,16 +105,18 @@ export function AdminJobManagementPage({
         sort: "createdAt,desc",
       };
       if (filterStatus !== "all") params.status = filterStatus;
-      const data = await fetchJobs(params);
+      // Use admin API to fetch all jobs including drafts/pending
+      const data = await fetchAdminJobs(params);
       const allJobs: Job[] = (data?.content || []).map((job: any) => ({
         ...job,
         employerId: job.employerId,
         lastDate: job.lastDate,
-        postedDate: job.postedDate,
+        postedDate: job.postedDate || job.createdAt,
+        organization: job.organization || job.companyName,
       }));
       setJobs(allJobs);
     } catch (e: any) {
-      setError(`Failed to fetch jobs: ${e.message}`);
+      setError(`Failed to fetch jobs: ${e.message || "Unknown error"}`);
       console.error("Error fetching jobs:", e);
     } finally {
       setLoading(false);
@@ -150,45 +155,15 @@ export function AdminJobManagementPage({
     try {
       if (!token) throw new Error("Authentication token not found.");
 
-      // Sample job data
-      const sampleJob = {
-        title: "Senior Medical Officer",
-        organization: "AIIMS Delhi",
-        sector: "government" as JobSector,
-        category: "Medical Officer" as JobCategory,
-        location: "New Delhi",
-        qualification: "MBBS with MD/MS",
-        experience: "5+ years",
-        experienceLevel: "senior" as const,
-        speciality: "General Medicine",
-        dutyType: "full_time" as const,
-        numberOfPosts: 10,
-        salary: "₹80,000 - ₹1,20,000 per month",
-        description:
-          "We are looking for experienced Senior Medical Officers to join our team. The candidate should have excellent clinical skills and a passion for patient care.",
-        lastDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0], // 30 days from now
-        requirements:
-          "MBBS with MD/MS in relevant field, Valid medical license, 5+ years of clinical experience, Good communication skills",
-        benefits:
-          "Health insurance, Provident Fund, Paid leaves, Professional development opportunities",
-        contactEmail: "hr@aiims.edu",
-        contactPhone: "+91-11-26588500",
-        status: "active" as const,
-        featured: true,
-        views: 0,
-        applications: 0,
-        type: "hospital",
-      };
-
-      await createJob(sampleJob);
-      alert("Sample job successfully added! 🎉");
+      // Use the admin API to create a sample job
+      await createSampleJob();
+      toast.success("Sample job successfully added! 🎉");
       loadJobs(); // Refresh the list
     } catch (e: any) {
-      setError(`Failed to add sample job: ${e.message}`);
+      const errorMsg = e.error || e.message || "Failed to create sample job";
+      setError(`Failed to add sample job: ${errorMsg}`);
       console.error("Error adding sample job:", e);
-      alert(`Error: ${e.message}`);
+      toast.error(`Error: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -204,13 +179,14 @@ export function AdminJobManagementPage({
 
     try {
       if (!token) throw new Error("Authentication token not found.");
-      await deleteJob(jobId);
+      await deleteAdminJob(jobId);
       setJobs((prev) => prev.filter((job) => job.id !== jobId));
-      alert("Job deleted successfully!");
+      toast.success("Job deleted successfully!");
     } catch (e: any) {
-      setError(`Failed to delete job: ${e.message}`);
+      const errorMsg = e.error || e.message || "Failed to delete job";
+      setError(`Failed to delete job: ${errorMsg}`);
       console.error("Error deleting job:", e);
-      alert(`Error deleting job: ${e.message}`);
+      toast.error(`Error deleting job: ${errorMsg}`);
     }
   };
 
@@ -227,13 +203,38 @@ export function AdminJobManagementPage({
 
     try {
       if (!token) throw new Error("Authentication token not found.");
-      await updateJob(jobId, { status: newStatus }, token);
-      alert(`Job status updated to ${newStatus} successfully!`);
+      // Use admin API for status updates
+      await updateAdminJobStatus(jobId, newStatus);
+      toast.success(`Job status updated to ${newStatus} successfully!`);
       loadJobs(); // Refresh the list to show updated status
     } catch (e: any) {
-      setError(`Failed to update job status: ${e.message}`);
+      const errorMsg = e.error || e.message || "Failed to update status";
+      setError(`Failed to update job status: ${errorMsg}`);
       console.error("Error updating job status:", e);
-      alert(`Error updating job status: ${e.message}`);
+      toast.error(`Error updating job status: ${errorMsg}`);
+    }
+  };
+
+  const handlePublishJob = async (jobId: string) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to publish this job? It will become visible on the job board.",
+      )
+    )
+      return;
+
+    try {
+      if (!token) throw new Error("Authentication token not found.");
+      await publishAdminJob(jobId);
+      toast.success(
+        "Job published successfully! It's now visible on the job board.",
+      );
+      loadJobs(); // Refresh the list
+    } catch (e: any) {
+      const errorMsg = e.error || e.message || "Failed to publish job";
+      setError(`Failed to publish job: ${errorMsg}`);
+      console.error("Error publishing job:", e);
+      toast.error(`Error publishing job: ${errorMsg}`);
     }
   };
 
@@ -252,7 +253,7 @@ export function AdminJobManagementPage({
         undefined,
         finalInterviewDate,
       );
-      alert("Application status updated!");
+      toast.success("Application status updated!");
       loadApplications();
       setSelectedAppId(null); // Reset selection
     } catch (e: any) {
@@ -278,11 +279,13 @@ export function AdminJobManagementPage({
 
       if (editingJob) {
         if (!token) throw new Error("Authentication token not found.");
-        await updateJob(editingJob.id, payload);
+        // Use admin API for updating jobs
+        await updateAdminJob(editingJob.id, payload);
         savedJobId = editingJob.id;
       } else {
         if (!token) throw new Error("Authentication token not found.");
-        const createdJob = await createJob(payload);
+        // Use admin API for creating jobs
+        const createdJob = await createAdminJob(payload);
         savedJobId = createdJob?.id;
       }
 
@@ -306,10 +309,11 @@ export function AdminJobManagementPage({
         }
       }
 
-      alert(`Job ${editingJob ? "updated" : "created"} successfully!`);
+      toast.success(`Job ${editingJob ? "updated" : "created"} successfully!`);
       loadJobs(); // Refresh the list after save
     } catch (e: any) {
-      setError(`Failed to save job: ${e.message}`);
+      const errorMsg = e.error || e.message || "Failed to save job";
+      setError(`Failed to save job: ${errorMsg}`);
       console.error("Error saving job:", e);
       alert(`Error saving job: ${e.message}`);
     } finally {
@@ -535,22 +539,37 @@ export function AdminJobManagementPage({
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditJob(job)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteJob(job.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div className="flex flex-col gap-2 ml-4">
+                    {/* Publish button for draft/pending jobs */}
+                    {(job.status === "draft" || job.status === "pending") && (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePublishJob(job.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Publish
+                      </Button>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditJob(job)}
+                        title="Edit Job"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteJob(job.id)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Delete Job"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
