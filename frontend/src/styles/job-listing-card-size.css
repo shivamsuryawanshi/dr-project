@@ -58,8 +58,8 @@
  */
 .min-h-screen.bg-gray-50
   > .container.mx-auto.px-3.sm\:px-4.py-5.sm\:py-8
-  > .grid.md\:grid-cols-4
-  > .md\:col-span-3.min-w-0
+  > .grid
+  > .min-w-0
   > .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3 {
   
   grid-template-columns: repeat(
@@ -77,8 +77,8 @@
 /* Target only the real job wrapper, not loading / empty-state blocks. */
 .min-h-screen.bg-gray-50
   > .container.mx-auto.px-3.sm\:px-4.py-5.sm\:py-8
-  > .grid.md\:grid-cols-4
-  > .md\:col-span-3.min-w-0
+  > .grid
+  > .min-w-0
   > .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3
   > .h-full.justify-self-center {
   width: 100% !important;
@@ -90,8 +90,8 @@
 
 .min-h-screen.bg-gray-50
   > .container.mx-auto.px-3.sm\:px-4.py-5.sm\:py-8
-  > .grid.md\:grid-cols-4
-  > .md\:col-span-3.min-w-0
+  > .grid
+  > .min-w-0
   > .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3
   > .h-full.justify-self-center
   > .medex-job-card {
@@ -109,11 +109,11 @@
 }
 
 /* The filtered result area is narrower because of the sidebar. */
-@media (min-width: 768px) and (max-width: 1149px) {
+@media (min-width: 1024px) and (max-width: 1149px) {
   .min-h-screen.bg-gray-50
     > .container.mx-auto.px-3.sm\:px-4.py-5.sm\:py-8
-    > .grid.md\:grid-cols-4
-    > .md\:col-span-3.min-w-0
+    > .grid
+    > .min-w-0
     > .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3 {
     grid-template-columns: minmax(0, var(--medex-public-job-card-width)) !important;
   }
@@ -131,8 +131,8 @@
     > .grid.md\:grid-cols-3.gap-6,
   .min-h-screen.bg-gray-50
     > .container.mx-auto.px-3.sm\:px-4.py-5.sm\:py-8
-    > .grid.md\:grid-cols-4
-    > .md\:col-span-3.min-w-0
+    > .grid
+    > .min-w-0
     > .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3 {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 16px !important;
@@ -145,8 +145,8 @@
     > div,
   .min-h-screen.bg-gray-50
     > .container.mx-auto.px-3.sm\:px-4.py-5.sm\:py-8
-    > .grid.md\:grid-cols-4
-    > .md\:col-span-3.min-w-0
+    > .grid
+    > .min-w-0
     > .grid.grid-cols-1.lg\:grid-cols-2.xl\:grid-cols-3
     > .h-full.justify-self-center {
     width: 100% !important;

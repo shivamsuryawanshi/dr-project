@@ -173,8 +173,8 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
             </h3>
             {organizationName && (
               <div className="flex items-center gap-1.5 mt-2 min-w-0">
-                <Building2 className="w-4 h-4 shrink-0 text-amber-700" />
-                <span className="truncate text-sm font-semibold text-amber-900">
+                <Building2 className="w-4 h-4 shrink-0 text-red-600" />
+                <span className="truncate text-sm font-semibold text-red-600">
                   {organizationName}
                 </span>
               </div>
@@ -212,14 +212,14 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
           )}
 
           {(salaryText || experienceText) && (
-            <div className="flex flex-wrap gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               {salaryText && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-green-700 font-medium">
                   💰 {salaryText}
                 </span>
               )}
               {experienceText && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
+                <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 font-medium">
                   📊 Experience: {experienceText}
                 </span>
               )}
