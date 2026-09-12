@@ -1,4 +1,3 @@
-// AI assisted development
 import {
   ArrowLeft,
   Bell,
@@ -6,11 +5,13 @@ import {
   Briefcase,
   Building2,
   Calendar,
+  Check,
   ChevronRight,
   Clock,
   FileText,
   Heart,
   LayoutDashboard,
+  Lightbulb,
   LogOut,
   MapPin,
   Menu,
@@ -476,184 +477,227 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
         <aside className="candidate-sidebar">{sidebarContent}</aside>
 
         <main className="candidate-main">
-          <div className="candidate-page-header">
-            <div>
-              <button type="button" className="candidate-back-link" onClick={() => onNavigate('home')}>
-                <ArrowLeft size={16} /> Back
-              </button>
-              <h1>Dashboard</h1>
-              <p>
-                Welcome back, {user?.name || 'Candidate'}
-                {profile?.speciality ? ` · ${profile.speciality}` : ''}.
-              </p>
+          {activeSection !== 'overview' && (
+            <div className="candidate-page-header">
+              <div>
+                <button type="button" className="candidate-back-link" onClick={() => openSection('overview')}>
+                  <ArrowLeft size={16} /> Back to Dashboard
+                </button>
+                <h1>
+                  {activeSection === 'saved'
+                    ? 'Saved Jobs'
+                    : activeSection === 'applications'
+                    ? 'My Applications'
+                    : activeSection === 'notifications'
+                    ? 'Notifications'
+                    : 'Recommended Jobs'}
+                </h1>
+                <p>
+                  Welcome back, {user?.name || 'Candidate'}
+                  {profile?.speciality ? ` · ${profile.speciality}` : ''}.
+                </p>
+              </div>
+              <div className="candidate-page-header__actions">
+                <button type="button" className="candidate-icon-button" onClick={() => openSection('notifications')} aria-label="Notifications">
+                  <Bell size={20} />
+                  {unreadNotifications > 0 && <span>{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
+                </button>
+                <button type="button" className="candidate-outline-button" onClick={handleLogout}><LogOut size={16} />Logout</button>
+              </div>
             </div>
-            <div className="candidate-page-header__actions">
-              <button type="button" className="candidate-icon-button" onClick={() => openSection('notifications')} aria-label="Notifications">
-                <Bell size={20} />
-                {unreadNotifications > 0 && <span>{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
-              </button>
-              <button type="button" className="candidate-outline-button" onClick={handleLogout}><LogOut size={16} />Logout</button>
-            </div>
-          </div>
+          )}
 
           {activeSection === 'overview' && (
             <>
-              <section className="mx-greeting">
-                <h2>{greetingForNow()}, {user?.name || 'Doctor'} 👋</h2>
-                <p>Find the right healthcare opportunity for your career.</p>
+              {/* Top Greeting Banner */}
+              <section className="mx-greeting-banner">
+                <div className="mx-greeting-banner__left">
+                  <div className="mx-greeting-banner__icon">
+                    <Stethoscope size={24} />
+                  </div>
+                  <div>
+                    <h2>{greetingForNow()}, {user?.name || 'Doctor'} 👋</h2>
+                    <p>Find the right healthcare opportunity for your career.</p>
+                  </div>
+                </div>
+                <div className="mx-greeting-banner__right">
+                  <div className="mx-greeting-banner__doc">
+                    <div className="mx-greeting-banner__doc-avatar">
+                      <svg viewBox="0 0 44 44" fill="none" className="mx-doc-svg" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="22" cy="14" r="7" stroke="#2563eb" strokeWidth="2.2" fill="#eff6ff" />
+                        <path d="M8 38c0-7.18 6.268-13 14-13s14 5.82 14 13" stroke="#2563eb" strokeWidth="2.2" fill="#dbeafe" />
+                        <path d="M17 27v3.5a5 5 0 0010 0V27" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" />
+                        <circle cx="22" cy="32.5" r="1.8" fill="#1d4ed8" />
+                      </svg>
+                    </div>
+                    <div className="mx-greeting-banner__doc-text">
+                      <strong>Better Careers</strong>
+                      <span>Healthier Tomorrow</span>
+                    </div>
+                  </div>
+                </div>
               </section>
 
-              <section className={`mx-profile ${profilePercent >= 70 ? 'is-ready' : 'is-incomplete'}`}>
-                <div className="mx-profile__top">
-                  <div className="mx-avatar mx-avatar--lg">{getInitials(user?.name)}</div>
-                  <div className="mx-profile__identity">
-                    <strong>{user?.name || 'Candidate'}</strong>
-                    <span>{profile?.speciality || 'Speciality not added'}{profile?.subSpeciality ? ` · ${profile.subSpeciality}` : ''}</span>
-                  </div>
-                  <div className="mx-progress">
-                    <div className="mx-progress__label">
-                      <span>Profile Completion</span>
-                      <em>{profilePercent}%</em>
+              {/* Profile Completion Row with "Why complete this?" Card */}
+              <div className="mx-profile-row">
+                <section className="mx-profile is-ready">
+                  <div className="mx-profile__top">
+                    <div className="mx-avatar mx-avatar--teal">{getInitials(user?.name)}</div>
+                    <div className="mx-profile__identity">
+                      <strong>{user?.name || 'Candidate'}</strong>
+                      <span>{profile?.speciality || 'Speciality not added'}{profile?.subSpeciality ? ` · ${profile.subSpeciality}` : ''}</span>
                     </div>
-                    <div
-                      className="mx-progress__bar"
-                      role="progressbar"
-                      aria-valuenow={profilePercent}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    >
-                      <span style={{ width: `${profilePercent}%` }} />
+                    <div className="mx-progress">
+                      <div className="mx-progress__label">
+                        <span>Profile Completion</span>
+                        <em>{profilePercent}%</em>
+                      </div>
+                      <div
+                        className="mx-progress__bar"
+                        role="progressbar"
+                        aria-valuenow={profilePercent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <span style={{ width: `${profilePercent}%` }} />
+                      </div>
                     </div>
+                    <button type="button" className="mx-btn mx-btn--teal" onClick={() => onNavigate('profile')}>
+                      <User size={16} /> {profilePercent >= 70 ? 'Edit Profile' : 'Complete Profile'}
+                    </button>
                   </div>
-                  <button type="button" className="mx-btn" onClick={() => onNavigate('profile')}>
-                    <User size={16} /> {profilePercent >= 70 ? 'Edit Profile' : 'Complete Profile'}
-                  </button>
-                </div>
 
-                <div className="mx-profile__grid">
-                  <article><Stethoscope size={16} /><div><span>Qualification</span><strong>{profile?.qualification || 'Not added'}</strong></div></article>
-                  <article><Briefcase size={16} /><div><span>Experience</span><strong>{profile?.yearsExperience != null ? `${profile.yearsExperience} years` : 'Not added'}</strong></div></article>
-                  <article><User size={16} /><div><span>Registration</span><strong>{profile?.registrationNumber || 'Not added'}</strong></div></article>
-                  <article><MapPin size={16} /><div><span>Location</span><strong>{[profile?.currentCity, profile?.state].filter(Boolean).join(', ') || 'Not added'}</strong></div></article>
-                </div>
+                  <div className="mx-profile__grid">
+                    <article>
+                      <div className="mx-attribute-icon mx-attribute-icon--blue"><Stethoscope size={16} /></div>
+                      <div><span>Qualification</span><strong>{profile?.qualification || 'Not added'}</strong></div>
+                    </article>
+                    <article>
+                      <div className="mx-attribute-icon mx-attribute-icon--teal"><Briefcase size={16} /></div>
+                      <div><span>Experience</span><strong>{profile?.yearsExperience != null ? `${profile.yearsExperience} years` : 'Not added'}</strong></div>
+                    </article>
+                    <article>
+                      <div className="mx-attribute-icon mx-attribute-icon--purple"><FileText size={16} /></div>
+                      <div><span>Registration</span><strong>{profile?.registrationNumber || 'Not added'}</strong></div>
+                    </article>
+                    <article>
+                      <div className="mx-attribute-icon mx-attribute-icon--green"><MapPin size={16} /></div>
+                      <div><span>Location</span><strong>{[profile?.currentCity, profile?.state].filter(Boolean).join(', ') || 'Not added'}</strong></div>
+                    </article>
+                  </div>
 
-                {profile?.profileSummary && <p className="mx-profile__summary">{profile.profileSummary}</p>}
-                {!profile?.speciality && (
-                  <p className="mx-profile__hint">
-                    Add speciality, qualification and registration so hospitals can shortlist you.
-                  </p>
-                )}
-              </section>
+                  {profile?.profileSummary && <p className="mx-profile__summary">{profile.profileSummary}</p>}
+                </section>
 
+                <aside className="mx-why-card">
+                  <div className="mx-why-card__head">
+                    <div className="mx-why-card__icon">
+                      <Lightbulb size={18} />
+                    </div>
+                    <h3>Why complete this?</h3>
+                  </div>
+                  <ul className="mx-why-card__list">
+                    <li>
+                      <Check size={14} className="mx-why-check" />
+                      <span>Employers see useful clinical context.</span>
+                    </li>
+                    <li>
+                      <Check size={14} className="mx-why-check" />
+                      <span>Admin can filter candidates by speciality, qualification and state.</span>
+                    </li>
+                    <li>
+                      <Check size={14} className="mx-why-check" />
+                      <span>Future job matching can use structured profile data.</span>
+                    </li>
+                  </ul>
+                </aside>
+              </div>
+
+              {/* 6 Statistics Cards */}
               <section className="mx-stats" aria-label="Candidate statistics">
                 {stats.map((stat) => {
                   const Icon = stat.icon;
                   return (
                     <button type="button" className={`mx-stat mx-stat--${stat.tone}`} key={stat.label} onClick={stat.action}>
-                      <span className="mx-stat__icon"><Icon size={18} /></span>
-                      <strong className="mx-stat__value">{stat.value}</strong>
-                      <span className="mx-stat__label">{stat.label}</span>
+                      <div className="mx-stat__head">
+                        <span className="mx-stat__icon"><Icon size={18} /></span>
+                        <span className="mx-stat__arrow"><ChevronRight size={13} /></span>
+                      </div>
+                      <div className="mx-stat__body">
+                        <strong className="mx-stat__value">{stat.value}</strong>
+                        <span className="mx-stat__label">{stat.label}</span>
+                      </div>
                     </button>
                   );
                 })}
               </section>
 
-              <div className="mx-section-header">
-                <h2><Star size={18} /> Recommended For You</h2>
-                <button type="button" className="mx-seeall" onClick={() => openSection('recommended')}>
-                  See All <ChevronRight size={14} />
-                </button>
-              </div>
-              {recommendedJobs.length === 0 ? (
-                <div className="mx-empty"><Star size={26} /><h3>No recommended jobs available</h3><p>Featured jobs from the portal will appear here when available.</p></div>
-              ) : (
-                <div className="mx-jobscroll">{recommendedJobs.slice(0, 6).map((job) => renderJobCard(job, 'recommended'))}</div>
-              )}
-
-              {closingSoonJobs.length > 0 && (
-                <>
-                  <div className="mx-section-header">
-                    <h2 className="mx-section-header--warn"><Clock size={18} /> Closing Soon</h2>
-                    <button type="button" className="mx-seeall" onClick={() => onNavigate('jobs')}>
-                      View All <ChevronRight size={14} />
-                    </button>
+              {/* Recent Applications Card */}
+              <section className="mx-card-panel mx-card-panel--purple">
+                <div className="mx-card-panel__header">
+                  <div className="mx-card-panel__title">
+                    <span className="mx-card-panel__icon mx-card-panel__icon--purple"><FileText size={17} /></span>
+                    <h3>Recent Applications</h3>
                   </div>
-                  <div className="mx-jobscroll">{closingSoonJobs.map((job) => renderJobCard(job, 'recommended'))}</div>
-                </>
-              )}
-
-              <div className="mx-section-header">
-                <h2><Briefcase size={18} /> Application Tracker</h2>
-                <button type="button" className="mx-seeall" onClick={() => openSection('applications')}>
-                  {applications.length} Applied
-                </button>
-              </div>
-              {applications.length === 0 ? (
-                <div className="mx-empty"><Briefcase size={26} /><h3>No applications yet</h3><p>Applications submitted from MedExJob will appear here.</p></div>
-              ) : (
-                <div className="mx-tracker">
-                  {trackerSteps.map((step, index) => (
-                    <Fragment key={step.label}>
-                      {index > 0 && <span className="mx-tracker__arrow" aria-hidden="true"><ChevronRight size={14} /></span>}
-                      <button
-                        type="button"
-                        className={`mx-tracker__step${step.count > 0 ? ' is-filled' : ''}${step.tone ? ` mx-tracker__step--${step.tone}` : ''}`}
-                        onClick={() => { setStatusFilter(step.filter); openSection('applications'); }}
-                      >
-                        <span className="mx-tracker__count">{step.count}</span>
-                        <span className="mx-tracker__label">{step.label}</span>
-                      </button>
-                    </Fragment>
-                  ))}
+                  <button type="button" className="mx-panel-link" onClick={() => openSection('applications')}>
+                    View All →
+                  </button>
                 </div>
-              )}
+                {applications.length === 0 ? (
+                  <div className="mx-empty"><Briefcase size={26} /><h3>No applications yet</h3></div>
+                ) : (
+                  <div className="mx-app-rows">
+                    {applications.slice(0, 4).map((application) => (
+                      <article key={application.id} className="mx-app-row" onClick={() => onNavigate('job-detail', application.jobId)}>
+                        <div className="mx-app-row__left">
+                          <div className="mx-app-row__title-wrap">
+                            <h4>{application.jobTitle}</h4>
+                            <span className="mx-status-pill mx-status-pill--purple">
+                              {normalizeStatus(application.status)}
+                            </span>
+                          </div>
+                          <p className="mx-app-row__org">{application.jobOrganization || application.postedBy?.company || 'Organization'}</p>
+                        </div>
+                        <div className="mx-app-row__right">
+                          <span className="mx-app-row__date"><Calendar size={13} /> Applied {formatDate(application.appliedDate)}</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
 
-              <div className="mx-section-header">
-                <h2><FileText size={18} /> Recent Applications</h2>
-                <button type="button" className="mx-seeall" onClick={() => openSection('applications')}>
-                  View All <ChevronRight size={14} />
-                </button>
-              </div>
-              {applications.length === 0 ? (
-                <div className="mx-empty"><Briefcase size={26} /><h3>No applications yet</h3></div>
-              ) : (
-                <div className="mx-applist">
-                  {applications.slice(0, 4).map((application) => (
-                    <article key={application.id} onClick={() => onNavigate('job-detail', application.jobId)}>
-                      <div>
-                        <h3>{application.jobTitle}</h3>
-                        <p>{application.jobOrganization}</p>
-                      </div>
-                      <div className="mx-applist__side">
-                        <span className={getStatusClass(application.status)}>{normalizeStatus(application.status)}</span>
-                        <small>Applied {formatDate(application.appliedDate)}</small>
-                      </div>
-                    </article>
-                  ))}
+              {/* Recent Notifications Card */}
+              <section className="mx-card-panel mx-card-panel--teal">
+                <div className="mx-card-panel__header">
+                  <div className="mx-card-panel__title">
+                    <span className="mx-card-panel__icon mx-card-panel__icon--teal"><Bell size={17} /></span>
+                    <h3>Recent Notifications</h3>
+                  </div>
+                  <button type="button" className="mx-panel-link mx-panel-link--teal" onClick={() => openSection('notifications')}>
+                    View All →
+                  </button>
                 </div>
-              )}
-
-              <div className="mx-section-header">
-                <h2><Bell size={18} /> Recent Notifications</h2>
-                <button type="button" className="mx-seeall" onClick={() => openSection('notifications')}>
-                  View All <ChevronRight size={14} />
-                </button>
-              </div>
-              {notifications.length === 0 ? (
-                <div className="mx-empty"><Bell size={26} /><h3>No notifications yet</h3></div>
-              ) : (
-                <div className="mx-notiflist">
-                  {notifications.slice(0, 5).map((notification: any) => (
-                    <article key={notification.id} className={notification.read ? '' : 'is-unread'}>
-                      <span className="mx-notiflist__icon"><Bell size={15} /></span>
-                      <div>
-                        <p>{notification.message}</p>
-                        <small>{formatDate(notification.createdAt)}</small>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+                {notifications.length === 0 ? (
+                  <div className="mx-empty"><Bell size={26} /><h3>No notifications yet</h3></div>
+                ) : (
+                  <div className="mx-notif-cards">
+                    {notifications.slice(0, 5).map((notification: any) => (
+                      <article key={notification.id} className="mx-notif-card">
+                        <span className="mx-notif-card__icon"><Bell size={14} /></span>
+                        <div className="mx-notif-card__content">
+                          <div className="mx-notif-card__message">
+                            <span className="mx-check-badge"><Check size={10} /></span>
+                            <p>{notification.message}</p>
+                          </div>
+                          <small>{formatDate(notification.createdAt)}</small>
+                        </div>
+                        <span className="mx-notif-card__arrow"><ChevronRight size={16} /></span>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
             </>
           )}
 
