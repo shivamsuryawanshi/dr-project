@@ -1,37 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
 
 .medex-applicant-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  align-items: stretch !important;
-  gap: 24px !important;
-  width: 100% !important;
-}
-
-@media (max-width: 1279px) {
-  .medex-applicant-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 20px !important;
-  }
-}
-
-@media (max-width: 767px) {
-  .medex-applicant-grid {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
+  align-items: start !important;
 }
 
 .medex-applicant-card {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
+  align-self: start !important;
+  height: auto !important;
   min-height: 0 !important;
-  border: 1px solid #e2e8f0 !important;
-  border-left: 1px solid #e2e8f0 !important;
+  border: 1px solid #e5e7eb !important;
+  border-left: 1px solid #e5e7eb !important;
   border-radius: 16px !important;
   background: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06) !important;
   font-family: "DM Sans", "Segoe UI", Arial, sans-serif !important;
   overflow: hidden !important;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
@@ -39,16 +20,12 @@
 
 .medex-applicant-card:hover {
   transform: translateY(-2px) !important;
-  border-color: #93c5fd !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.09) !important;
 }
 
 .medex-applicant-card-content {
   padding: 18px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;
-  height: 100% !important;
 }
 
 .medex-applicant-header {
@@ -132,11 +109,15 @@
   display: inline !important;
 }
 
-.medex-applicant-job-title {
-  margin: 0 0 6px !important;
+.medex-applicant-job-title-duplicate {
+  display: none !important;
+}
+
+.medex-applicant-job-title:not(.medex-applicant-job-title-duplicate) {
+  margin: 0 0 12px !important;
   color: #0f172a !important;
   font-family: "Manrope", "Segoe UI", Arial, sans-serif !important;
-  font-size: 0.94rem !important;
+  font-size: 0.92rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
 }
@@ -252,9 +233,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   align-items: stretch !important;
   gap: 8px !important;
-  margin-top: auto !important;
+  margin-top: 14px !important;
   padding-top: 12px !important;
-  border-top: 1px solid #f1f5f9 !important;
+  border-top: 1px solid #e5e7eb !important;
 }
 
 .medex-applicant-footer button,
@@ -270,10 +251,10 @@
   min-height: 38px !important;
   height: 38px !important;
   margin: 0 !important;
-  padding: 0 10px !important;
+  padding: 0 8px !important;
   border-radius: 8px !important;
   font-family: "Manrope", "Segoe UI", Arial, sans-serif !important;
-  font-size: 0.8rem !important;
+  font-size: 0.78rem !important;
   font-weight: 600 !important;
   white-space: nowrap !important;
   overflow: hidden !important;

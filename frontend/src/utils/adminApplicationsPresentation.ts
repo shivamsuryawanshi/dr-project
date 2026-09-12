@@ -154,6 +154,9 @@ function enhanceCard(card: HTMLElement) {
 
     if (jobHeading) {
       jobHeading.classList.add("medex-applicant-job-title");
+      if (role && cleanText(jobHeading.textContent).toLowerCase() === cleanText(role.textContent).toLowerCase()) {
+        jobHeading.classList.add("medex-applicant-job-title-duplicate");
+      }
     }
   }
 
