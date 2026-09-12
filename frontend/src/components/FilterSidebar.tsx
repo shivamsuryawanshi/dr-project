@@ -226,11 +226,12 @@ export function FilterSidebar({
 
 function SelectBlock({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
   if (!options.length) return null;
+  const defaultLabel = label === 'City' ? 'All Cities' : label === 'Speciality' ? 'All Specialities' : `All ${label}s`;
   return (
     <div>
       <Label className="mb-2 block">{label}</Label>
       <select className="w-full h-10 border rounded-md px-3 bg-white text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">All {label}s</option>
+        <option value="">{defaultLabel}</option>
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
     </div>

@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search, Loader2, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { JobCard } from "./JobCard";
 import { FilterSidebar, FilterOptions, emptyJobFilters } from "./FilterSidebar";
@@ -81,26 +81,10 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
   const [hasSearched, setHasSearched] = useState(false);
   const [showingFallback, setShowingFallback] = useState(false);
   const [fallbackReason, setFallbackReason] = useState("");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const isInitialMount = useRef(true);
   const lastSearchParams = useRef<string>("");
   const effectiveSector = sector || (filters.sector || undefined);
-
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filters.state) count++;
-    if (filters.city) count++;
-    if (filters.sector) count++;
-    if (filters.speciality) count++;
-    if (filters.department) count++;
-    if (filters.jobType) count++;
-    if (filters.qualification) count++;
-    if (filters.featured) count++;
-    if (filters.categories && filters.categories.length > 0) count += filters.categories.length;
-    if (filters.locations && filters.locations.length > 0) count += filters.locations.length;
-    return count;
-  }, [filters]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -288,7 +272,6 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
     setHasSearched(false);
     setShowingFallback(false);
     setFallbackReason("");
-    setMobileFiltersOpen(false);
     setFilters(emptyJobFilters());
     navigate(sector === "government" ? "/govt-jobs" : sector === "private" ? "/private-jobs" : "/jobs");
   };
@@ -305,71 +288,15 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
             initialLocation={locationQuery}
             compact={true}
             sector={effectiveSector}
-            onSearch={(query, place) => {
-              setMobileFiltersOpen(false);
-              handleLiveSearch(query, place);
-            }}
-            onLiveSearch={(query, place) => {
-              setMobileFiltersOpen(false);
-              handleLiveSearch(query, place);
-            }}
+            onLiveSearch={handleLiveSearch}
             showLabels={false}
           />
         </div>
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-8">
-        {/* Mobile & Tablet Filter Toggle (< lg: iPad & Mobile) */}
-        <div className="lg:hidden mb-4">
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileFiltersOpen((prev) => !prev)}
-              className="flex items-center gap-2 border-gray-300 text-gray-700 hover:bg-gray-100 h-9"
-            >
-              <SlidersHorizontal size={15} />
-              <span>{mobileFiltersOpen ? "Hide Filters" : "Filter Jobs (State, City, Role...)"}</span>
-              {activeFiltersCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full font-bold">
-                  {activeFiltersCount}
-                </span>
-              )}
-              {mobileFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </Button>
-
-            {activeFiltersCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setFilters(emptyJobFilters())}
-                className="text-xs text-blue-600 hover:underline font-medium"
-              >
-                Reset filters ({activeFiltersCount})
-              </button>
-            )}
-          </div>
-
-          {mobileFiltersOpen && (
-            <div className="mt-3">
-              <FilterSidebar
-                onFilterChange={setFilters}
-                showSector={!sector}
-                categories={metaCategories}
-                locations={metaLocations}
-                specialities={metaSpecialities}
-                departments={metaDepartments}
-                jobTypes={metaJobTypes}
-                qualifications={metaQualifications}
-                states={metaStates}
-                cities={metaCities}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-          {/* Desktop Filter Sidebar (hidden on mobile & iPad < lg) */}
-          <div className="hidden lg:block lg:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
+          <div className="order-2 md:order-1 md:col-span-1">
             <FilterSidebar
               onFilterChange={setFilters}
               showSector={!sector}
@@ -384,7 +311,7 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
             />
           </div>
 
-          <div className="col-span-1 lg:col-span-3 min-w-0">
+          <div className="order-1 md:order-2 md:col-span-3 min-w-0">
             <div className="mb-4 sm:mb-6">
               <p className="text-gray-700 font-medium text-sm sm:text-base">{getCountLabel()}</p>
               {showingFallback && fallbackReason && (
