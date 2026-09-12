@@ -240,6 +240,19 @@ const PAGE_STYLES = `
   .meta-label { color: #64748b; font-size: 12px; }
   .meta-value { margin-top: 3px; color: #0f172a; font-size: 14px; font-weight: 800; }
   .meta-value.deadline { color: #ef4444; }
+  .recruit-action-desktop {
+    display: block;
+    height: 100%;
+  }
+
+  .recruit-action-desktop .action-panel {
+    height: 100%;
+  }
+
+  .recruit-action-mobile-ipad {
+    display: none;
+    margin-top: 12px;
+  }
 
   .action-panel {
     min-height: 210px;
@@ -593,7 +606,9 @@ const PAGE_STYLES = `
 
   @media (max-width: 1080px) {
     .recruit-shell { width: min(100% - 28px, 980px); }
-    .recruit-top { grid-template-columns: 1fr 330px; }
+    .recruit-top { grid-template-columns: 1fr; }
+    .recruit-action-desktop { display: none !important; }
+    .recruit-action-mobile-ipad { display: block !important; }
     .recruit-hero-main { grid-template-columns: 118px minmax(0, 1fr); }
     .org-seal { width: 108px; height: 108px; }
     .org-seal-inner { width: 88px; height: 88px; }
@@ -606,6 +621,8 @@ const PAGE_STYLES = `
     .recruit-page { padding-bottom: 24px; }
     .recruit-shell { width: calc(100% - 24px); }
     .recruit-top { grid-template-columns: 1fr; }
+    .recruit-action-desktop { display: none !important; }
+    .recruit-action-mobile-ipad { display: block !important; }
     .action-panel { min-height: auto; }
     .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .explorer-shell { grid-template-columns: minmax(0, 1fr); }
@@ -863,12 +880,14 @@ export function RecruitmentPage() {
       <div className="recruit-shell">
         <div className="recruit-top">
           <RecruitmentHero recruitment={recruitment} isGovernment={isGovernment} applyByLabel={applyByLabel} />
-          <ApplicationPanel
-            recruitment={recruitment}
-            isGovernment={isGovernment}
-            daysLeft={daysLeft}
-            onShare={handleShare}
-          />
+          <div className="recruit-action-desktop">
+            <ApplicationPanel
+              recruitment={recruitment}
+              isGovernment={isGovernment}
+              daysLeft={daysLeft}
+              onShare={handleShare}
+            />
+          </div>
         </div>
 
         <section className="recruit-card summary-shell">
@@ -931,6 +950,15 @@ export function RecruitmentPage() {
             )}
           </main>
         </section>
+
+        <div className="recruit-action-mobile-ipad">
+          <ApplicationPanel
+            recruitment={recruitment}
+            isGovernment={isGovernment}
+            daysLeft={daysLeft}
+            onShare={handleShare}
+          />
+        </div>
 
         <OfficialSourcesFooter recruitment={recruitment} />
       </div>

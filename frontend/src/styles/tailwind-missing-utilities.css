@@ -600,4 +600,15 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
+
+  .z-0 { z-index: 0; }
+  .z-10 { z-index: 10; }
+  .z-20 { z-index: 20; }
+  .z-30 { z-index: 30; }
+  .z-40 { z-index: 40; }
+  .z-50 { z-index: 50; }
+  .z-\[60\] { z-index: 60; }
+  .z-\[100\] { z-index: 100; }
+  .z-\[999\] { z-index: 999; }
+  .z-\[9999\] { z-index: 9999; }
 }

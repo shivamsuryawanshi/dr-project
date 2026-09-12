@@ -6,7 +6,7 @@
   margin: 0 auto;
   padding: 0 16px;
   position: relative;
-  z-index: 50;
+  z-index: 100;
 }
 
 .search-bar--compact {
@@ -20,7 +20,7 @@
   background: #ffffff;
   border-radius: 60px;
   position: relative;
-  z-index: 50;
+  z-index: 100;
   box-shadow: 
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06),
@@ -40,8 +40,13 @@
 .search-bar__field {
   flex: 1;
   position: relative;
-  z-index: 50;
+  z-index: 1;
   min-width: 0;
+}
+
+.search-bar__field:focus-within,
+.search-bar__field--active {
+  z-index: 60;
 }
 
 .search-bar__field--job {
@@ -279,6 +284,7 @@
 @media (max-width: 768px) {
   .search-bar {
     padding: 0 12px;
+    z-index: 100;
   }
 
   .search-bar__container {
@@ -286,10 +292,17 @@
     border-radius: 24px;
     padding: 16px;
     gap: 0;
+    z-index: 100;
   }
 
   .search-bar__field {
     width: 100%;
+    z-index: 1;
+  }
+
+  .search-bar__field:focus-within,
+  .search-bar__field--active {
+    z-index: 100;
   }
 
   .search-bar__field--job,
@@ -320,6 +333,8 @@
     margin-top: 12px;
     border-radius: 16px;
     padding: 16px 24px;
+    position: relative;
+    z-index: 1;
   }
 
   .search-bar--compact .search-bar__button span {
@@ -333,6 +348,10 @@
     top: calc(100% + 4px);
     border-radius: 16px;
     z-index: 9999;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
   }
 }
 

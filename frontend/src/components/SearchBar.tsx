@@ -45,6 +45,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const requestSeq = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setJobQuery(initialQuery || searchParams.get('search') || ''), [initialQuery, searchParams]);
   useEffect(() => setLocationQuery(initialLocation || searchParams.get('location') || ''), [initialLocation, searchParams]);
@@ -52,6 +53,21 @@ const SearchBar: React.FC<SearchBarProps> = ({
     fetchJobsMeta(sector).then((meta) => setLocations(meta.locations || [])).catch(() => setLocations([]));
   }, [sector]);
   useEffect(() => () => timerRef.current && clearTimeout(timerRef.current), []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowJobDropdown(false);
+        setShowLocationDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   const requestSuggestions = useCallback((value: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -113,9 +129,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const containerClass = useMemo(() => `search-bar ${compact ? 'search-bar--compact' : ''}`.trim(), [compact]);
 
   return (
-    <div className={containerClass}>
+    <div className={containerClass} ref={containerRef}>
       <div className="search-bar__container">
-        <div className="search-bar__field search-bar__field--job">
+        <div className={`search-bar__field search-bar__field--job ${showJobDropdown && jobSuggestions.length > 0 ? 'search-bar__field--active' : ''}`}>
           <div className="search-bar__field-inner">
             <div className="search-bar__icon"><Search size={20} /></div>
             <div className="search-bar__input-group">
@@ -158,7 +174,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
         <div className="search-bar__divider" aria-hidden="true" />
 
-        <div className="search-bar__field search-bar__field--location">
+        <div className={`search-bar__field search-bar__field--location ${showLocationDropdown && locationSuggestions.length > 0 ? 'search-bar__field--active' : ''}`}>
           <div className="search-bar__field-inner">
             <div className="search-bar__icon"><MapPin size={20} /></div>
             <div className="search-bar__input-group">

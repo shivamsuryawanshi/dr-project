@@ -162,7 +162,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <section className="relative z-20 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-16 md:py-24 overflow-visible">
+      <section className="relative z-30 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-16 md:py-24 overflow-visible" style={{ position: 'relative', zIndex: 30 }}>
         <div className="absolute inset-0">
           <ImageWithFallback src="https://images.unsplash.com/photo-1666886573590-5815157da865?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpY2FsJTIwaGVhbHRoY2FyZSUyMHByb2Zlc3Npb25hbHxlbnwxfHx8fDE3NjAzNzY2MDB8MA&ixlib=rb-4.1.0&q=80&w=1080" alt="Medical professionals" className="w-full h-full object-cover opacity-30" />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/70 via-blue-700/70 to-blue-900/70"></div>
@@ -172,12 +172,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl md:text-6xl mb-6 animate-fade-in-up">Find Your Dream Medical Career</h1>
             <p className="text-xl text-blue-100 mb-10 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>India's Premier Job Portal for Doctors, Nurses & Paramedical Professionals</p>
-            <div className="animate-fade-in-up max-w-4xl mx-auto relative z-30" style={{ animationDelay: "0.4s" }}><SearchBar showLabels={true} /></div>
+            <div className="animate-fade-in-up max-w-4xl mx-auto relative z-40" style={{ animationDelay: "0.4s", position: 'relative', zIndex: 40 }}><SearchBar showLabels={true} /></div>
           </div>
         </div>
       </section>
 
-      <section className="py-16 bg-white border-b relative z-10 overflow-visible">
+      <section className="py-16 bg-white border-b relative z-10 overflow-visible" style={{ position: 'relative', zIndex: 1 }}>
         <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none"></div>
         <div className="container mx-auto px-4 relative z-10"><div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <StatCard icon={BriefcaseIcon} end={stats.totalJobs} label="Active Jobs" suffix="+" />

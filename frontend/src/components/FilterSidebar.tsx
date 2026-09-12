@@ -87,12 +87,17 @@ const STATE_NAME_BY_NORMALIZED = new Map(
   INDIAN_STATES_AND_UTS.map((state) => [state.toLowerCase(), state]),
 );
 
-function getValidJobStates(states: string[]) {
+function getAllJobStates(states: string[] = []) {
   const uniqueStates = new Map<string, string>();
+  // Include all standard Indian states and UTs so all states are always available
+  INDIAN_STATES_AND_UTS.forEach((state) => {
+    uniqueStates.set(state.toLowerCase(), state);
+  });
+  // Also include any extra states present in database metadata
   states.forEach((state) => {
     const normalized = state?.trim().toLowerCase();
     if (!normalized) return;
-    const canonicalState = STATE_NAME_BY_NORMALIZED.get(normalized);
+    const canonicalState = STATE_NAME_BY_NORMALIZED.get(normalized) || state.trim();
     if (canonicalState) uniqueStates.set(normalized, canonicalState);
   });
   return Array.from(uniqueStates.values()).sort((a, b) => a.localeCompare(b));
@@ -122,7 +127,7 @@ export function FilterSidebar({
   showSector = true,
 }: FilterSidebarProps) {
   const [filters, setFilters] = useState<FilterOptions>(emptyJobFilters());
-  const validStates = getValidJobStates(states);
+  const validStates = getAllJobStates(states);
   const validCities = getValidJobCities(cities);
 
   const emit = (next: FilterOptions) => {
