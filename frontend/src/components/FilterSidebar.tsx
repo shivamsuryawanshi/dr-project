@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
+import '../styles/job-listing-card-size.css';
 
 interface FilterSidebarProps {
   onFilterChange: (filters: FilterOptions) => void;
@@ -150,18 +152,16 @@ export function FilterSidebar({
         <Separator />
 
         {showSector && (
-          <div>
-            <Label className="mb-2 block">Job Type</Label>
-            <select
-              className="w-full h-10 border rounded-md px-3 bg-white text-sm"
-              value={filters.sector || ''}
-              onChange={(e) => emit({ ...filters, sector: e.target.value as FilterOptions['sector'] })}
-            >
-              <option value="">All Jobs</option>
-              <option value="government">Government</option>
-              <option value="private">Private</option>
-            </select>
-          </div>
+          <CustomDropdown
+            label="Job Type"
+            value={filters.sector || ''}
+            placeholder="All Jobs"
+            options={[
+              { value: 'government', label: 'Government' },
+              { value: 'private', label: 'Private' },
+            ]}
+            onChange={(val) => emit({ ...filters, sector: val as FilterOptions['sector'] })}
+          />
         )}
 
         <SelectBlock label="State" value={filters.state || ''} options={validStates} onChange={(state) => emit({ ...filters, state, city: '' })} />
@@ -224,16 +224,133 @@ export function FilterSidebar({
   );
 }
 
-function SelectBlock({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+function SelectBlock({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
   if (!options.length) return null;
-  const defaultLabel = label === 'City' ? 'All Cities' : label === 'Speciality' ? 'All Specialities' : `All ${label}s`;
+  const defaultLabel =
+    label === 'City' ? 'All Cities' : label === 'Speciality' ? 'All Specialities' : `All ${label}s`;
+  const formattedOptions = options.map((option) => ({ value: option, label: option }));
+
   return (
-    <div>
-      <Label className="mb-2 block">{label}</Label>
-      <select className="w-full h-10 border rounded-md px-3 bg-white text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{defaultLabel}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
+    <CustomDropdown
+      label={label}
+      value={value}
+      placeholder={defaultLabel}
+      options={formattedOptions}
+      onChange={onChange}
+    />
+  );
+}
+
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+function CustomDropdown({
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+}: {
+  label?: string;
+  value: string;
+  placeholder: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const handleSelect = (val: string) => {
+    onChange(val);
+    setIsOpen(false);
+  };
+
+  const selectedOpt = options.find((opt) => opt.value === value);
+  const displayLabel = selectedOpt ? selectedOpt.label : placeholder;
+
+  return (
+    <div className={`filter-dropdown-container ${isOpen ? 'is-open' : ''}`} ref={dropdownRef}>
+      {label && <Label className="mb-2 block">{label}</Label>}
+      <button
+        type="button"
+        className={`filter-dropdown-trigger ${isOpen ? 'is-open' : ''}`}
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="filter-dropdown-label" title={displayLabel}>
+          {displayLabel}
+        </span>
+        <ChevronDown className="filter-dropdown-chevron" />
+      </button>
+
+      {isOpen && (
+        <ul className="filter-dropdown-menu" role="listbox">
+          <li
+            role="option"
+            aria-selected={!value}
+            className={`filter-dropdown-item ${!value ? 'is-selected' : ''}`}
+            onClick={() => handleSelect('')}
+          >
+            <span className="truncate">{placeholder}</span>
+            {!value && <Check className="filter-dropdown-check" />}
+          </li>
+          {options.map((opt) => {
+            const isSelected = value === opt.value;
+            return (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`filter-dropdown-item ${isSelected ? 'is-selected' : ''}`}
+                onClick={() => handleSelect(opt.value)}
+                title={opt.label}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="filter-dropdown-check" />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
