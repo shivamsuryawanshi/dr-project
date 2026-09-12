@@ -44,26 +44,19 @@ export const emptyJobFilters = (): FilterOptions => ({
   city: '',
 });
 
-const INDIAN_STATES_AND_UTS = [
-  'Andaman and Nicobar Islands',
+export const INDIAN_28_STATES = [
   'Andhra Pradesh',
   'Arunachal Pradesh',
   'Assam',
   'Bihar',
-  'Chandigarh',
   'Chhattisgarh',
-  'Dadra and Nagar Haveli and Daman and Diu',
-  'Delhi',
   'Goa',
   'Gujarat',
   'Haryana',
   'Himachal Pradesh',
-  'Jammu and Kashmir',
   'Jharkhand',
   'Karnataka',
   'Kerala',
-  'Ladakh',
-  'Lakshadweep',
   'Madhya Pradesh',
   'Maharashtra',
   'Manipur',
@@ -71,7 +64,6 @@ const INDIAN_STATES_AND_UTS = [
   'Mizoram',
   'Nagaland',
   'Odisha',
-  'Puducherry',
   'Punjab',
   'Rajasthan',
   'Sikkim',
@@ -84,23 +76,12 @@ const INDIAN_STATES_AND_UTS = [
 ] as const;
 
 const STATE_NAME_BY_NORMALIZED = new Map(
-  INDIAN_STATES_AND_UTS.map((state) => [state.toLowerCase(), state]),
+  INDIAN_28_STATES.map((state) => [state.toLowerCase(), state]),
 );
 
-function getAllJobStates(states: string[] = []) {
-  const uniqueStates = new Map<string, string>();
-  // Include all standard Indian states and UTs so all states are always available
-  INDIAN_STATES_AND_UTS.forEach((state) => {
-    uniqueStates.set(state.toLowerCase(), state);
-  });
-  // Also include any extra states present in database metadata
-  states.forEach((state) => {
-    const normalized = state?.trim().toLowerCase();
-    if (!normalized) return;
-    const canonicalState = STATE_NAME_BY_NORMALIZED.get(normalized) || state.trim();
-    if (canonicalState) uniqueStates.set(normalized, canonicalState);
-  });
-  return Array.from(uniqueStates.values()).sort((a, b) => a.localeCompare(b));
+function getAllJobStates(_states: string[] = []) {
+  // Return strictly the 28 states of India
+  return [...INDIAN_28_STATES].sort((a, b) => a.localeCompare(b));
 }
 
 function getValidJobCities(cities: string[]) {

@@ -126,11 +126,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
     onLiveSearch?.(jobQuery, suggestion);
   };
 
-  const containerClass = useMemo(() => `search-bar ${compact ? 'search-bar--compact' : ''}`.trim(), [compact]);
+  const isJobDropdownOpen = Boolean(showJobDropdown && jobSuggestions.length > 0);
+  const containerClass = useMemo(
+    () => `search-bar ${compact ? 'search-bar--compact' : ''} ${isJobDropdownOpen ? 'is-job-dropdown-open' : ''}`.trim(),
+    [compact, isJobDropdownOpen]
+  );
 
   return (
     <div className={containerClass} ref={containerRef}>
-      <div className="search-bar__container">
+      <div className={`search-bar__container ${isJobDropdownOpen ? 'search-bar__container--job-open' : ''}`}>
         <div className={`search-bar__field search-bar__field--job ${showJobDropdown && jobSuggestions.length > 0 ? 'search-bar__field--active' : ''}`}>
           <div className="search-bar__field-inner">
             <div className="search-bar__icon"><Search size={20} /></div>

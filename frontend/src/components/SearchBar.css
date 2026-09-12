@@ -250,7 +250,7 @@
   transition: background 0.15s ease;
   color: #374151;
   font-size: 14px;
-  background-color: #ffffff;
+  background-color: #ffffff !important;
 }
 
 .search-bar__dropdown-item:hover,
@@ -341,17 +341,25 @@
     display: inline;
   }
 
+  .search-bar.is-job-dropdown-open .search-bar__divider,
+  .search-bar.is-job-dropdown-open .search-bar__field--location,
+  .search-bar__container--job-open .search-bar__divider,
+  .search-bar__container--job-open .search-bar__field--location {
+    display: none !important;
+  }
+
   .search-bar__dropdown {
     position: absolute;
     left: 0;
     right: 0;
     top: calc(100% + 4px);
     border-radius: 16px;
-    z-index: 9999;
+    z-index: 99999 !important;
     background: #ffffff !important;
     background-color: #ffffff !important;
     opacity: 1 !important;
     box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+    isolation: isolate;
   }
 }
 

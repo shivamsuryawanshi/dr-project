@@ -172,46 +172,44 @@ export function JobCard({ job, onViewDetails, onSaveJob, isSaved }: JobCardProps
               {displayTitle}
             </h3>
             {organizationName && (
-              <div className="flex items-center gap-1.5 mt-2 min-w-0">
-                <Building2 className="w-4 h-4 shrink-0 text-amber-700" />
-                <span className="medex-org-highlight truncate rounded-md bg-amber-100 px-2 py-0.5 text-sm font-semibold text-amber-900">
+              <div className="flex items-center gap-2 mt-2 min-w-0 border-b border-gray-100 pb-2.5">
+                <Building2 className="w-4 h-4 shrink-0 text-amber-800" />
+                <span className="truncate text-sm font-semibold text-amber-900">
                   {organizationName}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col items-start gap-2 text-sm">
+          <div className="flex flex-col gap-2.5 text-sm">
             {locationText && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700">
-                <MapPin className="w-3.5 h-3.5" />
-                {locationText}
-              </span>
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2.5 text-blue-600 font-medium">
+                <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="truncate">{locationText}</span>
+              </div>
             )}
             {job.numberOfPosts != null && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-purple-700">
-                <Briefcase className="w-3.5 h-3.5" />
-                {job.numberOfPosts} Post{job.numberOfPosts > 1 ? 's' : ''}
-              </span>
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2.5 text-purple-700 font-medium">
+                <Briefcase className="w-4 h-4 text-purple-600 shrink-0" />
+                <span>{job.numberOfPosts} Post{job.numberOfPosts > 1 ? 's' : ''}</span>
+              </div>
             )}
             {grouped && roleCount > 1 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-indigo-700">
-                {roleCount} roles in this recruitment
-              </span>
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2.5 text-indigo-700 font-medium">
+                <Briefcase className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>{roleCount} roles in this recruitment</span>
+              </div>
+            )}
+            {qualificationText && (
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2.5 text-gray-600">
+                <Gift className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="truncate">Qualification: {qualificationText}</span>
+              </div>
             )}
           </div>
 
-          {qualificationText && (
-            <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
-                <Gift className="w-3.5 h-3.5 text-gray-400" />
-                Qualification: {qualificationText}
-              </span>
-            </div>
-          )}
-
           {(salaryText || experienceText) && (
-            <div className="flex flex-wrap gap-2 text-sm">
+            <div className="flex flex-wrap gap-2 text-sm pt-0.5">
               {salaryText && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-green-700 font-medium">
                   💰 {salaryText}
