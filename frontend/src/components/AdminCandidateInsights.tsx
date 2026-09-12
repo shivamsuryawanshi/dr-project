@@ -152,32 +152,44 @@ export function AdminCandidateInsights({ onNavigate }: Props) {
                   <div className="insights-empty">Loading profiles…</div>
                 ) : data.profiles.length ? (
                   <div className="insights-profiles">
-                    {data.profiles.map((profile, index) => (
-                      <article className="insights-profile" key={profile.candidateId || profile.id || index}>
-                        <div>
-                          <h3>{profile.name || 'Candidate'}</h3>
-                          <p className="insights-profile__email">{profile.email}</p>
-                        </div>
-                        <div>
-                          <span className="insights-label">Speciality</span>
-                          <strong>{profile.speciality || 'Not provided'}</strong>
-                          {profile.subSpeciality && <small>{profile.subSpeciality}</small>}
-                        </div>
-                        <div>
-                          <span className="insights-label">Qualification</span>
-                          <strong>{profile.qualification || 'Not provided'}</strong>
-                          <small>
-                            {profile.yearsExperience != null
-                              ? `${profile.yearsExperience} years experience`
-                              : 'Experience not provided'}
-                          </small>
-                        </div>
-                        <div className="insights-profile__location">
-                          <MapPin />
-                          {[profile.currentCity, profile.state].filter(Boolean).join(', ') || 'Location missing'}
-                        </div>
-                      </article>
-                    ))}
+                    {data.profiles.map((profile, index) => {
+                      const locationText =
+                        [profile.currentCity, profile.state].filter(Boolean).join(', ') || 'Location missing';
+                      return (
+                        <article className="insights-profile" key={profile.candidateId || profile.id || index}>
+                          <div className="insights-profile__col insights-profile__candidate">
+                            <h3 title={profile.name || 'Candidate'}>{profile.name || 'Candidate'}</h3>
+                            <p className="insights-profile__email" title={profile.email}>{profile.email}</p>
+                          </div>
+                          <div className="insights-profile__col insights-profile__speciality">
+                            <span className="insights-label">Speciality</span>
+                            <strong title={profile.speciality || 'Not provided'}>{profile.speciality || 'Not provided'}</strong>
+                            {profile.subSpeciality && <small title={profile.subSpeciality}>{profile.subSpeciality}</small>}
+                          </div>
+                          <div className="insights-profile__col insights-profile__qualification">
+                            <span className="insights-label">Qualification</span>
+                            <strong title={profile.qualification || 'Not provided'}>{profile.qualification || 'Not provided'}</strong>
+                            <small
+                              title={
+                                profile.yearsExperience != null
+                                  ? `${profile.yearsExperience} years experience`
+                                  : 'Experience not provided'
+                              }
+                            >
+                              {profile.yearsExperience != null
+                                ? `${profile.yearsExperience} years experience`
+                                : 'Experience not provided'}
+                            </small>
+                          </div>
+                          <div className="insights-profile__col insights-profile__location">
+                            <MapPin />
+                            <span className="insights-profile__location-text" title={locationText}>
+                              {locationText}
+                            </span>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="insights-empty">No candidate profiles match this segment.</div>
