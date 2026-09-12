@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3, GraduationCap, MapPin, RefreshCw, Search, Stethoscope, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, BarChart3, Check, ChevronDown, GraduationCap, MapPin, RefreshCw, Search, Stethoscope, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CandidateInsightsResponse, fetchCandidateInsights } from '../api/candidateProfiles';
 import '../styles/admin-insights.css';
@@ -91,7 +91,7 @@ export function AdminCandidateInsights({ onNavigate }: Props) {
 
         <div className="insights-body">
           <main className="insights-main">
-            <section className="insights-card">
+            <section className="insights-card insights-card--filters">
               <div className="insights-filters">
                 <label className="insights-field">
                   <span>Search</span>
@@ -266,15 +266,90 @@ function Filter({
   options: string[];
   onChange: (value: string) => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const handleSelect = (val: string) => {
+    onChange(val);
+    setIsOpen(false);
+  };
+
+  const displayText = value || anyLabel;
+
   return (
-    <label className="insights-field">
+    <div className="insights-field" ref={dropdownRef}>
       <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{anyLabel}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-    </label>
+      <div className="insights-dropdown">
+        <button
+          type="button"
+          className={`insights-dropdown__trigger ${isOpen ? 'is-open' : ''}`}
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-label={`${label} filter`}
+        >
+          <span className="insights-dropdown__value" title={displayText}>
+            {displayText}
+          </span>
+          <ChevronDown className={`insights-dropdown__chevron ${isOpen ? 'is-open' : ''}`} />
+        </button>
+
+        {isOpen && (
+          <ul className="insights-dropdown__menu" role="listbox">
+            <li
+              role="option"
+              aria-selected={!value}
+              className={`insights-dropdown__item ${!value ? 'is-selected' : ''}`}
+              onClick={() => handleSelect('')}
+            >
+              <span>{anyLabel}</span>
+              {!value && <Check className="insights-dropdown__check" />}
+            </li>
+            {options.map((option) => {
+              const isSelected = value === option;
+              return (
+                <li
+                  key={option}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`insights-dropdown__item ${isSelected ? 'is-selected' : ''}`}
+                  onClick={() => handleSelect(option)}
+                  title={option}
+                >
+                  <span>{option}</span>
+                  {isSelected && <Check className="insights-dropdown__check" />}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
