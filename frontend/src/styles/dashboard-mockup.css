@@ -400,135 +400,7 @@
   font-size: 14px;
 }
 
-.mx-profile {
-  border: 1px solid var(--mx-200);
-  border-left: 5px solid var(--mx-success);
-  border-radius: var(--mx-radius);
-  background: #fff;
-  padding: 18px 20px;
-  margin-bottom: 22px;
-  box-shadow: var(--mx-shadow-sm);
-}
-
-.mx-profile.is-incomplete { border-left-color: var(--mx-warning); }
-
-.mx-profile__top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.mx-profile__identity { min-width: 140px; }
-
-.mx-profile__identity strong {
-  display: block;
-  color: var(--mx-900);
-  font-size: 17px;
-  font-weight: 750;
-}
-
-.mx-profile__identity span {
-  display: block;
-  margin-top: 1px;
-  color: var(--mx-500);
-  font-size: 13px;
-}
-
-.mx-progress {
-  flex: 1 1 190px;
-  min-width: 170px;
-}
-
-.mx-progress__label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--mx-600);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.mx-progress__label em {
-  color: var(--mx-primary);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.mx-profile.is-incomplete .mx-progress__label em { color: #b45309; }
-
-.mx-progress__bar {
-  height: 8px;
-  margin-top: 5px;
-  border-radius: 999px;
-  background: var(--mx-200);
-  overflow: hidden;
-}
-
-.mx-progress__bar > span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--mx-primary-light), var(--mx-secondary));
-  transition: width 600ms ease;
-}
-
-.mx-profile.is-incomplete .mx-progress__bar > span {
-  background: linear-gradient(90deg, #fbbf24, var(--mx-warning));
-}
-
-.mx-profile__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.mx-profile__grid article {
-  border: 1px solid #eef2f6;
-  border-radius: 11px;
-  background: var(--mx-50);
-  padding: 11px 13px;
-}
-
-.mx-profile__grid article svg { color: var(--mx-primary); }
-
-.mx-profile__grid article span {
-  display: block;
-  margin-top: 5px;
-  color: var(--mx-400);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.mx-profile__grid article strong {
-  display: block;
-  margin-top: 2px;
-  color: #22364a;
-  font-size: 14px;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-
-.mx-profile__summary,
-.mx-profile__hint {
-  margin: 14px 0 0;
-  color: var(--mx-600);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.mx-profile__hint {
-  border-radius: 10px;
-  background: rgba(245, 158, 11, 0.09);
-  color: #b45309;
-  padding: 10px 13px;
-  font-weight: 600;
-}
+/* Legacy mx-profile styles retired in favor of candidate-dashboard-modern.css */
 
 /* ------------------------------------------------------------------ *
  * Employer verification banner + post CTA + company preview
@@ -1374,16 +1246,8 @@
   .mx-stat__value { font-size: 22px; }
   .mx-stat__icon { width: 32px; height: 32px; margin-bottom: 6px; }
 
-  .mx-profile,
   .mx-banner,
   .mx-company { padding: 15px 16px; }
-
-  .mx-profile__top { gap: 12px; }
-  .mx-profile__identity { flex: 1 1 100%; order: -1; }
-  .mx-avatar--lg { width: 46px; height: 46px; font-size: 16px; }
-  .mx-progress { flex: 1 1 100%; max-width: none; }
-  .mx-profile__top > .mx-btn { width: 100%; }
-  .mx-profile__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .mx-banner__right > *,
   .mx-postcta > .mx-btn { flex: 1 1 100%; }
@@ -1402,13 +1266,10 @@
   .mx-company__logo { width: 46px; height: 46px; }
 
   /* iOS zooms the page when a focused field is under 16px. */
-  .mx-profile input,
   .mx-banner input { font-size: 16px; }
 }
 
 @media (max-width: 400px) {
-  .mx-stats,
-  .mx-profile__grid { grid-template-columns: minmax(0, 1fr); }
   .mx-candidate__actions { grid-template-columns: minmax(0, 1fr); }
 }
 
