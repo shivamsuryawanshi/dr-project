@@ -28,6 +28,7 @@ import { fetchJobs } from '../api/jobs';
 import { getSavedJobs, saveJob, unsaveJob } from '../api/savedJobs';
 import { fetchNotifications } from '../api/notifications';
 import { fetchMyCandidateProfile, CandidateProfileData } from '../api/candidateProfiles';
+import '../styles/candidate-dashboard-modern.css';
 
 interface CandidateDashboardProps {
   onNavigate: (page: string, jobId?: string) => void;
@@ -54,8 +55,10 @@ function getInitials(value?: string) {
 
 function normalizeStatus(status?: string) {
   if (!status) return 'Applied';
-  if (status === 'applied' || status === 'pending') return 'Under Review';
-  if (status === 'hired' || status === 'selected') return 'Selected';
+  const s = status.toLowerCase();
+  if (s === 'applied') return 'Applied';
+  if (s === 'pending' || s === 'review' || s === 'under review') return 'Under Review';
+  if (s === 'hired' || s === 'selected') return 'Selected';
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
@@ -86,7 +89,10 @@ function closingLabel(days: number | null) {
 }
 
 function getStatusClass(status?: string) {
-  switch (status) {
+  const s = (status || '').toLowerCase();
+  switch (s) {
+    case 'applied':
+      return 'candidate-status candidate-status--applied';
     case 'shortlisted':
       return 'candidate-status candidate-status--shortlisted';
     case 'interview':
@@ -96,6 +102,9 @@ function getStatusClass(status?: string) {
       return 'candidate-status candidate-status--selected';
     case 'rejected':
       return 'candidate-status candidate-status--rejected';
+    case 'pending':
+    case 'review':
+    case 'under review':
     default:
       return 'candidate-status candidate-status--review';
   }
@@ -255,13 +264,13 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
       .slice(0, 8);
   }, [recommendedJobs, savedJobs]);
 
-  const trackerSteps: Array<{ label: string; count: number; filter: ApplicationStatusFilter; tone?: string }> = [
-    { label: 'Applied', count: applications.length, filter: 'all' },
-    { label: 'Under Review', count: reviewCount, filter: 'applied' },
-    { label: 'Shortlisted', count: shortlistedCount, filter: 'shortlisted' },
-    { label: 'Interview', count: interviewCount, filter: 'interview' },
-    { label: 'Selected', count: selectedCount, filter: 'selected' },
-    { label: 'Rejected', count: rejectedCount, filter: 'rejected', tone: 'danger' },
+  const trackerSteps: Array<{ label: string; count: number; filter: ApplicationStatusFilter; tone: string }> = [
+    { label: 'Applied', count: applications.length, filter: 'all', tone: 'blue' },
+    { label: 'Under Review', count: reviewCount, filter: 'applied', tone: 'amber' },
+    { label: 'Shortlisted', count: shortlistedCount, filter: 'shortlisted', tone: 'green' },
+    { label: 'Interview', count: interviewCount, filter: 'interview', tone: 'purple' },
+    { label: 'Selected', count: selectedCount, filter: 'selected', tone: 'teal' },
+    { label: 'Rejected', count: rejectedCount, filter: 'rejected', tone: 'red' },
   ];
 
   const handleLogout = () => {
@@ -305,7 +314,7 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
     { label: 'Applications', value: applications.length, icon: Briefcase, tone: 'navy', action: () => openSection('applications') },
     { label: 'Interviews', value: interviewCount, icon: Calendar, tone: 'purple', action: () => openSection('applications') },
     { label: 'Shortlisted', value: shortlistedCount, icon: Star, tone: 'green', action: () => openSection('applications') },
-    { label: 'Selected', value: selectedCount, icon: User, tone: 'sky', action: () => openSection('applications') },
+    { label: 'Selected', value: selectedCount, icon: User, tone: 'teal', action: () => openSection('applications') },
     { label: 'Unread Alerts', value: unreadNotifications, icon: Bell, tone: 'amber', action: () => openSection('notifications') },
   ];
 
@@ -522,10 +531,10 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
                 </div>
 
                 <div className="mx-profile__grid">
-                  <article><Stethoscope size={15} /><span>Qualification</span><strong>{profile?.qualification || 'Not added'}</strong></article>
-                  <article><Briefcase size={15} /><span>Experience</span><strong>{profile?.yearsExperience != null ? `${profile.yearsExperience} years` : 'Not added'}</strong></article>
-                  <article><User size={15} /><span>Registration</span><strong>{profile?.registrationNumber || 'Not added'}</strong></article>
-                  <article><MapPin size={15} /><span>Location</span><strong>{[profile?.currentCity, profile?.state].filter(Boolean).join(', ') || 'Not added'}</strong></article>
+                  <article><Stethoscope size={16} /><div><span>Qualification</span><strong>{profile?.qualification || 'Not added'}</strong></div></article>
+                  <article><Briefcase size={16} /><div><span>Experience</span><strong>{profile?.yearsExperience != null ? `${profile.yearsExperience} years` : 'Not added'}</strong></div></article>
+                  <article><User size={16} /><div><span>Registration</span><strong>{profile?.registrationNumber || 'Not added'}</strong></div></article>
+                  <article><MapPin size={16} /><div><span>Location</span><strong>{[profile?.currentCity, profile?.state].filter(Boolean).join(', ') || 'Not added'}</strong></div></article>
                 </div>
 
                 {profile?.profileSummary && <p className="mx-profile__summary">{profile.profileSummary}</p>}
