@@ -295,8 +295,8 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="hidden lg:block lg:col-span-1">
+        <div className="job-listing-main-grid grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="job-listing-sidebar hidden lg:block lg:col-span-1">
             <FilterSidebar
               onFilterChange={setFilters}
               showSector={!sector}
@@ -311,7 +311,7 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
             />
           </div>
 
-          <div className="col-span-1 lg:col-span-3 min-w-0">
+          <div className="job-listing-results col-span-1 lg:col-span-3 min-w-0">
             <div className="mb-4 sm:mb-6">
               <p className="text-gray-700 font-medium text-sm sm:text-base">{getCountLabel()}</p>
               {showingFallback && fallbackReason && (

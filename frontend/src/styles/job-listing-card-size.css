@@ -53,6 +53,43 @@
 }
 
 /*
+ * JOB LISTING LAYOUT (SIDEBAR VS JOBS)
+ * Mobile & iPad (< 1024px): Hide filter sidebar completely.
+ * Laptop & Desktop (>= 1024px): 4-column grid with sidebar on the left and results on the right.
+ */
+@media (max-width: 1023px) {
+  .job-listing-sidebar {
+    display: none !important;
+  }
+  .job-listing-main-grid {
+    display: block !important;
+  }
+  .job-listing-results {
+    width: 100% !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .job-listing-main-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1.5rem !important;
+    align-items: start !important;
+  }
+
+  .job-listing-sidebar {
+    display: block !important;
+    grid-column: span 1 / span 1 !important;
+  }
+
+  .job-listing-results {
+    display: block !important;
+    grid-column: span 3 / span 3 !important;
+    min-width: 0 !important;
+  }
+}
+
+/*
  * ALL JOBS / GOVERNMENT JOBS / PRIVATE JOBS RESULT GRID ONLY
  * Keep the filter sidebar intact and size only actual job-card wrappers.
  */
