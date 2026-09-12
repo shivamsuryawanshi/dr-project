@@ -230,60 +230,114 @@
 
 .medex-applicant-footer {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   align-items: stretch !important;
-  gap: 10px !important;
-  margin-top: 16px !important;
-  padding-top: 14px !important;
+  gap: 8px !important;
+  margin-top: 14px !important;
+  padding-top: 12px !important;
   border-top: 1px solid #e5e7eb !important;
 }
 
+.medex-applicant-footer button,
+.medex-applicant-footer .medex-app-btn,
 .medex-applicant-actions-button,
 .medex-applicant-resume-button,
 .medex-applicant-no-resume {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 100% !important;
-  min-height: 40px !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  height: 38px !important;
   margin: 0 !important;
-  border-radius: 10px !important;
+  padding: 0 8px !important;
+  border-radius: 8px !important;
   font-family: "Manrope", "Segoe UI", Arial, sans-serif !important;
   font-size: 0.78rem !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
 }
 
-.medex-applicant-actions-button {
+.medex-applicant-footer button svg,
+.medex-applicant-footer .medex-app-btn svg,
+.medex-applicant-actions-button svg,
+.medex-applicant-resume-button svg,
+.medex-applicant-no-resume svg {
+  flex-shrink: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-right: 5px !important;
+}
+
+.medex-applicant-footer button span,
+.medex-applicant-footer .medex-app-btn span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+
+.medex-applicant-actions-button,
+.medex-applicant-footer button.medex-app-btn-view,
+.medex-applicant-footer button.medex-app-btn-status,
+.medex-applicant-footer button.medex-app-btn-interview {
   border: 1px solid #cbd5e1 !important;
   background: #ffffff !important;
   color: #334155 !important;
   box-shadow: none !important;
 }
 
-.medex-applicant-actions-button:hover {
+.medex-applicant-actions-button:hover,
+.medex-applicant-footer button.medex-app-btn-view:hover {
   border-color: #93c5fd !important;
   background: #eff6ff !important;
   color: #1d4ed8 !important;
 }
 
-.medex-applicant-resume-button {
+.medex-applicant-footer button.medex-app-btn-status:hover {
+  border-color: #c7d2fe !important;
+  background: #eef2ff !important;
+  color: #4338ca !important;
+}
+
+.medex-applicant-footer button.medex-app-btn-interview:hover {
+  border-color: #ddd6fe !important;
+  background: #f5f3ff !important;
+  color: #6d28d9 !important;
+}
+
+.medex-applicant-resume-button,
+.medex-applicant-footer button.medex-app-btn-resume {
   border: 1px solid #16a34a !important;
   background: #16a34a !important;
   color: #ffffff !important;
   box-shadow: none !important;
 }
 
-.medex-applicant-resume-button:hover {
+.medex-applicant-resume-button:hover,
+.medex-applicant-footer button.medex-app-btn-resume:hover {
   background: #15803d !important;
+  border-color: #15803d !important;
+  color: #ffffff !important;
 }
 
-.medex-applicant-no-resume {
-  display: flex !important;
+.medex-applicant-no-resume,
+.medex-applicant-footer .medex-app-no-resume {
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 8px 10px !important;
+  padding: 0 8px !important;
   border: 1px solid #fed7aa !important;
   background: #fff7ed !important;
   color: #9a3412 !important;
   text-align: center !important;
-  line-height: 1.25 !important;
+  font-size: 0.76rem !important;
+  cursor: default !important;
 }
 
 .medex-applications-tabs {
@@ -332,7 +386,8 @@
   }
 
   .medex-applicant-footer {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
   }
 
   .medex-applications-tabs {

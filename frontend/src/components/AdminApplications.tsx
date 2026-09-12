@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, XCircle, Calendar, FileText, Eye, MessageSquare, Phone, Mail, MapPin, Search, Filter, Users, Briefcase, MoreVertical, Loader2, ArrowLeft } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Calendar, FileText, Eye, MessageSquare, Phone, Mail, MapPin, Search, Filter, Users, Briefcase, MoreVertical, Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -454,12 +454,512 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
     </div>
   );
 
+  const renderApplicationCard = (application: ApplicationResponse) => (
+    <Card 
+      key={application.id} 
+      className="group relative overflow-hidden bg-white dark:bg-gray-800 border-l-4 border-l-blue-500 dark:border-l-blue-600 hover:border-l-blue-600 dark:hover:border-l-blue-500 hover:shadow-lg transition-all duration-200 ease-out hover:-translate-y-0.5 flex flex-col"
+      style={{
+        borderRadius: 'clamp(0.5rem, 0.8vw, 0.75rem)',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+      }}
+    >
+      <div 
+        className="flex flex-col flex-1"
+        style={{
+          padding: 'clamp(0.75rem, 1.5vw, 1.25rem)'
+        }}
+      >
+        {/* Candidate Header */}
+        <div 
+          className="mb-3 md:mb-4"
+          style={{ marginBottom: 'clamp(0.75rem, 1.5vw, 1rem)' }}
+        >
+          <div 
+            className="flex items-start justify-between gap-2 md:gap-3 mb-2 md:mb-3"
+            style={{ marginBottom: 'clamp(0.5rem, 1vw, 0.75rem)' }}
+          >
+            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div 
+                  className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-full flex items-center justify-center shadow-sm group-hover:shadow transition-shadow"
+                  style={{
+                    width: 'clamp(2.5rem, 4vw, 3.5rem)',
+                    height: 'clamp(2.5rem, 4vw, 3.5rem)'
+                  }}
+                >
+                  <span 
+                    className="text-white font-semibold"
+                    style={{ fontSize: 'clamp(1rem, 1.5vw, 1.5rem)' }}
+                  >
+                    {application.candidateName?.charAt(0)?.toUpperCase() || 'A'}
+                  </span>
+                </div>
+                <Badge 
+                  className={`absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 ${getStatusColor(application.status)} border-2 border-white dark:border-gray-800 shadow-xs flex-shrink-0`}
+                  style={{
+                    padding: 'clamp(0.125rem, 0.3vw, 0.25rem) clamp(0.25rem, 0.5vw, 0.5rem)',
+                    fontSize: 'clamp(0.625rem, 0.8vw, 0.75rem)'
+                  }}
+                  variant="outline"
+                >
+                  <span className="hidden sm:inline">{getStatusLabel(application.status)}</span>
+                  <span className="sm:hidden">{getStatusLabel(application.status).charAt(0)}</span>
+                </Badge>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 
+                  className="font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+                  style={{ fontSize: 'clamp(0.9375rem, 1.3vw, 1.125rem)' }}
+                >
+                  {application.candidateName || 'Unknown Candidate'}
+                </h2>
+                <p 
+                  className="text-gray-600 dark:text-gray-400 truncate flex items-center gap-1.5 mt-0.5"
+                  style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+                >
+                  <Briefcase 
+                    className="flex-shrink-0 text-gray-400" 
+                    style={{ width: 'clamp(0.75rem, 1vw, 0.875rem)', height: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+                  />
+                  <span className="truncate">{application.jobTitle}</span>
+                </p>
+              </div>
+            </div>
+            <Badge 
+              className={`${getStatusColor(application.status)} flex-shrink-0 shadow-xs hidden sm:inline-flex`}
+              style={{
+                padding: 'clamp(0.25rem, 0.5vw, 0.375rem) clamp(0.5rem, 0.8vw, 0.75rem)',
+                fontSize: 'clamp(0.6875rem, 0.9vw, 0.8125rem)'
+              }}
+              variant="outline"
+            >
+              {getStatusLabel(application.status)}
+            </Badge>
+          </div>
+
+          <h3 
+            className="font-semibold text-gray-900 dark:text-gray-100 mb-2 md:mb-3 line-clamp-2 leading-snug"
+            style={{ fontSize: 'clamp(0.8125rem, 1.1vw, 0.9375rem)' }}
+          >
+            {application.jobTitle}
+          </h3>
+
+          {/* Meta Info Grid */}
+          <div 
+            className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-gray-600 dark:text-gray-400 mb-3 md:mb-4"
+            style={{ marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)' }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div 
+                className="flex-shrink-0 rounded-md bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center"
+                style={{
+                  width: 'clamp(1.75rem, 2.5vw, 2rem)',
+                  height: 'clamp(1.75rem, 2.5vw, 2rem)'
+                }}
+              >
+                <Briefcase 
+                  className="text-gray-500 dark:text-gray-400" 
+                  style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
+                />
+              </div>
+              <span 
+                className="truncate font-medium text-gray-700 dark:text-gray-300"
+                style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+              >
+                {application.jobOrganization}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div 
+                className="flex-shrink-0 rounded-md bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center"
+                style={{
+                  width: 'clamp(1.75rem, 2.5vw, 2rem)',
+                  height: 'clamp(1.75rem, 2.5vw, 2rem)'
+                }}
+              >
+                <Calendar 
+                  className="text-purple-600 dark:text-purple-400" 
+                  style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
+                />
+              </div>
+              <span style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}>
+                {formatDate(application.appliedDate)}
+              </span>
+            </div>
+            {application.interviewDate && (
+              <div className="flex items-center gap-2">
+                <div 
+                  className="flex-shrink-0 rounded-md bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"
+                  style={{
+                    width: 'clamp(1.75rem, 2.5vw, 2rem)',
+                    height: 'clamp(1.75rem, 2.5vw, 2rem)'
+                  }}
+                >
+                  <Clock 
+                    className="text-purple-600 dark:text-purple-400" 
+                    style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
+                  />
+                </div>
+                <span 
+                  className="font-medium text-purple-700 dark:text-purple-300"
+                  style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+                >
+                  Interview: {formatDateTime(application.interviewDate)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Progress Section */}
+          <div 
+            className="mb-3 md:mb-4"
+            style={{ marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)' }}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span 
+                className="font-semibold text-gray-700 dark:text-gray-300"
+                style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+              >
+                Progress
+              </span>
+              <span 
+                className="font-semibold text-blue-600 dark:text-blue-400"
+                style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+              >
+                {getStatusProgress(application.status)}%
+              </span>
+            </div>
+            <Progress 
+              value={getStatusProgress(application.status)} 
+              className="bg-gray-100 dark:bg-gray-700"
+              style={{ height: 'clamp(0.375rem, 0.5vw, 0.5rem)' }}
+            />
+          </div>
+
+          {/* Status Steps */}
+          <div 
+            className="mb-3 md:mb-4"
+            style={{ marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)' }}
+          >
+            <div 
+              className="flex items-center justify-center gap-1 md:gap-2 overflow-x-auto pb-2 scrollbar-hide"
+              style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}
+            >
+              {getStatusSteps(application.status).map((step, index) => (
+                <div key={step.key} className="flex items-center">
+                  <div className="flex flex-col items-center">
+                    <div 
+                      className={`rounded-full flex items-center justify-center transition-all ${
+                        step.completed 
+                          ? 'bg-blue-600 text-white shadow-xs' 
+                          : step.current 
+                          ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border-2 border-blue-600' 
+                          : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                      }`}
+                      style={{
+                        width: 'clamp(1.5rem, 2.2vw, 1.875rem)',
+                        height: 'clamp(1.5rem, 2.2vw, 1.875rem)'
+                      }}
+                    >
+                      {step.completed ? (
+                        <CheckCircle style={{ width: 'clamp(0.75rem, 1vw, 0.875rem)', height: 'clamp(0.75rem, 1vw, 0.875rem)' }} />
+                      ) : (
+                        <span style={{ fontSize: 'clamp(0.625rem, 0.8vw, 0.75rem)' }} className="font-semibold">{index + 1}</span>
+                      )}
+                    </div>
+                    <span 
+                      className={`mt-1 font-medium hidden md:inline truncate max-w-[50px] text-center ${
+                        step.completed || step.current 
+                          ? 'text-gray-900 dark:text-gray-100' 
+                          : 'text-gray-400 dark:text-gray-500'
+                      }`}
+                      style={{ fontSize: 'clamp(0.625rem, 0.8vw, 0.6875rem)' }}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                  {index < getStatusSteps(application.status).length - 1 && (
+                    <div 
+                      className={`w-3 sm:w-4 md:w-6 h-0.5 mx-0.5 sm:mx-1 ${
+                        step.completed ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {application.notes && (
+            <div 
+              className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-md border border-amber-200 dark:border-amber-800/50 mb-3 md:mb-4"
+              style={{
+                padding: 'clamp(0.75rem, 1.2vw, 1rem)',
+                marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)'
+              }}
+            >
+              <p 
+                className="text-gray-800 dark:text-gray-200 line-clamp-2 leading-relaxed"
+                style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
+              >
+                <span className="font-semibold text-amber-700 dark:text-amber-300">Notes:</span>{' '}
+                <span className="text-gray-700 dark:text-gray-300">{application.notes}</span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons - Clean 2x2 Grid (All Viewports) */}
+        <div 
+          className="medex-applicant-footer grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-gray-200 dark:border-gray-700"
+          data-slot="applicant-footer"
+        >
+          {/* 1. View Details */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedApplication(application)}
+                className="medex-app-btn medex-app-btn-view w-full h-9 sm:h-10 px-2 py-1 text-xs sm:text-sm font-semibold inline-flex items-center justify-center min-w-0"
+                title="View Details"
+              >
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 flex-shrink-0" />
+                <span className="truncate">View</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-lg sm:text-xl">Application Details - {application.candidateName}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Candidate Information */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Candidate Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Full Name</label>
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-semibold break-words">
+                        {application.candidateName}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2 break-all">
+                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <a href={`mailto:${application.candidateEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                          {application.candidateEmail}
+                        </a>
+                      </p>
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <a href={`tel:${application.candidatePhone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                          {application.candidatePhone || 'N/A'}
+                        </a>
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Applied Date</label>
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">{formatDate(application.appliedDate)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Information */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                    <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Job Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Job Title</label>
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
+                        {application.jobTitle}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Organization</label>
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
+                        {application.jobOrganization}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Application Status</label>
+                      <div className="mt-1">
+                        <Badge className={getStatusColor(application.status)} variant="outline">
+                          {getStatusLabel(application.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                    {application.interviewDate && (
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Interview Date</label>
+                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
+                          {formatDateTime(application.interviewDate)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Resume */}
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Resume
+                  </h3>
+                  {application.resumeUrl ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <Button 
+                        variant="default" 
+                        onClick={() => openFileInViewer(application.resumeUrl!)}
+                        className="w-full sm:w-auto"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Resume
+                      </Button>
+                      <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
+                        Click to view or download the candidate's resume
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No resume uploaded by candidate</p>
+                  )}
+                </div>
+
+                {/* Notes */}
+                {application.notes && (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">Application Notes</h3>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                      {application.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* 2. Update Status */}
+          <Dialog 
+            open={isStatusDialogOpen && selectedApplication?.id === application.id} 
+            onOpenChange={(open) => {
+              setIsStatusDialogOpen(open);
+              if (!open && selectedApplication?.id === application.id) {
+                setSelectedApplication(null);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedApplication(application);
+                  setIsStatusDialogOpen(true);
+                }}
+                className="medex-app-btn medex-app-btn-status w-full h-9 sm:h-10 px-2 py-1 text-xs sm:text-sm font-semibold inline-flex items-center justify-center min-w-0"
+                title="Update Status"
+              >
+                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 flex-shrink-0" />
+                <span className="truncate">Update Status</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-base sm:text-lg">Update Application Status</DialogTitle>
+              </DialogHeader>
+              <StatusUpdateForm
+                application={selectedApplication}
+                onUpdate={(status, notes) => {
+                  if (selectedApplication) {
+                    updateApplicationStatusHandler(selectedApplication.id, status, notes);
+                  }
+                }}
+                onCancel={() => setIsStatusDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* 3. View Interview / Interview */}
+          <Dialog 
+            open={isInterviewDialogOpen && selectedApplication?.id === application.id} 
+            onOpenChange={(open) => {
+              setIsInterviewDialogOpen(open);
+              if (!open && selectedApplication?.id === application.id) {
+                setSelectedApplication(null);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedApplication(application);
+                  setIsInterviewDialogOpen(true);
+                }}
+                className="medex-app-btn medex-app-btn-interview w-full h-9 sm:h-10 px-2 py-1 text-xs sm:text-sm font-semibold inline-flex items-center justify-center min-w-0"
+                title={application.interviewDate ? 'View Interview' : 'Schedule Interview'}
+              >
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 flex-shrink-0 text-purple-600 dark:text-purple-400" />
+                <span className="truncate">{application.interviewDate || application.status === 'interview' ? 'View Interview' : 'Interview'}</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-base sm:text-lg">
+                  {application.interviewDate ? 'Interview Details / Reschedule' : 'Schedule Interview'}
+                </DialogTitle>
+              </DialogHeader>
+              <InterviewSchedulingForm
+                application={selectedApplication}
+                onSchedule={(date, notes) => {
+                  if (selectedApplication) {
+                    updateApplicationStatusHandler(selectedApplication.id, 'interview', notes, date);
+                  }
+                }}
+                onCancel={() => setIsInterviewDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* 4. View Resume */}
+          {application.resumeUrl ? (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => openFileInViewer(application.resumeUrl!)}
+              className="medex-app-btn medex-app-btn-resume medex-applicant-resume-button w-full h-9 sm:h-10 px-2 py-1 text-xs sm:text-sm font-semibold inline-flex items-center justify-center min-w-0 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+              title="View Resume"
+            >
+              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 flex-shrink-0" />
+              <span className="truncate">View Resume</span>
+            </Button>
+          ) : (
+            <div 
+              className="medex-app-btn medex-applicant-no-resume w-full h-9 sm:h-10 px-2 py-1 text-xs font-semibold inline-flex items-center justify-center min-w-0 rounded-lg text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50"
+              title="No resume uploaded"
+            >
+              <AlertCircle className="w-3.5 h-3.5 mr-1 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+              <span className="truncate">No Resume</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {/* Header - Responsive */}
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-5">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <Button
@@ -513,17 +1013,10 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
               </Button>
             </div>
           </div>
-
-          {/* Desktop Filters - Hidden on mobile, shown in sidebar */}
-          <div className="hidden lg:block">
-            <Card className="p-4">
-              <FilterPanel />
-            </Card>
-          </div>
         </div>
 
         {/* Main Content Area - Responsive Grid Layout */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
           {/* Desktop Sidebar Filters */}
           <aside className="hidden lg:block lg:w-64 xl:w-80 flex-shrink-0">
             <div className="sticky top-4">
@@ -580,23 +1073,10 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                   </div>
                 ) : filteredApplications.length === 0 ? (
                   <Card 
-                    className="text-center"
-                    style={{
-                      padding: 'clamp(2rem, 4vw, 3rem)',
-                      borderRadius: 'clamp(0.5rem, 0.8vw, 0.75rem)'
-                    }}
+                    className="text-center p-8 sm:p-12"
                   >
-                    <Briefcase 
-                      className="text-gray-300 dark:text-gray-600 mx-auto mb-4" 
-                      style={{ 
-                        width: 'clamp(3rem, 5vw, 4rem)', 
-                        height: 'clamp(3rem, 5vw, 4rem)' 
-                      }}
-                    />
-                    <p 
-                      className="text-gray-500 dark:text-gray-400"
-                      style={{ fontSize: 'clamp(0.875rem, 1.2vw, 1rem)' }}
-                    >
+                    <Briefcase className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
                       No applications found matching your criteria.
                     </p>
                   </Card>
@@ -607,674 +1087,19 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                       gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
                     }}
                   >
-                    {filteredApplications.map((application) => (
-                      <Card 
-                        key={application.id} 
-                        className="group relative overflow-hidden bg-white dark:bg-gray-800 border-l-4 border-l-blue-500 dark:border-l-blue-600 hover:border-l-blue-600 dark:hover:border-l-blue-500 hover:shadow-lg transition-all duration-200 ease-out hover:-translate-y-0.5 flex flex-col"
-                        style={{
-                          borderRadius: 'clamp(0.5rem, 0.8vw, 0.75rem)',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-                        }}
-                      >
-                        <div 
-                          className="flex flex-col flex-1"
-                          style={{
-                            padding: 'clamp(0.75rem, 1.5vw, 1.25rem)'
-                          }}
-                        >
-                          {/* Candidate Header */}
-                          <div 
-                            className="mb-3 md:mb-4"
-                            style={{ marginBottom: 'clamp(0.75rem, 1.5vw, 1rem)' }}
-                          >
-                            <div 
-                              className="flex items-start justify-between gap-2 md:gap-3 mb-2 md:mb-3"
-                              style={{ marginBottom: 'clamp(0.5rem, 1vw, 0.75rem)' }}
-                            >
-                              <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                                <div className="relative flex-shrink-0">
-                                  <div 
-                                    className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-full flex items-center justify-center shadow-sm group-hover:shadow transition-shadow"
-                                    style={{
-                                      width: 'clamp(2.5rem, 4vw, 3.5rem)',
-                                      height: 'clamp(2.5rem, 4vw, 3.5rem)'
-                                    }}
-                                  >
-                                    <span 
-                                      className="text-white font-semibold"
-                                      style={{ fontSize: 'clamp(1rem, 1.5vw, 1.5rem)' }}
-                                    >
-                                      {application.candidateName?.charAt(0)?.toUpperCase() || 'A'}
-                                    </span>
-                                  </div>
-                                  <Badge 
-                                    className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center p-0 bg-green-500 hover:bg-green-500"
-                                    style={{ fontSize: 'clamp(0.625rem, 0.8vw, 0.75rem)' }}
-                                  >
-                                    <span className="text-white font-semibold">H</span>
-                                  </Badge>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h2 
-                                    className="text-gray-900 dark:text-gray-100 truncate font-semibold mb-0.5"
-                                    style={{ 
-                                      fontSize: 'clamp(0.875rem, 1.2vw, 1.125rem)',
-                                      lineHeight: '1.3'
-                                    }}
-                                  >
-                                    {application.candidateName || 'Unknown Candidate'}
-                                  </h2>
-                                  <p 
-                                    className="text-gray-600 dark:text-gray-400 truncate font-medium"
-                                    style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
-                                  >
-                                    {application.jobTitle}
-                                  </p>
-                                </div>
-                              </div>
-                              <Badge 
-                                className={`${getStatusColor(application.status)} flex-shrink-0`} 
-                                variant="outline"
-                                style={{ fontSize: 'clamp(0.625rem, 0.8vw, 0.75rem)' }}
-                              >
-                                <span className="hidden sm:inline font-medium">{getStatusLabel(application.status)}</span>
-                                <span className="sm:hidden font-medium">{getStatusLabel(application.status).charAt(0)}</span>
-                              </Badge>
-                            </div>
-                            
-                            {/* Job Title */}
-                            <h3 
-                              className="text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug font-medium"
-                              style={{ 
-                                fontSize: 'clamp(0.8125rem, 1.1vw, 1rem)',
-                                marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)'
-                              }}
-                            >
-                              {application.jobTitle}
-                            </h3>
+                    {filteredApplications.map(renderApplicationCard)}
+                  </div>
+                )}
+              </TabsContent>
 
-                            {/* Key Information Grid */}
-                            <div 
-                              className="space-y-2 mb-3 md:mb-4"
-                              style={{ 
-                                gap: 'clamp(0.5rem, 0.8vw, 0.625rem)',
-                                marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)'
-                              }}
-                            >
-                              <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                                <div 
-                                  className="flex-shrink-0 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center"
-                                  style={{
-                                    width: 'clamp(1.75rem, 2.5vw, 2rem)',
-                                    height: 'clamp(1.75rem, 2.5vw, 2rem)'
-                                  }}
-                                >
-                                  <Briefcase 
-                                    className="text-blue-600 dark:text-blue-400" 
-                                    style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
-                                  />
-                                </div>
-                                <span 
-                                  className="font-medium truncate"
-                                  style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
-                                >
-                                  {application.jobOrganization}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                                <div 
-                                  className="flex-shrink-0 rounded-md bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"
-                                  style={{
-                                    width: 'clamp(1.75rem, 2.5vw, 2rem)',
-                                    height: 'clamp(1.75rem, 2.5vw, 2rem)'
-                                  }}
-                                >
-                                  <Calendar 
-                                    className="text-purple-600 dark:text-purple-400" 
-                                    style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
-                                  />
-                                </div>
-                                <span style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}>
-                                  {formatDate(application.appliedDate)}
-                                </span>
-                              </div>
-                              {application.interviewDate && (
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="flex-shrink-0 rounded-md bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"
-                                    style={{
-                                      width: 'clamp(1.75rem, 2.5vw, 2rem)',
-                                      height: 'clamp(1.75rem, 2.5vw, 2rem)'
-                                    }}
-                                  >
-                                    <Clock 
-                                      className="text-purple-600 dark:text-purple-400" 
-                                      style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
-                                    />
-                                  </div>
-                                  <span 
-                                    className="font-medium text-purple-700 dark:text-purple-300"
-                                    style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
-                                  >
-                                    Interview: {formatDateTime(application.interviewDate)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Progress Section */}
-                            <div 
-                              className="mb-3 md:mb-4"
-                              style={{ marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)' }}
-                            >
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span 
-                                  className="font-semibold text-gray-700 dark:text-gray-300"
-                                  style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
-                                >
-                                  Progress
-                                </span>
-                                <span 
-                                  className="font-semibold text-blue-600 dark:text-blue-400"
-                                  style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
-                                >
-                                  {getStatusProgress(application.status)}%
-                                </span>
-                              </div>
-                              <Progress 
-                                value={getStatusProgress(application.status)} 
-                                className="bg-gray-100 dark:bg-gray-700"
-                                style={{ height: 'clamp(0.375rem, 0.5vw, 0.5rem)' }}
-                              />
-                            </div>
-
-                            {/* Status Steps - Enhanced */}
-                            <div 
-                              className="mb-3 md:mb-4"
-                              style={{ marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)' }}
-                            >
-                              <div 
-                                className="flex items-center justify-center gap-1 md:gap-2 overflow-x-auto pb-2 scrollbar-hide"
-                                style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}
-                              >
-                                {getStatusSteps(application.status).map((step, index) => (
-                                  <div key={step.key} className="flex items-center flex-shrink-0">
-                                    <div className="flex flex-col items-center">
-                                      <div 
-                                        className={`flex items-center justify-center rounded-full border-2 transition-all duration-200 ${
-                                          step.completed
-                                            ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white dark:from-green-600 dark:to-green-700 shadow-sm'
-                                            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500'
-                                        }`}
-                                        style={{
-                                          width: 'clamp(1.5rem, 2.2vw, 2rem)',
-                                          height: 'clamp(1.5rem, 2.2vw, 2rem)'
-                                        }}
-                                      >
-                                        {step.completed ? (
-                                          <CheckCircle style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }} />
-                                        ) : (
-                                          <span 
-                                            className="font-semibold"
-                                            style={{ fontSize: 'clamp(0.625rem, 0.9vw, 0.75rem)' }}
-                                          >
-                                            {index + 1}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <span 
-                                        className={`mt-1 font-medium hidden md:block text-center max-w-[60px] truncate ${
-                                          step.completed ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
-                                        }`}
-                                        style={{ fontSize: 'clamp(0.625rem, 0.8vw, 0.75rem)' }}
-                                      >
-                                        {step.label}
-                                      </span>
-                                    </div>
-                                    {index < getStatusSteps(application.status).length - 1 && (
-                                      <div 
-                                        className={`hidden md:block transition-colors ${
-                                          getStatusSteps(application.status)[index + 1].completed
-                                            ? 'bg-gradient-to-r from-green-500 to-green-400 dark:from-green-600 dark:to-green-500'
-                                            : 'bg-gray-300 dark:bg-gray-600'
-                                        }`}
-                                        style={{
-                                          width: 'clamp(1rem, 1.5vw, 1.5rem)',
-                                          height: '2px',
-                                          margin: '0 clamp(0.25rem, 0.4vw, 0.5rem)'
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {application.notes && (
-                              <div 
-                                className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-md border border-amber-200 dark:border-amber-800/50 mb-3 md:mb-4"
-                                style={{
-                                  padding: 'clamp(0.75rem, 1.2vw, 1rem)',
-                                  marginBottom: 'clamp(0.75rem, 1.2vw, 1rem)'
-                                }}
-                              >
-                                <p 
-                                  className="text-gray-800 dark:text-gray-200 line-clamp-2 leading-relaxed"
-                                  style={{ fontSize: 'clamp(0.75rem, 1vw, 0.875rem)' }}
-                                >
-                                  <span className="font-semibold text-amber-700 dark:text-amber-300">Notes:</span>{' '}
-                                  <span className="text-gray-700 dark:text-gray-300">{application.notes}</span>
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                        {/* Action Buttons - Enhanced Responsive */}
-                        <div 
-                          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-auto pt-3 md:pt-4 border-t border-gray-200 dark:border-gray-700"
-                          style={{
-                            gap: 'clamp(0.5rem, 0.8vw, 0.75rem)',
-                            paddingTop: 'clamp(0.75rem, 1.2vw, 1rem)'
-                          }}
-                        >
-                          {/* Desktop: Full buttons */}
-                          <div 
-                            className="hidden sm:flex items-center gap-2 flex-1 flex-wrap"
-                            style={{ gap: 'clamp(0.5rem, 0.8vw, 0.75rem)' }}
-                          >
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => setSelectedApplication(application)}
-                                  className="flex-1"
-                                  style={{
-                                    minHeight: 'clamp(2.5rem, 3.5vw, 2.75rem)',
-                                    fontSize: 'clamp(0.8125rem, 1vw, 0.875rem)',
-                                    padding: 'clamp(0.5rem, 0.8vw, 0.625rem) clamp(0.75rem, 1.2vw, 1rem)'
-                                  }}
-                                >
-                                  <Eye 
-                                    className="mr-1.5" 
-                                    style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
-                                  />
-                                  View
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle className="text-lg sm:text-xl">Application Details - {application.candidateName}</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  {/* Candidate Information */}
-                                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                      <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                                      Candidate Information
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                      <div>
-                                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Full Name</label>
-                                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-semibold break-words">
-                                          {application.candidateName}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
-                                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2 break-all">
-                                          <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                          <a href={`mailto:${application.candidateEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                            {application.candidateEmail}
-                                          </a>
-                                        </p>
-                                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                          <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                          <a href={`tel:${application.candidatePhone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                            {application.candidatePhone || 'N/A'}
-                                          </a>
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Applied Date</label>
-                                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">{formatDate(application.appliedDate)}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Job Information */}
-                                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                      <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
-                                      Job Information
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                      <div>
-                                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Job Title</label>
-                                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                          {application.jobTitle}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Organization</label>
-                                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                          {application.jobOrganization}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Application Status</label>
-                                        <div className="mt-1">
-                                          <Badge className={getStatusColor(application.status)} variant="outline">
-                                            {getStatusLabel(application.status)}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      {application.interviewDate && (
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Interview Date</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                            {formatDateTime(application.interviewDate)}
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Resume */}
-                                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                      <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                                      Resume
-                                    </h3>
-                                    {application.resumeUrl ? (
-                                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                                        <Button 
-                                          variant="default" 
-                                          onClick={() => openFileInViewer(application.resumeUrl!)}
-                                          className="w-full sm:w-auto"
-                                        >
-                                          <FileText className="w-4 h-4 mr-2" />
-                                          View Resume
-                                        </Button>
-                                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
-                                          Click to view or download the candidate's resume
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <p className="text-sm text-gray-600 dark:text-gray-400">No resume uploaded by candidate</p>
-                                    )}
-                                  </div>
-
-                                  {/* Notes */}
-                                  {application.notes && (
-                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">Application Notes</h3>
-                                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
-                                        {application.notes}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-
-                            <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedApplication(application)}
-                                  className="flex-1"
-                                  style={{
-                                    minHeight: 'clamp(2.5rem, 3.5vw, 2.75rem)',
-                                    fontSize: 'clamp(0.8125rem, 1vw, 0.875rem)',
-                                    padding: 'clamp(0.5rem, 0.8vw, 0.625rem) clamp(0.75rem, 1.2vw, 1rem)'
-                                  }}
-                                >
-                                  Update Status
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-[95vw] sm:max-w-md">
-                                <DialogHeader>
-                                  <DialogTitle className="text-base sm:text-lg">Update Application Status</DialogTitle>
-                                </DialogHeader>
-                                <StatusUpdateForm
-                                  application={selectedApplication}
-                                  onUpdate={(status, notes) => {
-                                    if (selectedApplication) {
-                                      updateApplicationStatusHandler(selectedApplication.id, status, notes);
-                                    }
-                                  }}
-                                  onCancel={() => setIsStatusDialogOpen(false)}
-                                />
-                              </DialogContent>
-                            </Dialog>
-
-                            <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedApplication(application)}
-                                  className="flex-1"
-                                  style={{
-                                    minHeight: 'clamp(2.5rem, 3.5vw, 2.75rem)',
-                                    fontSize: 'clamp(0.8125rem, 1vw, 0.875rem)',
-                                    padding: 'clamp(0.5rem, 0.8vw, 0.625rem) clamp(0.75rem, 1.2vw, 1rem)'
-                                  }}
-                                >
-                                  <Calendar 
-                                    className="mr-1.5" 
-                                    style={{ width: 'clamp(0.875rem, 1.2vw, 1rem)', height: 'clamp(0.875rem, 1.2vw, 1rem)' }}
-                                  />
-                                  Interview
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-[95vw] sm:max-w-md">
-                                <DialogHeader>
-                                  <DialogTitle className="text-base sm:text-lg">Schedule Interview</DialogTitle>
-                                </DialogHeader>
-                                <InterviewSchedulingForm
-                                  application={selectedApplication}
-                                  onSchedule={(date, notes) => {
-                                    if (selectedApplication) {
-                                      updateApplicationStatusHandler(selectedApplication.id, 'interview', notes, date);
-                                    }
-                                  }}
-                                  onCancel={() => setIsInterviewDialogOpen(false)}
-                                />
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-
-                          {/* Mobile: Dropdown Menu */}
-                          <div className="sm:hidden w-full">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full font-medium shadow-sm hover:shadow-md transition-shadow"
-                                  style={{
-                                    minHeight: 'clamp(2.75rem, 4vw, 3rem)',
-                                    fontSize: 'clamp(0.8125rem, 1vw, 0.875rem)',
-                                    padding: 'clamp(0.625rem, 1vw, 0.75rem) clamp(1rem, 1.5vw, 1.25rem)'
-                                  }}
-                                >
-                                  <MoreVertical 
-                                    className="mr-2" 
-                                    style={{ width: 'clamp(1rem, 1.2vw, 1.125rem)', height: 'clamp(1rem, 1.2vw, 1.125rem)' }}
-                                  />
-                                  Actions
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem asChild>
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <div className="flex items-center w-full cursor-pointer">
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        View Details
-                                      </div>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                                      <DialogHeader>
-                                        <DialogTitle className="text-lg sm:text-xl">Application Details - {application.candidateName}</DialogTitle>
-                                      </DialogHeader>
-                                      <div className="space-y-4">
-                                        {/* Candidate Information */}
-                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                                            Candidate Information
-                                          </h3>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Full Name</label>
-                                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-semibold break-words">
-                                                {application.candidateName}
-                                              </p>
-                                            </div>
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
-                                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2 break-all">
-                                                <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                                <a href={`mailto:${application.candidateEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                                  {application.candidateEmail}
-                                                </a>
-                                              </p>
-                                            </div>
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Phone</label>
-                                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                                <a href={`tel:${application.candidatePhone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                                  {application.candidatePhone || 'N/A'}
-                                                </a>
-                                              </p>
-                                            </div>
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Applied Date</label>
-                                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">{formatDate(application.appliedDate)}</p>
-                                            </div>
-                                          </div>
-                                        </div>
-                                        {/* Job Information */}
-                                        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                            <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
-                                            Job Information
-                                          </h3>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Job Title</label>
-                                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                                {application.jobTitle}
-                                              </p>
-                                            </div>
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Organization</label>
-                                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                                {application.jobOrganization}
-                                              </p>
-                                            </div>
-                                            <div>
-                                              <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Application Status</label>
-                                              <div className="mt-1">
-                                                <Badge className={getStatusColor(application.status)} variant="outline">
-                                                  {getStatusLabel(application.status)}
-                                                </Badge>
-                                              </div>
-                                            </div>
-                                            {application.interviewDate && (
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Interview Date</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                                  {formatDateTime(application.interviewDate)}
-                                                </p>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                        {/* Resume */}
-                                        {application.resumeUrl && (
-                                          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                                              Resume
-                                            </h3>
-                                            <Button 
-                                              variant="default" 
-                                              asChild
-                                              className="w-full sm:w-auto"
-                                            >
-                                              <a 
-                                                href={application.resumeUrl?.startsWith('http') 
-                                                  ? application.resumeUrl 
-                                                  : `${window.location.origin}${application.resumeUrl}`} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="flex items-center justify-center gap-2"
-                                              >
-                                                <FileText className="w-4 h-4" />
-                                                View/Download Resume
-                                              </a>
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                  setSelectedApplication(application);
-                                  setIsStatusDialogOpen(true);
-                                }}>
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Update Status
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {
-                                  setSelectedApplication(application);
-                                  setIsInterviewDialogOpen(true);
-                                }}>
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  Schedule Interview
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                          
-                          {/* View Resume Button - Clearly Visible */}
-                          <div className="mt-3">
-                            {application.resumeUrl ? (
-                              <Button 
-                                variant="default" 
-                                size="sm"
-                                onClick={() => openFileInViewer(application.resumeUrl!)}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                View Resume
-                              </Button>
-                            ) : (
-                              <div className="text-sm text-orange-700 bg-orange-100 border border-orange-300 p-2 rounded font-medium text-center">
-                                ⚠️ No resume uploaded
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        </div>
-                      </Card>
-                    ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-              {/* Other Tabs Content - Reuse same card structure */}
               <TabsContent value="active" className="mt-4 sm:mt-6">
                 {loading ? (
-                  <div className="space-y-4 sm:space-y-6">
+                  <div 
+                    className="grid gap-4 md:gap-5 lg:gap-6"
+                    style={{
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
+                    }}
+                  >
                     {[...Array(3)].map((_, i) => (
                       <ApplicationSkeleton key={i} />
                     ))}
@@ -1285,352 +1110,27 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                     <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">No active applications found.</p>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6">
+                  <div 
+                    className="grid gap-4 md:gap-5 lg:gap-6"
+                    style={{
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
+                    }}
+                  >
                     {filteredApplications
                       .filter(app => ['pending', 'applied', 'shortlisted'].includes(app.status))
-                      .map((application) => (
-                        <Card key={application.id} className="p-4 sm:p-6 border-l-4 border-l-blue-500 dark:border-l-blue-600 hover:shadow-lg transition-shadow duration-200">
-                          {/* Reuse same card structure from "all" tab - simplified for brevity */}
-                          <div className="mb-4">
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <span className="text-blue-600 dark:text-blue-400 font-bold text-base sm:text-lg">
-                                    {application.candidateName?.charAt(0)?.toUpperCase() || 'A'}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
-                                    {application.candidateName || 'Unknown Candidate'}
-                                  </h2>
-                                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
-                                    {application.jobTitle}
-                                  </p>
-                                </div>
-                              </div>
-                              <Badge className={`${getStatusColor(application.status)} flex-shrink-0`} variant="outline">
-                                <span className="hidden sm:inline">{getStatusLabel(application.status)}</span>
-                                <span className="sm:hidden">{getStatusLabel(application.status).charAt(0)}</span>
-                              </Badge>
-                            </div>
-                            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 line-clamp-2">
-                              {application.jobTitle}
-                            </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
-                              <div className="flex items-start gap-2">
-                                <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 flex-shrink-0" />
-                                <span className="truncate">{application.jobOrganization}</span>
-                              </div>
-                              <div className="flex items-start gap-2">
-                                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 flex-shrink-0" />
-                                <span>{formatDate(application.appliedDate)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="hidden sm:flex items-center gap-2 flex-1">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="outline" size="sm" onClick={() => setSelectedApplication(application)} className="flex-1">
-                                    <Eye className="w-4 h-4 mr-1.5" />
-                                    View
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                                  <DialogHeader>
-                                    <DialogTitle className="text-lg sm:text-xl">Application Details - {application.candidateName}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                        <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                                        Candidate Information
-                                      </h3>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Full Name</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-semibold break-words">
-                                            {application.candidateName}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2 break-all">
-                                            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                            <a href={`mailto:${application.candidateEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                              {application.candidateEmail}
-                                            </a>
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Phone</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                            <a href={`tel:${application.candidatePhone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                              {application.candidatePhone || 'N/A'}
-                                            </a>
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Applied Date</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">{formatDate(application.appliedDate)}</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                        <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
-                                        Job Information
-                                      </h3>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Job Title</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                            {application.jobTitle}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Organization</label>
-                                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                            {application.jobOrganization}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Application Status</label>
-                                          <div className="mt-1">
-                                            <Badge className={getStatusColor(application.status)} variant="outline">
-                                              {getStatusLabel(application.status)}
-                                            </Badge>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {application.resumeUrl && (
-                                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                          <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                                          Resume
-                                        </h3>
-                                        <Button variant="default" asChild className="w-full sm:w-auto">
-                                          <a 
-                                            href={application.resumeUrl?.startsWith('http') 
-                                              ? application.resumeUrl 
-                                              : `${window.location.origin}${application.resumeUrl}`} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-2"
-                                          >
-                                            <FileText className="w-4 h-4" />
-                                            View/Download Resume
-                                          </a>
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                              <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-                                <DialogTrigger asChild>
-                                  <Button variant="outline" size="sm" onClick={() => setSelectedApplication(application)} className="flex-1">
-                                    Update Status
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-[95vw] sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle className="text-base sm:text-lg">Update Application Status</DialogTitle>
-                                  </DialogHeader>
-                                  <StatusUpdateForm
-                                    application={selectedApplication}
-                                    onUpdate={(status, notes) => {
-                                      if (selectedApplication) {
-                                        updateApplicationStatusHandler(selectedApplication.id, status, notes);
-                                      }
-                                    }}
-                                    onCancel={() => setIsStatusDialogOpen(false)}
-                                  />
-                                </DialogContent>
-                              </Dialog>
-                              <Dialog open={isInterviewDialogOpen} onOpenChange={setIsInterviewDialogOpen}>
-                                <DialogTrigger asChild>
-                                  <Button variant="outline" size="sm" onClick={() => setSelectedApplication(application)} className="flex-1">
-                                    <Calendar className="w-4 h-4 mr-1.5" />
-                                    Interview
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-[95vw] sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle className="text-base sm:text-lg">Schedule Interview</DialogTitle>
-                                  </DialogHeader>
-                                  <InterviewSchedulingForm
-                                    application={selectedApplication}
-                                    onSchedule={(date, notes) => {
-                                      if (selectedApplication) {
-                                        updateApplicationStatusHandler(selectedApplication.id, 'interview', notes, date);
-                                      }
-                                    }}
-                                    onCancel={() => setIsInterviewDialogOpen(false)}
-                                  />
-                                </DialogContent>
-                              </Dialog>
-                            </div>
-                            <div className="sm:hidden">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" className="w-full">
-                                    <MoreVertical className="w-4 h-4 mr-2" />
-                                    Actions
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  <DropdownMenuItem asChild>
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <div className="flex items-center w-full cursor-pointer">
-                                          <Eye className="w-4 h-4 mr-2" />
-                                          View Details
-                                        </div>
-                                      </DialogTrigger>
-                                      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                                        <DialogHeader>
-                                          <DialogTitle className="text-lg sm:text-xl">Application Details - {application.candidateName}</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4">
-                                          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                                              Candidate Information
-                                            </h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Full Name</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-semibold break-words">
-                                                  {application.candidateName}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2 break-all">
-                                                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                                  <a href={`mailto:${application.candidateEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                                    {application.candidateEmail}
-                                                  </a>
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Phone</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                                  <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                                  <a href={`tel:${application.candidatePhone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
-                                                    {application.candidatePhone || 'N/A'}
-                                                  </a>
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Applied Date</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">{formatDate(application.appliedDate)}</p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                              <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
-                                              Job Information
-                                            </h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Job Title</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                                  {application.jobTitle}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Organization</label>
-                                                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 break-words">
-                                                  {application.jobOrganization}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <label className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Application Status</label>
-                                                <div className="mt-1">
-                                                  <Badge className={getStatusColor(application.status)} variant="outline">
-                                                    {getStatusLabel(application.status)}
-                                                  </Badge>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          {application.resumeUrl && (
-                                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                                <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                Resume
-                                              </h3>
-                                              <Button variant="default" asChild className="w-full sm:w-auto">
-                                                <a 
-                                                  href={application.resumeUrl?.startsWith('http') 
-                                                    ? application.resumeUrl 
-                                                    : `${window.location.origin}${application.resumeUrl}`} 
-                                                  target="_blank" 
-                                                  rel="noopener noreferrer"
-                                                  className="flex items-center justify-center gap-2"
-                                                >
-                                                  <FileText className="w-4 h-4" />
-                                                  View/Download Resume
-                                                </a>
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                                    setSelectedApplication(application);
-                                    setIsStatusDialogOpen(true);
-                                  }}>
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Update Status
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => {
-                                    setSelectedApplication(application);
-                                    setIsInterviewDialogOpen(true);
-                                  }}>
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Schedule Interview
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                            
-                            {/* View Resume Button - Clearly Visible */}
-                            <div className="mt-3">
-                              {application.resumeUrl ? (
-                                <Button 
-                                  variant="default" 
-                                  size="sm"
-                                  onClick={() => openFileInViewer(application.resumeUrl!)}
-                                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
-                                >
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  View Resume
-                                </Button>
-                              ) : (
-                                <div className="text-sm text-orange-700 bg-orange-100 border border-orange-300 p-2 rounded font-medium text-center">
-                                  ⚠️ No resume uploaded
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
+                      .map(renderApplicationCard)}
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="interview" className="mt-4 sm:mt-6">
                 {loading ? (
-                  <div className="space-y-4 sm:space-y-6">
+                  <div 
+                    className="grid gap-4 md:gap-5 lg:gap-6"
+                    style={{
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
+                    }}
+                  >
                     {[...Array(3)].map((_, i) => (
                       <ApplicationSkeleton key={i} />
                     ))}
@@ -1641,24 +1141,27 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                     <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">No interview scheduled applications found.</p>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6">
+                  <div 
+                    className="grid gap-4 md:gap-5 lg:gap-6"
+                    style={{
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
+                    }}
+                  >
                     {filteredApplications
                       .filter(app => app.status === 'interview')
-                      .map((application) => (
-                        <Card key={application.id} className="p-4 sm:p-6 border-l-4 border-l-purple-500 dark:border-l-purple-600 hover:shadow-lg transition-shadow duration-200">
-                          {/* Same structure as active tab - reuse component if needed */}
-                          <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-                            Interview: {application.candidateName} - {application.jobTitle}
-                          </div>
-                        </Card>
-                      ))}
+                      .map(renderApplicationCard)}
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="completed" className="mt-4 sm:mt-6">
                 {loading ? (
-                  <div className="space-y-4 sm:space-y-6">
+                  <div 
+                    className="grid gap-4 md:gap-5 lg:gap-6"
+                    style={{
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
+                    }}
+                  >
                     {[...Array(3)].map((_, i) => (
                       <ApplicationSkeleton key={i} />
                     ))}
@@ -1669,17 +1172,15 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                     <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">No completed applications found.</p>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6">
+                  <div 
+                    className="grid gap-4 md:gap-5 lg:gap-6"
+                    style={{
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))'
+                    }}
+                  >
                     {filteredApplications
                       .filter(app => ['hired', 'selected', 'rejected'].includes(app.status))
-                      .map((application) => (
-                        <Card key={application.id} className="p-4 sm:p-6 border-l-4 border-l-green-500 dark:border-l-green-600 hover:shadow-lg transition-shadow duration-200">
-                          {/* Same structure as active tab - reuse component if needed */}
-                          <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-                            Completed: {application.candidateName} - {application.jobTitle}
-                          </div>
-                        </Card>
-                      ))}
+                      .map(renderApplicationCard)}
                   </div>
                 )}
               </TabsContent>

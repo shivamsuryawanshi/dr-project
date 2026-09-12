@@ -194,21 +194,30 @@ function enhanceCard(card: HTMLElement) {
     spans[0]?.classList.add("medex-applicant-notes-label");
   }
 
+  const footer = card.querySelector<HTMLElement>(".medex-applicant-footer") || card.querySelector<HTMLElement>("[data-slot='applicant-footer']");
+  if (footer) {
+    footer.classList.add("medex-applicant-footer");
+  }
+
   const buttons = Array.from(card.querySelectorAll<HTMLButtonElement>("button"));
   const actionsButton = buttons.find((button) => cleanText(button.textContent) === "Actions");
-  const resumeButton = buttons.find((button) => cleanText(button.textContent) === "View Resume");
+  const resumeButton = buttons.find((button) => cleanText(button.textContent).includes("Resume"));
 
   actionsButton?.classList.add("medex-applicant-actions-button");
   resumeButton?.classList.add("medex-applicant-resume-button");
 
-  const footer = commonAncestor(actionsButton, resumeButton, card);
-  footer?.classList.add("medex-applicant-footer");
+  if (!footer && (actionsButton || resumeButton)) {
+    const computedFooter = commonAncestor(actionsButton, resumeButton, card);
+    computedFooter?.classList.add("medex-applicant-footer");
+  }
 
-  const noResume = findLeaf(card, (text) => text.includes("No resume uploaded"));
+  const noResume = card.querySelector<HTMLElement>(".medex-app-no-resume, .medex-applicant-no-resume") || findLeaf(card, (text) => text.includes("No resume") || text.includes("No Resume"));
   if (noResume) {
     noResume.classList.add("medex-applicant-no-resume");
-    const noResumeFooter = commonAncestor(actionsButton, noResume, card);
-    noResumeFooter?.classList.add("medex-applicant-footer");
+    if (!footer) {
+      const noResumeFooter = commonAncestor(actionsButton, noResume, card);
+      noResumeFooter?.classList.add("medex-applicant-footer");
+    }
   }
 }
 
@@ -230,11 +239,11 @@ function enhanceApplicationCards() {
 
   document.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
     const text = cleanText(button.textContent);
-    if (text === "View Resume" || text === "Actions") seeds.push(button);
+    if (text.includes("Resume") || text === "Actions" || text === "View" || text.includes("Status") || text.includes("Interview")) seeds.push(button);
   });
 
   document.querySelectorAll<HTMLElement>("div, p, span").forEach((element) => {
-    if (element.children.length === 0 && cleanText(element.textContent).includes("No resume uploaded")) seeds.push(element);
+    if (element.children.length === 0 && (cleanText(element.textContent).includes("No resume") || cleanText(element.textContent).includes("No Resume"))) seeds.push(element);
   });
 
   const cards = new Set<HTMLElement>();
