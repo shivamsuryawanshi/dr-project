@@ -44,6 +44,169 @@
   background: rgba(255, 255, 255, 0.85);
 }
 
+.admin-applications-page__topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  min-height: 3.25rem;
+  padding-bottom: 0.9rem;
+  margin-bottom: 0.9rem;
+  border-bottom: 1px solid #e2eef8;
+}
+
+.admin-applications-page__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 11rem;
+  color: #123b67;
+}
+
+.admin-applications-page__brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.7rem;
+  color: #fff;
+  background: linear-gradient(145deg, #6425f4, #3b13ba);
+  box-shadow: 0 7px 16px rgba(91, 45, 210, 0.25);
+}
+
+.admin-applications-page__brand strong,
+.admin-applications-page__brand span,
+.admin-applications-page__account-copy strong,
+.admin-applications-page__account-copy span {
+  display: block;
+}
+
+.admin-applications-page__brand strong {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.admin-applications-page__brand span,
+.admin-applications-page__account-copy span {
+  color: #7186a0;
+  font-size: 0.7rem;
+}
+
+.admin-applications-page__global-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: min(31rem, 48vw);
+  margin-left: auto;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #d2e3f1;
+  border-radius: 0.65rem;
+  color: #7b95b0;
+  background: #fff;
+}
+
+.admin-applications-page__global-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #193b62;
+  font-size: 0.75rem;
+  background: transparent;
+}
+
+.admin-applications-page__account {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #183c65;
+}
+
+.admin-applications-page__notification {
+  position: relative;
+  display: inline-flex;
+  padding: 0.35rem;
+  color: #183c65;
+  background: transparent;
+  border: 0;
+}
+
+.admin-applications-page__notification span {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  color: #fff;
+  background: #e53935;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.admin-applications-page__account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #2878f0, #0753bd);
+  font-weight: 800;
+}
+
+.admin-applications-page__account-copy {
+  min-width: 4.1rem;
+}
+
+.admin-applications-page__account-copy strong {
+  font-size: 0.75rem;
+}
+
+.admin-applications-page__view-tools {
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.admin-applications-page__view-tools button {
+  min-height: 2.2rem;
+  border-color: #d2e3f1;
+  color: #315778;
+  background: #fff;
+}
+
+.admin-applications-page__view-tools button[data-size="icon"] {
+  width: 2.2rem;
+}
+
+.admin-applications-page__tabs-toolbar {
+  gap: 0.75rem;
+}
+
+.admin-applications-page__tabs [role="tablist"] {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.admin-applications-page__tabs [role="tablist"]::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-applications-page__tabs [role="tab"] {
+  white-space: nowrap;
+}
+
+.admin-applications-empty {
+  border: 1px solid #d7e7f4;
+  background: linear-gradient(145deg, #fff, #f5faff);
+}
+
 .admin-applications-page__filter-card {
   border: 1px solid var(--apps-line) !important;
   border-radius: 1rem !important;
@@ -205,6 +368,22 @@
   .admin-applications-page__header {
     padding: 0.9rem;
   }
+
+  .admin-applications-page__topbar {
+    flex-wrap: wrap;
+  }
+
+  .admin-applications-page__global-search {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-applications-page__intro {
+    display: none;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1279px) {
@@ -231,6 +410,32 @@
 
   .admin-applications-page__header {
     border-radius: 1rem;
+  }
+
+  .admin-applications-page__topbar {
+    align-items: flex-start;
+    padding-bottom: 0.75rem;
+  }
+
+  .admin-applications-page__brand {
+    min-width: 0;
+  }
+
+  .admin-applications-page__account {
+    margin-left: auto;
+  }
+
+  .admin-applications-page__account-copy,
+  .admin-applications-page__account > svg {
+    display: none;
+  }
+
+  .admin-applications-page__intro h1 {
+    font-size: 1.6rem;
+  }
+
+  .admin-applications-page__tabs-toolbar {
+    align-items: stretch;
   }
 
   .admin-applications-page__title-icon {
