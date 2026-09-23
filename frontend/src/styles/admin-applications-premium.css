@@ -101,6 +101,10 @@
   background: #f5efff !important;
 }
 
+.admin-applications-page__overview > div > div:last-child > div:nth-child(4) {
+  background: #fff7e8 !important;
+}
+
 .admin-applications-page__overview > div > div:last-child button {
   border-color: #70b5f4 !important;
   color: #0755a6 !important;
@@ -132,6 +136,8 @@
 
 .admin-applications-page .medex-applicant-grid {
   align-items: stretch !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 1rem !important;
 }
 
 .admin-applications-page .medex-applicant-card {
@@ -161,9 +167,60 @@
   gap: 0.5rem !important;
 }
 
+/* Keep the reference layout readable: two spacious cards rather than three
+   cramped columns on laptop and iPad widths. */
+@media (min-width: 768px) {
+  .admin-applications-page .medex-applicant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .admin-applications-page .medex-applicant-card-content {
+    padding: 1rem !important;
+  }
+
+  .admin-applications-page .medex-applicant-name {
+    font-size: 1rem !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .admin-applications-page__overview > div {
+    align-items: center;
+  }
+
+  .admin-applications-page__overview > div > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(112px, 1fr));
+    align-items: stretch;
+    min-width: min(62%, 760px);
+  }
+
+  .admin-applications-page__overview > div > div:last-child > button {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
 @media (max-width: 1023px) {
   .admin-applications-page__header {
     padding: 0.9rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .admin-applications-page__overview > div > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 560px);
+  }
+
+  .admin-applications-page__overview > div > div:last-child > div {
+    min-width: 0;
+  }
+
+  .admin-applications-page__overview > div > div:last-child > button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }
 
@@ -187,17 +244,27 @@
   }
 
   .admin-applications-page__overview > div > div:last-child {
+    gap: 0.5rem;
+  }
+
+  .admin-applications-page__overview > div > div:last-child {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+  }
+
+  .admin-applications-page__overview > div > div:last-child > div {
+    min-width: 0;
   }
 
   .admin-applications-page__overview > div > div:last-child button {
     grid-column: 1 / -1;
+    width: 100%;
   }
 
   .admin-applications-page .medex-applicant-grid {
     gap: 0.85rem !important;
+    grid-template-columns: 1fr !important;
   }
 
   .admin-applications-page .medex-applicant-card {

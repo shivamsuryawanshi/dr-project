@@ -1244,6 +1244,18 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                     </div>
                   </div>
 
+                  <div className="bg-white dark:bg-gray-800/90 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-gray-700 text-left min-w-[85px] shadow-2xs flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Pending Review</div>
+                      <div className="text-lg font-bold text-amber-600 dark:text-amber-400 leading-tight">
+                        {applications.filter(a => ['pending', 'applied'].includes(a.status)).length}
+                      </div>
+                    </div>
+                  </div>
+
                   <Button
                     size="sm"
                     variant={filters.eligibleOnly ? "default" : "outline"}
@@ -1268,19 +1280,19 @@ export function AdminApplications({ onNavigate, userRole }: AdminApplicationsPro
                     value="all" 
                     className="text-xs sm:text-sm px-3 sm:px-4 rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white font-semibold transition-all"
                   >
-                    All ({filteredApplications.length})
+                    <Users className="w-3.5 h-3.5 mr-1.5" /> All ({filteredApplications.length})
                   </TabsTrigger>
                   <TabsTrigger 
                     value="active" 
                     className="text-xs sm:text-sm px-3 sm:px-4 rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white font-semibold transition-all"
                   >
-                    Active
+                    <Rocket className="w-3.5 h-3.5 mr-1.5" /> Active
                   </TabsTrigger>
                   <TabsTrigger 
                     value="interview" 
                     className="text-xs sm:text-sm px-3 sm:px-4 rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white font-semibold transition-all"
                   >
-                    Interviews Completed
+                    <Calendar className="w-3.5 h-3.5 mr-1.5" /> Interviews Completed
                   </TabsTrigger>
                 </TabsList>
               </div>
