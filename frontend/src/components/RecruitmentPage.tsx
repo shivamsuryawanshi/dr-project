@@ -38,7 +38,7 @@ import {
 import { fetchJob } from '../api/jobs';
 import { RecruitmentViewSwitcher } from './RecruitmentViewSwitcher';
 import { GovernmentJobDetail } from './SectorAwareJobDetailPage';
-import { resolveNotificationPdfUrl, safeOpenExternal } from '../utils/pdfUrlHelper';
+import { resolveNotificationPdfUrl, safeOpenExternal, isValidWebUrl } from '../utils/pdfUrlHelper';
 import {
   cleanExtractedName,
   departmentSubtitle,
@@ -1555,7 +1555,8 @@ function DepartmentScroller({ children }: { children: ReactNode }) {
 
 function OfficialSourcesFooter({ recruitment, notificationUrl }: { recruitment: Recruitment; notificationUrl?: string }) {
   const effectivePdf = notificationUrl || recruitment.officialNotificationUrl;
-  if (!recruitment.officialWebsite && !effectivePdf) return null;
+  const hasValidWebsite = isValidWebUrl(recruitment.officialWebsite);
+  if (!hasValidWebsite && !effectivePdf) return null;
   return (
     <section className="recruit-card" style={{ padding: '18px', marginTop: 12 }}>
       <h2 className="section-eyebrow">Official Sources</h2>
@@ -1563,7 +1564,7 @@ function OfficialSourcesFooter({ recruitment, notificationUrl }: { recruitment: 
         Review the vacancy details above before opening these official links.
       </p>
       <div className="action-stack">
-        {recruitment.officialWebsite && (
+        {hasValidWebsite && (
           <button className="action-btn" onClick={() => openExternal(recruitment.officialWebsite)}>
             <Building2 size={15} />Official Website
           </button>

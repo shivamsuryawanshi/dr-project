@@ -49,7 +49,7 @@ import { ResumeUploadSection } from "./ResumeUploadSection";
 import { cardFieldText, cardSalaryText, displayJobDescription, isNotMentioned } from "../utils/extractedFieldDisplay";
 import { cleanLocation } from "../utils/locationCleaner";
 import { buildJobShareText, getJobShareUrl, shareTextWithoutUrl } from "../utils/shareContent";
-import { resolveNotificationPdfUrl, ensureAbsoluteUrl, safeOpenExternal } from "../utils/pdfUrlHelper";
+import { resolveNotificationPdfUrl, ensureAbsoluteUrl, safeOpenExternal, isValidWebUrl } from "../utils/pdfUrlHelper";
 
 interface JobDetailPageProps {
   onNavigate: (page: string, entityId?: string) => void;
@@ -1625,7 +1625,8 @@ export function JobDetailPage({
 
             {(() => {
               const resolvedPdf = resolveNotificationPdfUrl(job.pdfUrl || job.jobDocumentUrl || (job as any).officialNotificationUrl);
-              if (!resolvedPdf && !job.officialWebsite) return null;
+              const hasValidWebsite = isValidWebUrl(job.officialWebsite);
+              if (!resolvedPdf && !hasValidWebsite) return null;
               return (
                 <Card className="p-6 job-detail-docs">
                   <h3 className="mb-4 text-lg font-semibold text-gray-900">Official Documents</h3>
@@ -1648,7 +1649,7 @@ export function JobDetailPage({
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
-                    {job.officialWebsite && (
+                    {hasValidWebsite && (
                       <a
                         href={ensureAbsoluteUrl(job.officialWebsite)}
                         target="_blank"

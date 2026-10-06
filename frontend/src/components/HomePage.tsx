@@ -214,15 +214,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
       if (cardElem) {
         clearInterval(interval);
         cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
-        cardElem.classList.add("ring-4", "ring-blue-500", "ring-offset-4", "transition-all", "duration-500");
-        setTimeout(() => {
-          cardElem.classList.remove("ring-4", "ring-blue-500", "ring-offset-4");
-          try {
-            sessionStorage.removeItem("medex_last_viewed_job_id");
-            sessionStorage.removeItem("medex_last_viewed_job_slug");
-            sessionStorage.removeItem("medex_last_scroll_pos");
-          } catch {}
-        }, 2500);
+        try {
+          sessionStorage.removeItem("medex_last_viewed_job_id");
+          sessionStorage.removeItem("medex_last_viewed_job_slug");
+          sessionStorage.removeItem("medex_last_scroll_pos");
+        } catch {}
       } else if (attempts >= 15) {
         clearInterval(interval);
         try {

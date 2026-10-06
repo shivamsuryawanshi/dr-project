@@ -39,6 +39,42 @@ export function resolveNotificationPdfUrl(url?: string | null): string {
 }
 
 /**
+ * Checks whether a given string is a real, valid web URL (and not empty or a placeholder).
+ * Rejects placeholders like "Official Institutional Portal", "Not specified in notice", "N/A", "Nil", etc.
+ */
+export function isValidWebUrl(url?: string | null): boolean {
+  if (!url) return false;
+  const clean = String(url).trim().toLowerCase();
+  if (
+    !clean ||
+    clean === '#' ||
+    clean === 'null' ||
+    clean === 'undefined' ||
+    clean === 'javascript:void(0)' ||
+    clean === 'n/a' ||
+    clean === 'na' ||
+    clean === 'none' ||
+    clean === 'nil' ||
+    clean.includes('not specified') ||
+    clean.includes('not mentioned') ||
+    clean.includes('not applicable') ||
+    clean.includes('refer to') ||
+    clean.includes('institutional portal') ||
+    clean.includes('hospital hr')
+  ) {
+    return false;
+  }
+  // Strip protocol/leading slashes to inspect domain structure
+  const withoutProto = clean
+    .replace(/^https?:\/\//i, '')
+    .replace(/^\/\//, '')
+    .replace(/^www\./i, '');
+
+  // Must have at least a dot and a valid top-level domain (e.g. example.com, gov.in, edu.in, sub.domain.com)
+  return /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:[/?#]|$)/i.test(withoutProto);
+}
+
+/**
  * Ensures any external URL (Official Website, Apply Portal, etc.) has a valid absolute protocol (https://)
  * and strips accidental surrounding punctuation, brackets, quotes, or trailing dots/colons from PDF text extraction.
  */
@@ -64,6 +100,11 @@ export function ensureAbsoluteUrl(url?: string | null): string {
   // Internal absolute path
   if (clean.startsWith('/')) {
     return clean;
+  }
+
+  // If not a valid web URL, return empty string so broken placeholders are not treated as links
+  if (!isValidWebUrl(clean)) {
+    return '';
   }
 
   // Already http:// or https://

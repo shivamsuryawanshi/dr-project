@@ -23,151 +23,40 @@
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
 }
 
-/* --- SPECIFIC ROLE & CATEGORY THEMES (Color-Coded) --- */
+/* --- SPECIFIC ROLE & CATEGORY THEMES (Clean White Cards, No Left-Border or Gradients) --- */
 
-/* 🟥 1. JR (Junior Resident) - Red */
-.medex-job-card.theme-jr-red {
-  border-left: 4px solid #ef4444 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(239, 68, 68, 0.09) 0%, rgba(239, 68, 68, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-jr-red .medex-card-icon-box {
-  background: #dc2626 !important;
-}
-.medex-job-card.theme-jr-red .medex-watermark {
-  color: #fca5a5 !important;
-  opacity: 0.65 !important;
-}
-
-/* ⬛ 2. SR (Senior Resident) - Black / Dark Slate */
-.medex-job-card.theme-sr-black {
-  border-left: 4px solid #0f172a !important;
-  background: radial-gradient(circle at 5% 95%, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-sr-black .medex-card-icon-box {
-  background: #0f172a !important;
-}
-.medex-job-card.theme-sr-black .medex-watermark {
-  color: #94a3b8 !important;
-  opacity: 0.65 !important;
+.medex-job-card.theme-jr-red,
+.medex-job-card.theme-sr-black,
+.medex-job-card.theme-faculty-yellow,
+.medex-job-card.theme-mo-green,
+.medex-job-card.theme-consultant-purple,
+.medex-job-card.theme-blue,
+.medex-job-card.theme-purple,
+.medex-job-card.theme-emerald,
+.medex-job-card.theme-emerald-stethoscope,
+.medex-job-card.theme-indigo,
+.medex-job-card.theme-rose,
+.medex-job-card.theme-paramedical-cyan,
+.medex-job-card.theme-multiple-indigo {
+  background: #ffffff !important;
+  border: 1px solid #eef2f6 !important;
+  border-left: 1px solid #eef2f6 !important;
 }
 
-/* 🟨 3. FACULTY - Yellow / Amber / Gold */
-.medex-job-card.theme-faculty-yellow {
-  border-left: 4px solid #f59e0b !important;
-  background: radial-gradient(circle at 5% 95%, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-faculty-yellow .medex-card-icon-box {
-  background: #d97706 !important;
-}
-.medex-job-card.theme-faculty-yellow .medex-watermark {
-  color: #fde68a !important;
-  opacity: 0.75 !important;
-}
-
-/* 🟩 4. MO / GDMO - Green / Emerald */
-.medex-job-card.theme-mo-green {
-  border-left: 4px solid #10b981 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(16, 185, 129, 0.09) 0%, rgba(16, 185, 129, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-mo-green .medex-card-icon-box {
-  background: #059669 !important;
-}
-.medex-job-card.theme-mo-green .medex-watermark {
-  color: #86efac !important;
-  opacity: 0.65 !important;
-}
-
-/* 🟪 5. CONSULTANT / SPECIALIST - Purple */
-.medex-job-card.theme-consultant-purple {
-  border-left: 4px solid #8b5cf6 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(139, 92, 246, 0.09) 0%, rgba(139, 92, 246, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-consultant-purple .medex-card-icon-box {
-  background: #7c3aed !important;
-}
-.medex-job-card.theme-consultant-purple .medex-watermark {
-  color: #c4b5fd !important;
-  opacity: 0.65 !important;
-}
-
-/* --- THEME VARIATIONS (Borders & Bottom-Left Gradient Washes) --- */
-
-/* 1. Blue Theme */
-.medex-job-card.theme-blue {
-  border-left: 4px solid #1463ff !important;
-  background: radial-gradient(circle at 5% 95%, rgba(20, 99, 255, 0.08) 0%, rgba(20, 99, 255, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-blue .medex-card-icon-box {
-  background: #1463ff !important;
-}
-.medex-job-card.theme-blue .medex-watermark {
-  color: #60a5fa !important;
-  opacity: 0.55 !important;
-}
-
-/* 2. Purple Theme */
-.medex-job-card.theme-purple {
-  border-left: 4px solid #8b5cf6 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(139, 92, 246, 0.09) 0%, rgba(139, 92, 246, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-purple .medex-card-icon-box {
-  background: #8b5cf6 !important;
-}
-.medex-job-card.theme-purple .medex-watermark {
-  color: #c4b5fd !important;
-  opacity: 0.65 !important;
-}
-
-/* 3. Emerald Theme */
-.medex-job-card.theme-emerald {
-  border-left: 4px solid #10b981 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(16, 185, 129, 0.09) 0%, rgba(16, 185, 129, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-emerald .medex-card-icon-box {
-  background: #10b981 !important;
-}
-.medex-job-card.theme-emerald .medex-watermark {
-  color: #86efac !important;
-  opacity: 0.65 !important;
-}
-
-/* 4. Emerald Stethoscope Theme */
-.medex-job-card.theme-emerald-stethoscope {
-  border-left: 4px solid #059669 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(5, 150, 105, 0.09) 0%, rgba(5, 150, 105, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-emerald-stethoscope .medex-card-icon-box {
-  background: #059669 !important;
-}
-.medex-job-card.theme-emerald-stethoscope .medex-watermark {
-  color: #86efac !important;
-  opacity: 0.65 !important;
-}
-
-/* 5. Indigo Theme */
-.medex-job-card.theme-indigo {
-  border-left: 4px solid #6366f1 !important;
-  background: radial-gradient(circle at 5% 95%, rgba(99, 102, 241, 0.09) 0%, rgba(99, 102, 241, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-indigo .medex-card-icon-box {
-  background: #6366f1 !important;
-}
-.medex-job-card.theme-indigo .medex-watermark {
-  color: #a5b4fc !important;
-  opacity: 0.65 !important;
-}
-
-/* 6. Rose Theme */
-.medex-job-card.theme-rose {
-  border-left: 4px solid #f43f5e !important;
-  background: radial-gradient(circle at 5% 95%, rgba(244, 63, 94, 0.09) 0%, rgba(244, 63, 94, 0) 55%), #ffffff !important;
-}
-.medex-job-card.theme-rose .medex-card-icon-box {
-  background: #f43f5e !important;
-}
-.medex-job-card.theme-rose .medex-watermark {
-  color: #fda4af !important;
-  opacity: 0.65 !important;
+.medex-job-card.theme-jr-red:hover,
+.medex-job-card.theme-sr-black:hover,
+.medex-job-card.theme-faculty-yellow:hover,
+.medex-job-card.theme-mo-green:hover,
+.medex-job-card.theme-consultant-purple:hover,
+.medex-job-card.theme-blue:hover,
+.medex-job-card.theme-purple:hover,
+.medex-job-card.theme-emerald:hover,
+.medex-job-card.theme-emerald-stethoscope:hover,
+.medex-job-card.theme-indigo:hover,
+.medex-job-card.theme-rose:hover,
+.medex-job-card.theme-paramedical-cyan:hover,
+.medex-job-card.theme-multiple-indigo:hover {
+  border-color: #cbd5e1 !important;
 }
 
 /* --- CARD ELEMENTS --- */
@@ -180,15 +69,17 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  color: #ffffff !important;
+  background: #eff6ff !important;
+  border: 1px solid #dbeafe !important;
+  color: #2563eb !important;
   flex-shrink: 0 !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 .medex-card-icon-box svg {
   width: 22px !important;
   height: 22px !important;
-  color: #ffffff !important;
-  stroke: #ffffff !important;
+  color: #2563eb !important;
+  stroke: #2563eb !important;
 }
 
 /* Top Badge Pills - Prominent, High-Visibility Government / Private Tags */

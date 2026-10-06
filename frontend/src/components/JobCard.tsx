@@ -585,8 +585,8 @@ export function JobCard({
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Top Row: Squircle Category Icon on Left, Color-Coded Role & Sector Badges + Share on Right */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <div className="medex-card-icon-box" style={{ backgroundColor: theme.iconBg }}>
-              <theme.Icon size={22} color="#ffffff" strokeWidth={2.2} />
+            <div className="medex-card-icon-box">
+              <theme.Icon size={22} color="#2563eb" strokeWidth={2.2} />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>

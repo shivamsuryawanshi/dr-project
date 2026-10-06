@@ -1,5 +1,6 @@
 import { JobCategory } from '../types';
 import { standardizePositionName } from './recruitmentBreakdown';
+import { isValidWebUrl } from './pdfUrlHelper';
 
 export const INDIAN_STATES = [
   'Andaman and Nicobar Islands',
@@ -535,6 +536,72 @@ function isJunkOrganization(org: string): boolean {
   );
 }
 
+/**
+ * Converts various date formats (DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, DD Month YYYY, YYYY-MM-DD)
+ * to ISO YYYY-MM-DD format suitable for HTML5 <input type="date">.
+ */
+export function parseDateToIso(dateStr?: string | null): string | null {
+  if (!dateStr) return null;
+  const clean = dateStr.trim();
+  if (!clean || /^(nil|none|na|n\/a|not\s*specified)$/i.test(clean)) return null;
+
+  // 1. Check YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = clean.match(/\b(20\d{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12]\d|3[01])\b/);
+  if (ymdMatch) {
+    const y = ymdMatch[1];
+    const m = ymdMatch[2].padStart(2, '0');
+    const d = ymdMatch[3].padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // 2. Check DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+  const dmyMatch = clean.match(/\b(0?[1-9]|[12]\d|3[01])[./-](0?[1-9]|1[0-2])[./-](20\d{2})\b/);
+  if (dmyMatch) {
+    const d = dmyMatch[1].padStart(2, '0');
+    const m = dmyMatch[2].padStart(2, '0');
+    const y = dmyMatch[3];
+    return `${y}-${m}-${d}`;
+  }
+
+  // 3. Named months: e.g. "15 October 2026", "15th Oct 2026", "15-Oct-2026"
+  const monthNames: Record<string, string> = {
+    jan: '01', january: '01',
+    feb: '02', february: '02',
+    mar: '03', march: '03',
+    apr: '04', april: '04',
+    may: '05',
+    jun: '06', june: '06',
+    jul: '07', july: '07',
+    aug: '08', august: '08',
+    sep: '09', sept: '09', september: '09',
+    oct: '10', october: '10',
+    nov: '11', november: '11',
+    dec: '12', december: '12',
+  };
+
+  // e.g. 15th October 2026 or 15 Oct 2026 or 15-Oct-2026
+  const namedDmyMatch = clean.match(/\b(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?[\s\-_]+([A-Za-z]{3,9})[\s\-_]+(20\d{2})\b/i);
+  if (namedDmyMatch) {
+    const d = namedDmyMatch[1].padStart(2, '0');
+    const monStr = namedDmyMatch[2].toLowerCase();
+    const m = monthNames[monStr];
+    const y = namedDmyMatch[3];
+    if (m) return `${y}-${m}-${d}`;
+  }
+
+  // e.g. October 15, 2026
+  const namedMdyMatch = clean.match(/\b([A-Za-z]{3,9})[\s\-_]+(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?(?:,)?[\s\-_]+(20\d{2})\b/i);
+  if (namedMdyMatch) {
+    const monStr = namedMdyMatch[1].toLowerCase();
+    const m = monthNames[monStr];
+    const d = namedMdyMatch[2].padStart(2, '0');
+    const y = namedMdyMatch[3];
+    if (m) return `${y}-${m}-${d}`;
+  }
+
+  return null;
+}
+
 export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   const normalizedText = translateHindiToEnglish(rawText.trim());
   const lines = normalizedText
@@ -920,35 +987,67 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   }
 
   // ==========================================
-  // 7. Last Date detection
+  // 7. Last Date / Interview Date detection
   // ==========================================
-  const lastDateKeyMatch = normalizedText.match(
-    /(?:^|\n)\s*(?:\*\s*)?(?:Last\s*Date(?:\s*(?:to\s*Apply|for\s*submission|for\s*application))?|Closing\s*Date|Apply\s*Before)\s*[:\-]\s*([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{1,2}[./-][0-9]{1,2}[./-][0-9]{2,4})/i
-  );
+  const dateKeyRegex =
+    /(?:^|\n)\s*(?:\*\s*)?(?:Date\s*of\s*(?:Walk-in[- ]?)?Interview(?:\s*[\/\&]\s*Last\s*Date)?|Walk-in[- ]?Interview(?:\s*Date)?|Walk-in[- ]?Date|Date\s*of\s*Walk-in|Date\s*of\s*Written\s*Exam(?:ination)?|Screening\s*Test\s*Date|Interview\s*Date|Interview\s*Schedule|Date\s*of\s*Interview|Last\s*Date(?:\s*(?:to\s*Apply|for\s*submission|for\s*application|for\s*receipt\s*of\s*application))?|Closing\s*Date|Apply\s*Before|Submission\s*Deadline|Due\s*Date|Last\s*Date\s*of\s*Application)\s*[:\-]\s*([^\n\r]+)/i;
+
+  const lastDateKeyMatch = normalizedText.match(dateKeyRegex);
   if (lastDateKeyMatch) {
     const rawDate = lastDateKeyMatch[1].trim();
-    const dmy = rawDate.match(/^([0-9]{1,2})[./-]([0-9]{1,2})[./-]([0-9]{4})$/);
-    if (dmy) {
-      result.lastDate = `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+    const iso = parseDateToIso(rawDate);
+    if (iso) {
+      result.lastDate = iso;
     } else {
       result.lastDate = rawDate;
+    }
+  } else {
+    // Fallback: check for date near interview/walk-in/last date mentions anywhere in text
+    const inlineMatch = normalizedText.match(
+      /(?:interview\s*date|walk-in\s*interview|walk-in\s*date|last\s*date|closing\s*date|apply\s*before)\s*[:\-]?\s*([0-9]{1,2}[./-][0-9]{1,2}[./-][0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i
+    );
+    if (inlineMatch) {
+      const iso = parseDateToIso(inlineMatch[1]);
+      if (iso) result.lastDate = iso;
     }
   }
 
   // ==========================================
   // 8. Official Website / Apply Link
   // ==========================================
-  const webMatch =
-    normalizedText.match(/(?:^|\n)\s*(?:\*\s*)?(?:Website|Official\s*Website|Portal)\s*[:\-]\s*([^\s\n\r]+)/i) ||
-    normalizedText.match(/((?:https?:\/\/|www\.)[a-zA-Z0-9\.\-]+(?:\.[a-zA-Z]{2,})[^\s\)]*)/i);
+  const explicitWebMatch = normalizedText.match(
+    /(?:^|\n)\s*(?:\*\s*)?(?:Website|Official\s*Website|Portal|Career\s*Portal)\s*[:\-]\s*([^\s\n\r]+)/i
+  );
+  let detectedWebUrl = '';
 
-  if (webMatch) {
-    let url = webMatch[1].trim().replace(/[),.;]+$/, '');
-    if (!/^https?:\/\//i.test(url)) {
-      url = `https://${url}`;
+  if (explicitWebMatch) {
+    let candidate = explicitWebMatch[1].trim().replace(/^["'<]+|["'>.,;:]+$/g, '');
+    if (isValidWebUrl(candidate)) {
+      if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
+      detectedWebUrl = candidate;
     }
-    result.officialWebsite = url;
-    result.applyLink = url;
+  }
+
+  // If explicit Website was NIL / placeholder / not found, check if text contains any valid URL
+  if (!detectedWebUrl) {
+    const allUrls = normalizedText.match(
+      /(https?:\/\/[^\s\)\],]+|(?:www\.)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}[^\s\)\],]*)/gi
+    );
+    if (allUrls) {
+      for (const u of allUrls) {
+        let cleanU = u.trim().replace(/^["'<]+|["'>.,;:]+$/g, '');
+        if (isValidWebUrl(cleanU)) {
+          if (!/^https?:\/\//i.test(cleanU)) cleanU = `https://${cleanU}`;
+          detectedWebUrl = cleanU;
+          break;
+        }
+      }
+    }
+  }
+
+  if (detectedWebUrl) {
+    result.officialWebsite = detectedWebUrl;
+    result.applyLink = detectedWebUrl;
   }
 
   // ==========================================

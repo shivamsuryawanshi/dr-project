@@ -35,7 +35,7 @@ import { Separator } from './ui/separator';
 import { cardFieldText, cardSalaryText, displayJobDescription, isNotMentioned } from '../utils/extractedFieldDisplay';
 import { cleanLocation } from '../utils/locationCleaner';
 import { buildJobShareText, getJobShareUrl, shareTextWithoutUrl } from '../utils/shareContent';
-import { resolveNotificationPdfUrl, ensureAbsoluteUrl, safeOpenExternal } from '../utils/pdfUrlHelper';
+import { resolveNotificationPdfUrl, ensureAbsoluteUrl, safeOpenExternal, isValidWebUrl } from '../utils/pdfUrlHelper';
 
 interface Props {
   onNavigate: (page: string, entityId?: string) => void;
@@ -140,7 +140,8 @@ export function SectorAwareJobDetailPage({ onNavigate }: Props) {
             'Government Organisation';
           const loc = cleanLocation(data.location || [data.city, data.state].filter(Boolean).join(', '), org, '');
           const notificationUrl = resolveNotificationPdfUrl(data.jobDocumentUrl || data.pdfUrl || data.applyLink);
-          const officialWeb = data.officialWebsite || extractOfficialWebsite(data.description);
+          const rawOfficial = data.officialWebsite || extractOfficialWebsite(data.description);
+          const officialWeb = isValidWebUrl(rawOfficial) ? rawOfficial : undefined;
 
           // If individual department vacancies were unspecified (or sum is less than authoritativeTotal),
           // ensure the sum matches authoritativeTotal so there is zero data mismatch
@@ -279,8 +280,9 @@ export function GovernmentJobDetail({
   const locationText = cleanLocation(rawLocation, organization, fallbackCityState);
 
   const notificationUrl = resolveNotificationPdfUrl(job.jobDocumentUrl || job.pdfUrl || job.officialNotificationUrl);
-  const officialWebsite = extractOfficialWebsite(job.description) || job.officialWebsite;
-  const directApplyUrl = job.applyLink || officialWebsite;
+  const rawOfficialWeb = extractOfficialWebsite(job.description) || job.officialWebsite;
+  const officialWebsite = isValidWebUrl(rawOfficialWeb) ? rawOfficialWeb : '';
+  const directApplyUrl = (isValidWebUrl(job.applyLink) ? job.applyLink : '') || officialWebsite;
   const daysLeft = job.lastDate
     ? Math.ceil((new Date(job.lastDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
@@ -584,14 +586,14 @@ export function GovernmentJobDetail({
               </div>
             </Card>
 
-            {(notificationUrl || officialWebsite) && (
+            {(notificationUrl || (isValidWebUrl(officialWebsite) && officialWebsite)) && (
               <Card className="p-6 job-detail-docs border-slate-200 shadow-none">
                 <h3 className="mb-4 font-semibold text-slate-800">Official Documents</h3>
                 <div className="space-y-3">
                   {notificationUrl && (
                     <OfficialLinkBox href={notificationUrl} icon={FileText} label="Notification PDF" tone="pdf" />
                   )}
-                  {officialWebsite && (
+                  {isValidWebUrl(officialWebsite) && officialWebsite && (
                     <OfficialLinkBox href={officialWebsite} icon={Building2} label="Official Website" tone="website" />
                   )}
                 </div>
@@ -673,6 +675,7 @@ function formatLongDate(value: string) {
 
 function extractOfficialWebsite(description?: string) {
   if (!description) return '';
-  const match = description.match(/Official Website:\s*(https?:\/\/\S+)/i);
-  return match?.[1]?.replace(/[),.;]+$/, '') || '';
+  const match = description.match(/(?:Official\s*Website|Website)\s*[:\-]\s*(https?:\/\/\S+|\S+\.[a-zA-Z]{2,}\S*)/i);
+  const candidate = match?.[1]?.replace(/[),.;]+$/, '') || '';
+  return isValidWebUrl(candidate) ? candidate : '';
 }

@@ -58,7 +58,7 @@ import {
 } from '../utils/rawNoticeParser';
 import '../styles/job-posting-template.css';
 import { toast } from 'sonner';
-import { ensureAbsoluteUrl, safeOpenExternal } from '../utils/pdfUrlHelper';
+import { ensureAbsoluteUrl, safeOpenExternal, isValidWebUrl } from '../utils/pdfUrlHelper';
 
 interface JobPostingFormProps {
   onCancel: () => void;
@@ -388,9 +388,11 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
         jobDescription: rawPastedNotice || formData.description,
         importantInstructions: formData.requirements || undefined,
         selectionProcess: formData.selectionProcess || undefined,
-        officialApplicationUrl: formData.applyLink || undefined,
-        officialNotificationUrl: notificationPdfUrl || formData.applyLink || undefined,
-        officialWebsite: formData.applyLink || undefined,
+        officialApplicationUrl: isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined,
+        officialNotificationUrl: notificationPdfUrl || (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
+        officialWebsite:
+          (isValidWebUrl(formData.officialWebsite) ? formData.officialWebsite : undefined) ||
+          (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
         publishImmediately: true,
         vacancies: recData.departments.map((d) => ({
           postName: d.postName || formData.title.trim() || recData?.title || 'Medical Officer / Resident',
@@ -493,6 +495,10 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
       if (parsed.contactPhone) {
         next.contactPhone = parsed.contactPhone;
         populated.push('Phone');
+      }
+      if (parsed.officialWebsite) {
+        next.officialWebsite = parsed.officialWebsite;
+        populated.push('Official Website');
       }
       if (parsed.applyLink) {
         next.applyLink = parsed.applyLink;
@@ -664,6 +670,10 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
 
     onSave({
       ...formData,
+      applyLink: isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined,
+      officialWebsite:
+        (isValidWebUrl(formData.officialWebsite) ? formData.officialWebsite : undefined) ||
+        (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
       pdfUrl: formData.pdfUrl || (initialData as any)?.pdfUrl || (initialData as any)?.jobDocumentUrl,
       jobDocumentUrl: formData.jobDocumentUrl || (initialData as any)?.jobDocumentUrl || (initialData as any)?.pdfUrl,
       sector: isEmployer ? 'private' : formData.sector,
