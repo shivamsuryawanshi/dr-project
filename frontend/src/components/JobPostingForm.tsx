@@ -386,7 +386,9 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
         sector: (formData.sector as 'government' | 'private') || 'government',
         location: formData.location ? (formData.state ? `${formData.location}, ${formData.state}` : formData.location) : 'India',
         totalVacancies: formData.numberOfPosts || recData.totalVacancies,
-        applicationLastDate: formData.lastDate || undefined,
+        applicationLastDate: /^\d{4}-\d{2}-\d{2}$/.test((formData.lastDate || '').trim())
+          ? formData.lastDate?.trim()
+          : undefined,
         qualification: formData.qualification || undefined,
         experience: formData.experience || undefined,
         ageLimit: formData.ageLimit || undefined,
@@ -394,7 +396,11 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
         jobType: formData.dutyType === 'full_time' ? 'Full Time' : formData.dutyType === 'part_time' ? 'Part Time' : 'Contract',
         jobDescription: rawPastedNotice || formData.description,
         importantInstructions: formData.requirements || undefined,
-        selectionProcess: formData.selectionProcess || undefined,
+        selectionProcess:
+          formData.selectionProcess ||
+          (formData.lastDate
+            ? `Walk-in Interview Schedule: ${formData.lastDate}. Selection via interview and document verification.`
+            : undefined),
         officialApplicationUrl: isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined,
         officialNotificationUrl: notificationPdfUrl || (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
         officialWebsite:
@@ -425,7 +431,13 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
       }
     } catch (err: any) {
       console.error('Failed to publish multi-department recruitment:', err);
-      toast.error(err?.response?.data?.error || err?.message || 'Failed to publish recruitment');
+      const errMsg =
+        typeof err?.response?.data?.error === 'string'
+          ? err.response.data.error
+          : typeof err?.response?.data?.message === 'string'
+          ? err.response.data.message
+          : err?.message || 'Failed to publish recruitment';
+      toast.error(errMsg);
     } finally {
       setPublishingRecruitment(false);
     }

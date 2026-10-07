@@ -647,9 +647,18 @@ public class RecruitmentManagementService {
         if (value instanceof Number n) return n.doubleValue();
         return Double.parseDouble(String.valueOf(value));
     }
-    private LocalDate asDate(Object value) {
+    public static LocalDate parseDateSafely(Object value) {
         if (value == null || String.valueOf(value).isBlank()) return null;
-        return LocalDate.parse(String.valueOf(value));
+        String str = String.valueOf(value).trim();
+        try {
+            return LocalDate.parse(str);
+        } catch (Exception e) {
+            // For recurring interviews or non-standard date text (e.g. "Every Monday"), default to 90 days active
+            return LocalDate.now().plusMonths(3);
+        }
+    }
+    private LocalDate asDate(Object value) {
+        return parseDateSafely(value);
     }
     private String nonBlank(String value, String fallback) { return hasText(value) ? value.trim() : fallback; }
     private boolean hasText(String value) { return value != null && !value.trim().isEmpty(); }
@@ -713,8 +722,8 @@ public class RecruitmentManagementService {
         private String sector;
         private String location;
         private Integer totalVacancies;
-        private LocalDate applicationStartDate;
-        private LocalDate applicationLastDate;
+        private String applicationStartDate;
+        private String applicationLastDate;
         private String applicationFee;
         private String selectionProcess;
         private String officialNotificationUrl;
@@ -744,10 +753,11 @@ public class RecruitmentManagementService {
         public void setLocation(String location) { this.location = location; }
         public Integer getTotalVacancies() { return totalVacancies; }
         public void setTotalVacancies(Integer totalVacancies) { this.totalVacancies = totalVacancies; }
-        public LocalDate getApplicationStartDate() { return applicationStartDate; }
-        public void setApplicationStartDate(LocalDate applicationStartDate) { this.applicationStartDate = applicationStartDate; }
-        public LocalDate getApplicationLastDate() { return applicationLastDate; }
-        public void setApplicationLastDate(LocalDate applicationLastDate) { this.applicationLastDate = applicationLastDate; }
+        public LocalDate getApplicationStartDate() { return parseDateSafely(applicationStartDate); }
+        public void setApplicationStartDate(Object val) { this.applicationStartDate = val != null ? String.valueOf(val).trim() : null; }
+        public LocalDate getApplicationLastDate() { return parseDateSafely(applicationLastDate); }
+        public void setApplicationLastDate(Object val) { this.applicationLastDate = val != null ? String.valueOf(val).trim() : null; }
+        public String getRawApplicationLastDate() { return applicationLastDate; }
         public String getApplicationFee() { return applicationFee; }
         public void setApplicationFee(String applicationFee) { this.applicationFee = applicationFee; }
         public String getSelectionProcess() { return selectionProcess; }
