@@ -38,7 +38,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { fetchJob, incrementJobView } from "../api/jobs";
 import { useParams } from "react-router-dom";
 import { applyForJob } from "../api/applications";
@@ -50,6 +50,7 @@ import { cardFieldText, cardSalaryText, displayJobDescription, isNotMentioned } 
 import { cleanLocation } from "../utils/locationCleaner";
 import { buildJobShareText, getJobShareUrl, shareTextWithoutUrl } from "../utils/shareContent";
 import { resolveNotificationPdfUrl, ensureAbsoluteUrl, safeOpenExternal, isValidWebUrl } from "../utils/pdfUrlHelper";
+import { scrollToTopInstant } from "../utils/scrollHelper";
 
 interface JobDetailPageProps {
   onNavigate: (page: string, entityId?: string) => void;
@@ -179,6 +180,16 @@ export function JobDetailPage({
   useEffect(() => {
     console.log("📊 showApplyDialog state changed:", showApplyDialog);
   }, [showApplyDialog]);
+
+  useLayoutEffect(() => {
+    scrollToTopInstant();
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!loading) {
+      scrollToTopInstant();
+    }
+  }, [loading]);
 
   useEffect(() => {
     (async () => {

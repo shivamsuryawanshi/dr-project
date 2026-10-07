@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { scrollToTopInstant } from '../utils/scrollHelper';
 import {
   Activity,
   AlarmClock,
@@ -755,6 +756,16 @@ export function RecruitmentPage() {
   const [viewMode, setViewMode] = useState<'explorer' | 'standard'>('explorer');
   const [job, setJob] = useState<any | null>(null);
 
+  useLayoutEffect(() => {
+    scrollToTopInstant();
+  }, [recruitmentId]);
+
+  useEffect(() => {
+    if (!loading) {
+      scrollToTopInstant();
+    }
+  }, [loading]);
+
   useEffect(() => {
     if (!recruitmentId) return;
     setLoading(true);
@@ -964,6 +975,10 @@ export function RecruitmentExplorerView({
   const [internalPosition, setInternalPosition] = useState('All Positions');
   const selectedPosition = externalSelectedPosition ?? internalPosition;
   const onPositionChange = externalOnPositionChange ?? setInternalPosition;
+
+  useLayoutEffect(() => {
+    scrollToTopInstant();
+  }, [recruitment?.id]);
 
   const effectiveNotificationUrl = useMemo(() => {
     if (notificationUrl && notificationUrl.trim()) return notificationUrl.trim();

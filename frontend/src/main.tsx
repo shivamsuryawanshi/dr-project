@@ -34,6 +34,9 @@ import "./utils/adminApplicationsPresentation";
 import "./utils/adminApplicationsControlsCleanup";
 import "./utils/adminApplicationModalPresentation";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
+import { enableManualScrollRestoration } from "./utils/scrollHelper.ts";
+
+enableManualScrollRestoration();
 
 createRoot(document.getElementById("root")!).render(
   <AuthProvider>

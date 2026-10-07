@@ -33,6 +33,7 @@ import {
   isNotMentioned,
 } from '../utils/extractedFieldDisplay';
 import { cleanLocation } from '../utils/locationCleaner';
+import { scrollToTopInstant } from '../utils/scrollHelper';
 import { useAuth } from '../contexts/AuthContext';
 import { deleteAdminJob, deleteJob } from '../api/jobs';
 import { toast } from 'sonner';
@@ -494,9 +495,11 @@ export function JobCard({
 
     if (grouped && sourceRecruitmentId) {
       navigate(`/recruitment/${sourceRecruitmentId}`);
+      scrollToTopInstant();
       return;
     }
     onViewDetails(job.slug || job.id);
+    scrollToTopInstant();
   };
 
   const handleDeleteClick = async (e: React.MouseEvent) => {

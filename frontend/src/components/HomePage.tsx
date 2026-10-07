@@ -193,47 +193,59 @@ export function HomePage({ onNavigate }: HomePageProps) {
     })();
   }, []);
 
-  // Point 9: Auto-scroll to exact job card when returning from View Details to Home
+  // Auto-scroll to exact job card when returning from View Details to Home
   useEffect(() => {
     let targetJobId: string | null = null;
     let targetJobSlug: string | null = null;
+    let savedScroll: string | null = null;
     try {
       targetJobId = sessionStorage.getItem("medex_last_viewed_job_id");
       targetJobSlug = sessionStorage.getItem("medex_last_viewed_job_slug");
+      savedScroll = sessionStorage.getItem("medex_last_scroll_pos");
     } catch {}
 
-    if (!targetJobId && !targetJobSlug) return;
+    if (!targetJobId && !targetJobSlug && !savedScroll) return;
 
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
+    const cleanup = () => {
+      try {
+        sessionStorage.removeItem("medex_last_viewed_job_id");
+        sessionStorage.removeItem("medex_last_viewed_job_slug");
+        sessionStorage.removeItem("medex_last_scroll_pos");
+      } catch {}
+    };
+
+    const performRestore = () => {
       const cardElem =
-        document.getElementById(`job-card-${targetJobId}`) ||
+        (targetJobId ? document.getElementById(`job-card-${targetJobId}`) : null) ||
         (targetJobSlug ? document.getElementById(`job-card-${targetJobSlug}`) : null);
 
       if (cardElem) {
-        clearInterval(interval);
-        cardElem.scrollIntoView({ behavior: "smooth", block: "center" });
         try {
-          sessionStorage.removeItem("medex_last_viewed_job_id");
-          sessionStorage.removeItem("medex_last_viewed_job_slug");
-          sessionStorage.removeItem("medex_last_scroll_pos");
-        } catch {}
-      } else if (attempts >= 15) {
-        clearInterval(interval);
-        try {
-          const savedScroll = sessionStorage.getItem("medex_last_scroll_pos");
-          if (savedScroll) {
-            window.scrollTo({ top: Number(savedScroll), behavior: "smooth" });
-          }
-          sessionStorage.removeItem("medex_last_viewed_job_id");
-          sessionStorage.removeItem("medex_last_viewed_job_slug");
-          sessionStorage.removeItem("medex_last_scroll_pos");
-        } catch {}
+          cardElem.scrollIntoView({ behavior: "instant", block: "center" });
+        } catch {
+          cardElem.scrollIntoView(true);
+        }
+        cleanup();
+        return true;
       }
-    }, 100);
+      return false;
+    };
 
-    return () => clearInterval(interval);
+    if (performRestore()) return;
+
+    const rafId = requestAnimationFrame(() => {
+      if (performRestore()) return;
+      if (savedScroll) {
+        try {
+          window.scrollTo({ top: Number(savedScroll), left: 0, behavior: "instant" });
+        } catch {
+          window.scrollTo(0, Number(savedScroll));
+        }
+      }
+      cleanup();
+    });
+
+    return () => cancelAnimationFrame(rafId);
   }, [allJobs, featuredJobs, governmentJobs, privateJobs]);
 
   return (

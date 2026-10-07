@@ -58,6 +58,11 @@ import { AdminEmployerInsights } from "./components/AdminEmployerInsights";
 import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
+import {
+  scrollToTopInstant,
+  enableManualScrollRestoration,
+  isListingPath,
+} from "./utils/scrollHelper";
 
 function EmployerManagementPageWrapper({
   onNavigate,
@@ -79,6 +84,10 @@ function AppContent() {
   );
 
   useEffect(() => {
+    enableManualScrollRestoration();
+  }, []);
+
+  useEffect(() => {
     setCurrentPage(location.pathname.substring(1) || "home");
   }, [location]);
 
@@ -88,22 +97,34 @@ function AppContent() {
 
   useEffect(() => {
     try {
-      if (sessionStorage.getItem("medex_last_viewed_job_id")) {
+      const isListing = isListingPath(location.pathname);
+      const hasSavedScroll = Boolean(
+        sessionStorage.getItem("medex_last_scroll_pos") || sessionStorage.getItem("medex_last_viewed_job_id")
+      );
+
+      // Only skip scroll reset if returning to a listing page where saved position will be restored instantly
+      if (isListing && hasSavedScroll) {
         return;
       }
     } catch {}
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+
+    // Every other route transition (especially all detail pages) immediately mounts at { top: 0, left: 0 }
+    scrollToTopInstant();
   }, [location.pathname]);
 
   const handleNavigate = (page: string, entityId?: string) => {
     try {
-      if (sessionStorage.getItem("medex_last_viewed_job_id") && (page === "jobs" || page === "home" || page === "govt-jobs" || page === "private-jobs")) {
-        // Will be handled by destination page scroll restoration
-      } else {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      const isDestListing =
+        page === "jobs" || page === "home" || page === "govt-jobs" || page === "private-jobs";
+      const hasSavedScroll = Boolean(
+        sessionStorage.getItem("medex_last_viewed_job_id") || sessionStorage.getItem("medex_last_scroll_pos")
+      );
+
+      if (!(isDestListing && hasSavedScroll)) {
+        scrollToTopInstant();
       }
     } catch {
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      scrollToTopInstant();
     }
 
     if (page === "logout") {

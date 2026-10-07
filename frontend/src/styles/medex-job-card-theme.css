@@ -4,11 +4,9 @@
 
 .medex-job-card {
   position: relative !important;
-  background: #ffffff !important;
-  border-radius: 20px !important;
-  border: 1px solid #eef2f6 !important;
+  border-radius: 22px !important;
   padding: 22px 24px !important;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   overflow: hidden !important;
   display: flex !important;
@@ -16,47 +14,19 @@
   justify-content: space-between !important;
   cursor: pointer !important;
   box-sizing: border-box !important;
+  border: 2px solid transparent !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(0, 102, 255, 0.16) 0%, rgba(0, 102, 255, 0) 36%) padding-box,
+    radial-gradient(circle at 100% 0%, rgba(0, 230, 118, 0.16) 0%, rgba(0, 230, 118, 0) 36%) padding-box,
+    radial-gradient(circle at 0% 100%, rgba(0, 229, 255, 0.16) 0%, rgba(0, 229, 255, 0) 36%) padding-box,
+    radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.16) 0%, rgba(168, 85, 247, 0) 36%) padding-box,
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    conic-gradient(from 315deg at 50% 50%, #0066ff 0deg, #00e676 90deg, #a855f7 180deg, #00e5ff 270deg, #0066ff 360deg) border-box !important;
 }
 
 .medex-job-card:hover {
   transform: translateY(-4px) !important;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
-}
-
-/* --- SPECIFIC ROLE & CATEGORY THEMES (Clean White Cards, No Left-Border or Gradients) --- */
-
-.medex-job-card.theme-jr-red,
-.medex-job-card.theme-sr-black,
-.medex-job-card.theme-faculty-yellow,
-.medex-job-card.theme-mo-green,
-.medex-job-card.theme-consultant-purple,
-.medex-job-card.theme-blue,
-.medex-job-card.theme-purple,
-.medex-job-card.theme-emerald,
-.medex-job-card.theme-emerald-stethoscope,
-.medex-job-card.theme-indigo,
-.medex-job-card.theme-rose,
-.medex-job-card.theme-paramedical-cyan,
-.medex-job-card.theme-multiple-indigo {
-  background: #ffffff !important;
-  border: 1px solid #eef2f6 !important;
-  border-left: 1px solid #eef2f6 !important;
-}
-
-.medex-job-card.theme-jr-red:hover,
-.medex-job-card.theme-sr-black:hover,
-.medex-job-card.theme-faculty-yellow:hover,
-.medex-job-card.theme-mo-green:hover,
-.medex-job-card.theme-consultant-purple:hover,
-.medex-job-card.theme-blue:hover,
-.medex-job-card.theme-purple:hover,
-.medex-job-card.theme-emerald:hover,
-.medex-job-card.theme-emerald-stethoscope:hover,
-.medex-job-card.theme-indigo:hover,
-.medex-job-card.theme-rose:hover,
-.medex-job-card.theme-paramedical-cyan:hover,
-.medex-job-card.theme-multiple-indigo:hover {
-  border-color: #cbd5e1 !important;
+  box-shadow: 0 12px 28px rgba(0, 102, 255, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06) !important;
 }
 
 /* --- CARD ELEMENTS --- */

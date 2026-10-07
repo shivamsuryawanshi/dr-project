@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { scrollToTopInstant } from '../utils/scrollHelper';
 import {
   Briefcase,
   BriefcaseIcon,
@@ -86,6 +87,16 @@ export function SectorAwareJobDetailPage({ onNavigate }: Props) {
       filteredSpecialtiesCount: specCount,
     };
   }, [displayRecruitment, recruitment, job, selectedPosition, breakdownMap]);
+
+  useLayoutEffect(() => {
+    scrollToTopInstant();
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!loading) {
+      scrollToTopInstant();
+    }
+  }, [loading]);
 
   useEffect(() => {
     let active = true;
@@ -240,7 +251,10 @@ export function SectorAwareJobDetailPage({ onNavigate }: Props) {
             applyByDateOverride={job.lastDate}
             notificationUrl={job.pdfUrl || job.jobDocumentUrl || recruitment?.officialNotificationUrl}
             onNavigate={onNavigate}
-            onViewStandardDetail={() => setViewMode('standard')}
+            onViewStandardDetail={() => {
+              setViewMode('standard');
+              scrollToTopInstant();
+            }}
             selectedPosition={selectedPosition}
             onPositionChange={setSelectedPosition}
             availablePositions={availablePositions}
@@ -269,6 +283,10 @@ export function GovernmentJobDetail({
   job: any;
   onNavigate: Props['onNavigate'];
 }) {
+  useLayoutEffect(() => {
+    scrollToTopInstant();
+  }, [job?.id]);
+
   const organization =
     job.organization ||
     job.companyName ||
