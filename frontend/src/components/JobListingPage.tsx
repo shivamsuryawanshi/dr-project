@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { JobCard } from "./JobCard";
-import { FilterSidebar, FilterOptions, emptyJobFilters } from "./FilterSidebar";
+import { FilterSidebar, FilterOptions, emptyJobFilters, cleanFilterOptions } from "./FilterSidebar";
 import SearchBar from "./SearchBar";
 import { fetchJobs, fetchJobsMeta } from "../api/jobs";
 import { trackSearch } from "../utils/searchUtils";
@@ -128,10 +128,10 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
         const meta = await fetchJobsMeta(effectiveSector);
         setMetaCategories(Array.isArray(meta?.categories) ? meta.categories : []);
         setMetaLocations(Array.isArray(meta?.locations) ? meta.locations : []);
-        setMetaSpecialities(Array.isArray(meta?.specialities) ? meta.specialities : []);
-        setMetaDepartments(Array.isArray(meta?.departments) ? meta.departments : []);
-        setMetaJobTypes(Array.isArray(meta?.jobTypes) ? meta.jobTypes : []);
-        setMetaQualifications(Array.isArray(meta?.qualifications) ? meta.qualifications : []);
+        setMetaSpecialities(cleanFilterOptions(Array.isArray(meta?.specialities) ? meta.specialities : []));
+        setMetaDepartments(cleanFilterOptions(Array.isArray(meta?.departments) ? meta.departments : []));
+        setMetaJobTypes(cleanFilterOptions(Array.isArray(meta?.jobTypes) ? meta.jobTypes : []));
+        setMetaQualifications(cleanFilterOptions(Array.isArray(meta?.qualifications) ? meta.qualifications : []));
         setMetaStates(Array.isArray(meta?.states) ? meta.states : []);
         setMetaCities(Array.isArray(meta?.cities) ? meta.cities : []);
       } catch (err) {

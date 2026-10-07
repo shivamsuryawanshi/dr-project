@@ -22,7 +22,7 @@ import { fetchJob } from '../api/jobs';
 import { fetchPublishedRecruitment, Recruitment } from '../api/recruitments';
 import { RecruitmentExplorerView } from './RecruitmentPage';
 import { RecruitmentViewSwitcher } from './RecruitmentViewSwitcher';
-import { parseRawVacancyNotice } from '../utils/rawNoticeParser';
+import { parseRawVacancyNotice, formatInterviewOrDate } from '../utils/rawNoticeParser';
 import {
   parseRecruitmentBreakdown,
   getVacancyPositionMatch,
@@ -502,13 +502,17 @@ export function GovernmentJobDetail({
                 {cardSalaryText(job.salary) && (
                   <PrivateStyleDetail icon={IndianRupee} label="Salary" value={cardSalaryText(job.salary)} />
                 )}
-                {job.lastDate && (
-                  <PrivateStyleDetail
-                    icon={Calendar}
-                    label="Last Date to Apply"
-                    value={formatLongDate(job.lastDate)}
-                  />
-                )}
+                {(() => {
+                  const scheduleInfo = formatInterviewOrDate(job.lastDate, job.description);
+                  if (!scheduleInfo.displayValue) return null;
+                  return (
+                    <PrivateStyleDetail
+                      icon={Calendar}
+                      label={scheduleInfo.label}
+                      value={scheduleInfo.displayValue}
+                    />
+                  );
+                })()}
               </div>
             </Card>
 

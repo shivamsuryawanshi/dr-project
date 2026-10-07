@@ -440,6 +440,86 @@ export function inferState(location?: string | null, fullNoticeText?: string | n
 }
 
 /**
+ * Accurately formats and labels Interview schedules or Application last dates.
+ * Preserves recurring interview patterns (e.g. "Every Monday", "Every Saturday", "Interview on all working days")
+ * without ever displaying "Invalid Date".
+ */
+export function formatInterviewOrDate(
+  lastDate?: string | null,
+  description?: string | null
+): {
+  label: string;
+  displayValue: string;
+  fullBadgeText: string;
+  isRecurring: boolean;
+} {
+  const dStr = (lastDate || '').trim();
+  const desc = (description || '').trim();
+
+  // 1. Check if lastDate itself contains recurring interview schedule
+  const recurringPattern = /\b(every\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s*(?:&|and|,)\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))?|(?:every|on\s*all)\s*working\s*days?|walk[- ]?in(?:\s*interview)?)\b/i;
+  const recurringMatch = dStr.match(recurringPattern);
+  if (recurringMatch) {
+    const cleanSchedule = dStr.replace(/^(interview|walk-in|schedule|date)[:\s-]+/i, '').trim();
+    const val = cleanSchedule || dStr;
+    return {
+      label: 'Interview Schedule',
+      displayValue: val,
+      fullBadgeText: `INTERVIEW: ${val}`,
+      isRecurring: true,
+    };
+  }
+
+  // 2. Check if description has an explicit recurring interview schedule
+  const descRecurringMatch = desc.match(
+    /(?:interview\s*(?:schedule|date)?|walk-in\s*(?:interview)?(?:\s*date)?)\s*[:\-]\s*(every\s+[^\n\r,.;]+|(?:on\s*all|every)\s*working\s*days?|walk[- ]?in[^\n\r,.;]*)/i
+  );
+  if (descRecurringMatch) {
+    const cleanSchedule = descRecurringMatch[1].trim();
+    return {
+      label: 'Interview Schedule',
+      displayValue: cleanSchedule,
+      fullBadgeText: `INTERVIEW: ${cleanSchedule}`,
+      isRecurring: true,
+    };
+  }
+
+  // 3. Check if dStr is a valid parseable date
+  if (dStr) {
+    const parsed = new Date(dStr);
+    if (!Number.isNaN(parsed.getTime())) {
+      const formatted = parsed.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const isInterview = /walk[- ]?in|interview/i.test(`${dStr} ${desc}`);
+      return {
+        label: isInterview ? 'Interview Date' : 'Last Date to Apply',
+        displayValue: formatted,
+        fullBadgeText: isInterview ? `INTERVIEW: ${formatted}` : `Apply by ${formatted}`,
+        isRecurring: false,
+      };
+    }
+
+    // 4. Fallback for non-parseable non-empty text: show cleanly without "Invalid Date"
+    return {
+      label: 'Interview / Last Date',
+      displayValue: dStr,
+      fullBadgeText: `INTERVIEW: ${dStr}`,
+      isRecurring: false,
+    };
+  }
+
+  return {
+    label: 'Last Date to Apply',
+    displayValue: '',
+    fullBadgeText: '',
+    isRecurring: false,
+  };
+}
+
+/**
  * Translates common Hindi circular phrases to English and converts Devanagari numerals.
  */
 export function translateHindiToEnglish(text: string): string {
@@ -466,9 +546,14 @@ export function translateHindiToEnglish(text: string): string {
     [/कनिष्ठ\s+रेजिडेंट/gi, 'Junior Resident'],
     [/साक्षात्कार\s+की\s+तिथि|साक्षात्कार\s+तिथि/gi, 'Date of Interview'],
     [/वाक[- ]?इन\s+इंटरव्यू|साक्षात्कार/gi, 'Walk-in Interview'],
-    [/आवेदन\s+की\s+अंतिम\s+तिथि|अंतिम\s+तिथि/gi, 'Last Date of Application'],
+    [/प्रत्येक\s+सोमवार/gi, 'Every Monday'],
+    [/प्रत्येक\s+शनिवार/gi, 'Every Saturday'],
+    [/प्रत्येक\s+मंगलवार/gi, 'Every Tuesday'],
     [/प्रत्येक\s+बुधवार/gi, 'Every Wednesday'],
+    [/प्रत्येक\s+गुरुवार/gi, 'Every Thursday'],
+    [/प्रत्येक\s+शुक्रवार/gi, 'Every Friday'],
     [/प्रत्येक\s+कार्यदिवस/gi, 'Every Working Day'],
+    [/सभी\s+कार्यदिवसों\s+में|प्रत्येक\s+कार्यदिवस\s+में/gi, 'Interview on all working days'],
     [/पदों\s+की\s+संख्या|कुल\s+पद/gi, 'Total Posts'],
     [/मानदेय|वेतन/gi, 'Salary / Remuneration'],
     [/अनिवार्य\s+अर्हता|शैक्षणिक\s+अर्हता|योग्यता/gi, 'Educational Qualification'],
@@ -508,6 +593,7 @@ export interface ParsedNoticeResult {
   numberOfPosts?: number;
   salary?: string;
   lastDate?: string;
+  interviewSchedule?: string;
   requirements?: string;
   benefits?: string;
   contactEmail?: string;
@@ -959,20 +1045,27 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   // ==========================================
   const interviewMatch =
     normalizedText.match(
-      /(?:^|\n)\s*(?:\*\s*)?(?:Date\s+of\s+Interview|Interview\s+Date|Walk-in\s+Interview(?:\s+Date)?|Walk-in\s+Date|Walk-in)\s*[:\-]\s*([^\n\r]+)/i
+      /(?:^|\n)\s*(?:\*\s*)?(?:Date\s+of\s+Interview|Interview\s+Date|Interview\s+Schedule|Walk-in\s+Interview(?:\s+Date|\s+Schedule)?|Walk-in\s+Date|Date\s+of\s+Walk-in|Walk-in)\s*[:\-]\s*([^\n\r]+)/i
     ) ||
     normalizedText.match(
-      /(?:walk-in\s+interview\s+(?:on|is\s+scheduled\s+on|every))\s*[:\-]?\s*([0-9]{1,2}[./-][0-9]{1,2}[./-][0-9]{2,4}|Every\s+[A-Za-z]+|[0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s*[0-9]{4})/i
+      /(?:walk-in\s+interview\s+(?:on|is\s+scheduled\s+on|every)|interview\s+is\s+conducted\s+on|interviews?\s+held\s+on)\s*[:\-]?\s*([0-9]{1,2}[./-][0-9]{1,2}[./-][0-9]{2,4}|Every\s+[A-Za-z\s&,]+|[0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s*[0-9]{4}|(?:all|every)\s+working\s*days?)/i
+    ) ||
+    normalizedText.match(
+      /\b(Every\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(?:\s*(?:&|and|,)\s*(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday))?|Interview\s+on\s+all\s+working\s*days|Every\s+working\s*day|Walk-in\s+Interview)\b/i
     );
 
   if (interviewMatch) {
-    const intInfo = interviewMatch[1].trim();
-    result.selectionProcess = `Walk-in Interview Date: ${intInfo}. Selection is conducted via interview and document verification as per official norms.`;
+    const intInfo = (interviewMatch[1] || interviewMatch[0]).trim();
+    result.interviewSchedule = intInfo;
+    result.selectionProcess = `Walk-in Interview Schedule / Date: ${intInfo}. Selection is conducted via interview and document verification as per official norms.`;
 
-    // If no explicit lastDate, format interview date as last date
+    // If explicit DD-MM-YYYY date format:
     const dmy = intInfo.match(/^([0-9]{1,2})[./-]([0-9]{1,2})[./-]([0-9]{4})$/);
     if (dmy) {
       result.lastDate = `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+    } else {
+      // Recurring schedule or text (e.g. Every Monday, Every Saturday): preserve exact schedule string
+      result.lastDate = intInfo;
     }
   }
 

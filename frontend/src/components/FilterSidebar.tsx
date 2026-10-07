@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
+import { standardizePositionName } from '../utils/recruitmentBreakdown';
 import '../styles/job-listing-card-size.css';
 
 interface FilterSidebarProps {
@@ -97,6 +98,41 @@ function getValidJobCities(cities: string[]) {
   return Array.from(uniqueCities.values()).sort((a, b) => a.localeCompare(b));
 }
 
+export function cleanFilterOptions(options: string[]): string[] {
+  if (!Array.isArray(options)) return [];
+  const map = new Map<string, string>();
+
+  for (const raw of options) {
+    if (!raw || typeof raw !== 'string') continue;
+    // Split on slashes, commas, pipes, semicolons, or " and "
+    const tokens = raw.split(/[/,|;]|\band\b/i);
+    for (const token of tokens) {
+      let trimmed = token.trim();
+      // Remove leading/trailing bullet points or hyphens or numbers
+      trimmed = trimmed.replace(/^[\s•\-\*\d\.\)\(]+/, '').replace(/[\s•\-\*\.\)\(]+$/, '').trim();
+      if (!trimmed || trimmed.length < 2) continue;
+      // Skip pure punctuation/numbers
+      if (/^[\d\s.,;:-]+$/.test(trimmed)) continue;
+
+      // Standardize known positions/designations
+      const standardized = standardizePositionName(trimmed);
+      const displayVal = standardized || trimmed;
+      const key = displayVal.toLowerCase();
+
+      if (!map.has(key)) {
+        map.set(key, displayVal);
+      } else {
+        const existing = map.get(key)!;
+        if (displayVal !== existing && displayVal[0] === displayVal[0].toUpperCase() && existing[0] !== existing[0].toUpperCase()) {
+          map.set(key, displayVal);
+        }
+      }
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
 export function FilterSidebar({
   onFilterChange,
   categories,
@@ -112,6 +148,12 @@ export function FilterSidebar({
   const [filters, setFilters] = useState<FilterOptions>(emptyJobFilters());
   const validStates = getAllJobStates(states);
   const validCities = getValidJobCities(cities);
+
+  const cleanedSpecialities = useMemo(() => cleanFilterOptions(specialities), [specialities]);
+  const cleanedDepartments = useMemo(() => cleanFilterOptions(departments), [departments]);
+  const cleanedJobTypes = useMemo(() => cleanFilterOptions(jobTypes), [jobTypes]);
+  const cleanedQualifications = useMemo(() => cleanFilterOptions(qualifications), [qualifications]);
+  const cleanedCategories = useMemo(() => cleanFilterOptions(categories), [categories]);
 
   const emit = (next: FilterOptions) => {
     setFilters(next);
@@ -166,17 +208,17 @@ export function FilterSidebar({
 
         <SelectBlock label="State" value={filters.state || ''} options={validStates} onChange={(state) => emit({ ...filters, state, city: '' })} />
         <SelectBlock label="City" value={filters.city || ''} options={citiesForState} onChange={(city) => emit({ ...filters, city })} />
-        <SelectBlock label="Speciality" value={filters.speciality || ''} options={specialities} onChange={(speciality) => emit({ ...filters, speciality })} />
-        <SelectBlock label="Department" value={filters.department || ''} options={departments} onChange={(department) => emit({ ...filters, department })} />
-        <SelectBlock label="Job Type" value={filters.jobType || ''} options={jobTypes} onChange={(jobType) => emit({ ...filters, jobType })} />
-        <SelectBlock label="Qualification" value={filters.qualification || ''} options={qualifications} onChange={(qualification) => emit({ ...filters, qualification })} />
+        <SelectBlock label="Speciality" value={filters.speciality || ''} options={cleanedSpecialities} onChange={(speciality) => emit({ ...filters, speciality })} />
+        <SelectBlock label="Department" value={filters.department || ''} options={cleanedDepartments} onChange={(department) => emit({ ...filters, department })} />
+        <SelectBlock label="Job Type" value={filters.jobType || ''} options={cleanedJobTypes} onChange={(jobType) => emit({ ...filters, jobType })} />
+        <SelectBlock label="Qualification" value={filters.qualification || ''} options={cleanedQualifications} onChange={(qualification) => emit({ ...filters, qualification })} />
 
         <Separator />
 
         <div>
           <Label className="mb-3 block">Job Category</Label>
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {categories.map((category) => (
+            {cleanedCategories.map((category) => (
               <div key={category} className="flex items-center space-x-2">
                 <Checkbox
                   id={category}

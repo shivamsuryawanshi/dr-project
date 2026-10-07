@@ -103,7 +103,9 @@ public final class JobSpecifications {
             if (hasText(speciality)) {
                 predicates.add(cb.or(
                         like(cb, root.get("speciality"), speciality),
-                        like(cb, root.get("title"), speciality)
+                        like(cb, root.get("title"), speciality),
+                        like(cb, root.get("jobRoles"), speciality),
+                        like(cb, root.get("description"), speciality)
                 ));
             }
             if (hasText(department)) {

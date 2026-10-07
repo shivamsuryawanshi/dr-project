@@ -55,6 +55,8 @@ import {
   parseRawVacancyNotice,
   ParsedDepartmentVacancy,
   ParsedNoticeResult,
+  inferState,
+  formatInterviewOrDate,
 } from '../utils/rawNoticeParser';
 import '../styles/job-posting-template.css';
 import { toast } from 'sonner';
@@ -190,11 +192,6 @@ function inferDutyType(value?: string | null): JobFormData['dutyType'] {
     : 'full_time';
 }
 
-function inferState(location?: string | null) {
-  const t = trim(location).toLowerCase();
-  return INDIAN_STATES.find((state) => t.includes(state.toLowerCase())) || '';
-}
-
 function locationWithState(location: string, state: string) {
   const l = location.trim();
   const s = state.trim();
@@ -306,10 +303,20 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
           : initialData.category
           ? [initialData.category]
           : ['Medical Officer'];
+      const resolvedState =
+        initialData.state ||
+        inferState(initialData.location, (initialData as any)?.description) ||
+        p.state ||
+        '';
+      let loc = (initialData.location || '').trim();
+      if (resolvedState && loc.toLowerCase().endsWith(`, ${resolvedState.toLowerCase()}`)) {
+        loc = loc.substring(0, loc.length - resolvedState.length - 2).trim();
+      }
       return {
         ...m,
+        location: loc || initialData.location || m.location || '',
         jobRoles: initialRoles,
-        state: initialData.state || inferState(initialData.location),
+        state: resolvedState,
         sector: isEmployer ? 'private' : m.sector || 'private',
       };
     });
@@ -542,7 +549,7 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
     step === 1
       ? Boolean(formData.title.trim() && formData.organization.trim() && formData.location.trim() && formData.state.trim())
       : step === 3
-      ? Boolean(formData.description.trim() && formData.lastDate)
+      ? Boolean(formData.description.trim() && (formData.lastDate || '').trim())
       : true;
 
   const applyExtractedVacancy = (
@@ -670,10 +677,11 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
 
     onSave({
       ...formData,
-      applyLink: isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined,
+      state: formData.state,
+      applyLink: isValidWebUrl(formData.applyLink) ? ensureAbsoluteUrl(formData.applyLink) : (formData.applyLink?.trim() || undefined),
       officialWebsite:
-        (isValidWebUrl(formData.officialWebsite) ? formData.officialWebsite : undefined) ||
-        (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
+        (isValidWebUrl(formData.officialWebsite) ? ensureAbsoluteUrl(formData.officialWebsite) : (formData.officialWebsite?.trim() || undefined)) ||
+        (isValidWebUrl(formData.applyLink) ? ensureAbsoluteUrl(formData.applyLink) : undefined),
       pdfUrl: formData.pdfUrl || (initialData as any)?.pdfUrl || (initialData as any)?.jobDocumentUrl,
       jobDocumentUrl: formData.jobDocumentUrl || (initialData as any)?.jobDocumentUrl || (initialData as any)?.pdfUrl,
       sector: isEmployer ? 'private' : formData.sector,
@@ -1572,19 +1580,54 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
 
               <div className="jpf-field-row">
                 <div className="jpf-field-card">
-                  <div className="jpf-field-header">
-                    <div className="jpf-field-badge jpf-badge--rose">
-                      <Calendar className="h-4 w-4" />
+                  <div className="jpf-field-header justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="jpf-field-badge jpf-badge--rose">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <Label className="jpf-field-label">Last Date to Apply / Interview Schedule *</Label>
                     </div>
-                    <Label className="jpf-field-label">Last Date to Apply *</Label>
                   </div>
-                  <div className="jpf-input-wrap">
+                  <div className="jpf-input-wrap relative flex items-center">
                     <input
-                      type="date"
-                      className="jpf-input jpf-input-noicon"
+                      type="text"
+                      className="jpf-input jpf-input-noicon pr-10"
                       value={formData.lastDate}
                       onChange={(e) => setField('lastDate', e.target.value)}
+                      placeholder="e.g. 2026-10-30 or 'Every Monday', 'Every Saturday'"
                     />
+                    <input
+                      type="date"
+                      className="absolute right-2 opacity-0 w-8 h-8 cursor-pointer z-10"
+                      onChange={(e) => {
+                        if (e.target.value) setField('lastDate', e.target.value);
+                      }}
+                      title="Pick date from calendar"
+                    />
+                    <Calendar className="h-4 w-4 absolute right-3 text-slate-400 pointer-events-none" />
+                  </div>
+                  {/* Quick selection chips for recurring interview schedules */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      'Every Monday',
+                      'Every Saturday',
+                      'Every Monday & Thursday',
+                      'Interview on all working days',
+                      'Walk-in Interview',
+                    ].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setField('lastDate', chip)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors ${
+                          formData.lastDate === chip
+                            ? 'bg-rose-50 text-rose-700 border-rose-300 font-bold'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1608,6 +1651,25 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
                       placeholder="https://..."
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Row: Official Website / Portal */}
+              <div className="jpf-field-card">
+                <div className="jpf-field-header">
+                  <div className="jpf-field-badge jpf-badge--blue">
+                    <ExternalLink className="h-4 w-4" />
+                  </div>
+                  <Label className="jpf-field-label">Official Website / Hospital Portal (optional)</Label>
+                </div>
+                <div className="jpf-input-wrap">
+                  <input
+                    type="text"
+                    className="jpf-input jpf-input-noicon"
+                    value={formData.officialWebsite || ''}
+                    onChange={(e) => setField('officialWebsite', e.target.value)}
+                    placeholder="e.g. https://aiimsbhopal.edu.in or www.hospital.org"
+                  />
                 </div>
               </div>
             </div>

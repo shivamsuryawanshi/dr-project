@@ -48,6 +48,7 @@ import { Bookmark, BookmarkCheck } from "lucide-react";
 import { ResumeUploadSection } from "./ResumeUploadSection";
 import { cardFieldText, cardSalaryText, displayJobDescription, isNotMentioned } from "../utils/extractedFieldDisplay";
 import { cleanLocation } from "../utils/locationCleaner";
+import { formatInterviewOrDate } from "../utils/rawNoticeParser";
 import { buildJobShareText, getJobShareUrl, shareTextWithoutUrl } from "../utils/shareContent";
 import { resolveNotificationPdfUrl, ensureAbsoluteUrl, safeOpenExternal, isValidWebUrl } from "../utils/pdfUrlHelper";
 import { scrollToTopInstant } from "../utils/scrollHelper";
@@ -526,12 +527,12 @@ export function JobDetailPage({
                     className={`${
                       isGovernment
                         ? "!bg-gradient-to-r !from-blue-500 !to-blue-600 !text-white"
-                        : "!bg-gradient-to-r !from-emerald-500 !to-emerald-600 !text-white"
+                        : "!bg-gradient-to-r !from-indigo-600 !to-indigo-700 !text-white"
                     } !border-0 shadow-md px-4 py-1.5 text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 rounded-md inline-flex`}
                     style={{
                       background: isGovernment
                         ? "linear-gradient(to right, rgb(59 130 246), rgb(37 99 235))"
-                        : "linear-gradient(to right, rgb(16 185 129), rgb(5 150 105))",
+                        : "linear-gradient(to right, rgb(99 102 241), rgb(79 70 229))",
                       color: "white",
                     }}
                   >
@@ -711,23 +712,23 @@ export function JobDetailPage({
                   </div>
                 )}
 
-                {job.lastDate && (
-                  <div className="flex items-start gap-2 sm:gap-3 rounded-lg border border-gray-200 bg-white p-2.5 sm:p-3.5 shadow-none">
-                    <div className="rounded-md bg-blue-50 p-1.5 sm:p-2 text-blue-600 shrink-0">
-                      <Calendar className="w-4 h-4" />
+                {(() => {
+                  const scheduleInfo = formatInterviewOrDate(job.lastDate, job.description);
+                  if (!scheduleInfo.displayValue) return null;
+                  return (
+                    <div className="flex items-start gap-2 sm:gap-3 rounded-lg border border-gray-200 bg-white p-2.5 sm:p-3.5 shadow-none">
+                      <div className="rounded-md bg-blue-50 p-1.5 sm:p-2 text-blue-600 shrink-0">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">{scheduleInfo.label}</p>
+                        <p className="mt-0.5 text-xs sm:text-sm font-medium leading-tight sm:leading-snug text-gray-900 break-words">
+                          {scheduleInfo.displayValue}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Last Date to Apply</p>
-                      <p className="mt-0.5 text-xs sm:text-sm font-medium leading-tight sm:leading-snug text-gray-900 break-words">
-                        {new Date(job.lastDate).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </Card>
 

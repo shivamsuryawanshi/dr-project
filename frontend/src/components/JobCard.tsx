@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { extractPositionsFromText, sortPositions } from '../utils/recruitmentBreakdown';
+import { extractPositionsFromText, sortPositions, standardizePositionName } from '../utils/recruitmentBreakdown';
+import { formatInterviewOrDate } from '../utils/rawNoticeParser';
 import {
   ArrowRight,
   Briefcase,
@@ -404,10 +405,11 @@ export function JobCard({
       if (!role) return;
       const clean = String(role).trim();
       if (!clean || clean.toLowerCase() === 'all' || clean.toLowerCase() === 'multiple roles') return;
-      const key = clean.toLowerCase();
+      const standardized = standardizePositionName(clean);
+      const key = standardized.toLowerCase();
       if (!seen.has(key)) {
         seen.add(key);
-        roles.push(clean);
+        roles.push(standardized);
       }
     };
 
@@ -606,7 +608,7 @@ export function JobCard({
                 </span>
               ) : (
                 <span className="medex-pill-badge badge-private">
-                  <User size={14} color="#047857" />
+                  <Briefcase size={13} color="#4f46e5" />
                   Private
                 </span>
               )}
@@ -699,14 +701,18 @@ export function JobCard({
         <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'auto' }}>
           {/* Date & Expandable Categories */}
           <div className="medex-card-footer-info">
-            {job.lastDate ? (
-              <div className="medex-footer-date">
-                <Calendar size={14} color={theme.calendarColor} />
-                <span>Apply by {new Date(job.lastDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              </div>
-            ) : (
-              <div style={{ color: '#94a3b8' }}>Open Vacancy</div>
-            )}
+            {(() => {
+              const scheduleInfo = formatInterviewOrDate(job.lastDate, job.description);
+              if (scheduleInfo.displayValue) {
+                return (
+                  <div className="medex-footer-date">
+                    <Calendar size={14} color={theme.calendarColor} />
+                    <span>{scheduleInfo.fullBadgeText}</span>
+                  </div>
+                );
+              }
+              return <div style={{ color: '#94a3b8' }}>Open Vacancy</div>;
+            })()}
 
             {roleBadges.length >= 2 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>

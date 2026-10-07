@@ -52,6 +52,7 @@ import {
   augmentRecruitmentWithBreakdown,
   type DepartmentBreakdown,
 } from '../utils/recruitmentBreakdown';
+import { formatInterviewOrDate } from '../utils/rawNoticeParser';
 
 const PAGE_STYLES = `
   .recruit-page {
@@ -96,10 +97,11 @@ const PAGE_STYLES = `
   }
 
   .recruit-hero.private {
-    border-color: #bcebd8;
+    border-color: #c7d2fe;
+    border-top: 4px solid #4f46e5;
     background:
       radial-gradient(circle at 88% 12%, rgba(255,255,255,.95) 0 22%, transparent 23%),
-      linear-gradient(118deg, #ecfdf5 0%, #f5fffb 52%, #ffffff 100%);
+      linear-gradient(118deg, #eef2ff 0%, #f8faff 52%, #ffffff 100%);
   }
 
   .recruit-badge-row {
@@ -133,7 +135,10 @@ const PAGE_STYLES = `
     box-shadow: 0 4px 10px rgba(20, 99, 255, .18);
   }
 
-  .sector-badge.private { background: #059669; }
+  .sector-badge.private {
+    background: #4f46e5;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, .22);
+  }
 
   .official-badge {
     padding: 6px 10px;
@@ -1065,7 +1070,7 @@ export function RecruitmentExplorerView({
   const visibleVacancies = useMemo(() => {
     if (!effectiveRecruitment) return [];
     const q = query.trim().toLowerCase();
-    return (effectiveRecruitment.vacancies || [])
+    const rawFiltered = (effectiveRecruitment.vacancies || [])
       .map((vacancy) => {
         const { matches, count } = getVacancyPositionMatch(vacancy, selectedPosition, breakdownMap);
         return {
@@ -1082,6 +1087,42 @@ export function RecruitmentExplorerView({
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(q));
       });
+
+    // Group identical designations/departments so multiple rows like "Medical Officer" are aggregated into a single entry
+    const groupedMap = new Map<string, any>();
+    for (const v of rawFiltered) {
+      const cleanName = cleanExtractedName(v.department || v.speciality || v.postName);
+      const groupKey = cleanName.toLowerCase().trim();
+      if (!groupedMap.has(groupKey)) {
+        groupedMap.set(groupKey, {
+          ...v,
+          _rawGroup: [v],
+          displayCount: Number(v.displayCount || 0),
+          numberOfVacancies: Number(v.numberOfVacancies || v.displayCount || 0),
+        });
+      } else {
+        const existing = groupedMap.get(groupKey);
+        existing._rawGroup.push(v);
+        existing.displayCount += Number(v.displayCount || 0);
+        existing.numberOfVacancies += Number(v.numberOfVacancies || v.displayCount || 0);
+        if (v.qualification && !existing.qualification?.includes(v.qualification)) {
+          existing.qualification = existing.qualification
+            ? `${existing.qualification}; ${v.qualification}`
+            : v.qualification;
+        }
+        if (v.experience && !existing.experience?.includes(v.experience)) {
+          existing.experience = existing.experience
+            ? `${existing.experience}; ${v.experience}`
+            : v.experience;
+        }
+        if (v.salary && !existing.salary?.includes(v.salary)) {
+          existing.salary = existing.salary
+            ? `${existing.salary}; ${v.salary}`
+            : v.salary;
+        }
+      }
+    }
+    return Array.from(groupedMap.values());
   }, [effectiveRecruitment, activePost, query, selectedPosition, breakdownMap, availablePositions]);
 
   useEffect(() => {
@@ -1121,7 +1162,8 @@ export function RecruitmentExplorerView({
   }, [effectiveRecruitment, selectedPosition, visibleVacancies]);
 
   const isGovernment = recruitment.sector === 'government';
-  const applyByLabel = applyByDate ? formatDate(applyByDate) : 'See Notification';
+  const scheduleInfo = formatInterviewOrDate(applyByDate, recruitment.jobDescription);
+  const applyByLabel = scheduleInfo.displayValue || (applyByDate ? formatDate(applyByDate) : 'See Notification');
   const daysLeft = applyByDate
     ? Math.ceil((parseRecruitmentDate(applyByDate).getTime() - Date.now()) / 86400000)
     : null;

@@ -12,6 +12,7 @@ import {
 } from "../api/jobs";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { inferState } from "../utils/rawNoticeParser";
 
 interface EditJobPageProps {
   onNavigate: (page: string) => void;
@@ -40,6 +41,14 @@ export function EditJobPage({ onNavigate }: EditJobPageProps) {
         setError(null);
         const data = await getJobById(jobId);
 
+        // Accurately resolve State from API or infer from location/description
+        const resolvedState = data.state || inferState(data.location, data.description) || "";
+        let cleanLocation = (data.location || "").trim();
+        // If location ends with ", [State]", strip trailing state for clean City input
+        if (resolvedState && cleanLocation.toLowerCase().endsWith(`, ${resolvedState.toLowerCase()}`)) {
+          cleanLocation = cleanLocation.substring(0, cleanLocation.length - resolvedState.length - 2).trim();
+        }
+
         // Transform backend response to match form data structure
         setJobData({
           id: data.id || jobId,
@@ -55,8 +64,8 @@ export function EditJobPage({ onNavigate }: EditJobPageProps) {
               : data.category
               ? [data.category]
               : ["Medical Officer"],
-          location: data.location || "",
-          state: data.state || "",
+          location: cleanLocation || data.location || "",
+          state: resolvedState,
           department: data.department || "",
           qualification: data.qualification || "",
           experience: data.experience || "",
@@ -135,6 +144,9 @@ export function EditJobPage({ onNavigate }: EditJobPageProps) {
 
       const payload = {
         ...formData,
+        state: formData.state || jobData?.state || "",
+        officialWebsite: formData.officialWebsite || jobData?.officialWebsite || "",
+        applyLink: formData.applyLink || jobData?.applyLink || "",
         pdfUrl: effectivePdfUrl,
         jobDocumentUrl: effectivePdfUrl,
         jobImageUrl: effectiveImageUrl,

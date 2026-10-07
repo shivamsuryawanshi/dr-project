@@ -946,7 +946,12 @@ public class JobController {
         } else if (req.category() != null && !req.category().isBlank()) {
             job.setJobRoles(clip(req.category(), 1000));
         }
-        job.setLocation(clip(Optional.ofNullable(req.location()).orElse(""), 200));
+        String loc = Optional.ofNullable(req.location()).orElse("").trim();
+        String st = Optional.ofNullable(req.state()).orElse("").trim();
+        if (!st.isEmpty() && !loc.toLowerCase(Locale.ROOT).contains(st.toLowerCase(Locale.ROOT))) {
+            loc = loc.isEmpty() ? st : loc + ", " + st;
+        }
+        job.setLocation(clip(loc, 200));
         job.setQualification(Optional.ofNullable(req.qualification()).orElse(""));
         job.setExperience(clip(Optional.ofNullable(req.experience()).orElse(""), 100));
         job.setExperienceLevel(req.experienceLevel() != null ? parseExperienceLevel(req.experienceLevel()) : null);
@@ -963,12 +968,13 @@ public class JobController {
         job.setOfficialWebsite(clip(normalizeUrl(req.officialWebsite()), 500));
         job.setRequirements(req.requirements());
         job.setBenefits(req.benefits());
-        // Handle lastDate - required field, default to 30 days from now if not provided
+        // Handle lastDate - if non-ISO (e.g. recurring schedule "Every Monday"), set safe 90-day active date in DB
         if (req.lastDate() != null && !req.lastDate().isBlank()) {
             try { 
-                job.setLastDate(java.time.LocalDate.parse(req.lastDate())); 
+                job.setLastDate(java.time.LocalDate.parse(req.lastDate().trim())); 
             } catch (Exception e) {
-                job.setLastDate(java.time.LocalDate.now().plusDays(30));
+                logger.info("Non-ISO lastDate on job creation (e.g. recurring schedule): {}, setting 90 days deadline", req.lastDate());
+                job.setLastDate(java.time.LocalDate.now().plusMonths(3));
             }
         } else {
             job.setLastDate(java.time.LocalDate.now().plusDays(30));
@@ -1041,7 +1047,19 @@ public class JobController {
             }
         }
         if (req.location() != null && !req.location().isBlank()) {
-            job.setLocation(clip(req.location(), 200));
+            String loc = req.location().trim();
+            String st = req.state() != null ? req.state().trim() : "";
+            if (!st.isEmpty() && !loc.toLowerCase(Locale.ROOT).contains(st.toLowerCase(Locale.ROOT))) {
+                loc = loc + ", " + st;
+            }
+            job.setLocation(clip(loc, 200));
+        } else if (req.state() != null && !req.state().isBlank()) {
+            String existingLoc = Optional.ofNullable(job.getLocation()).orElse("").trim();
+            String st = req.state().trim();
+            if (!existingLoc.toLowerCase(Locale.ROOT).contains(st.toLowerCase(Locale.ROOT))) {
+                existingLoc = existingLoc.isEmpty() ? st : existingLoc + ", " + st;
+                job.setLocation(clip(existingLoc, 200));
+            }
         }
         if (req.qualification() != null) {
             job.setQualification(req.qualification());
@@ -1094,9 +1112,10 @@ public class JobController {
         // Handle lastDate - only update if provided
         if (req.lastDate() != null && !req.lastDate().isBlank()) {
             try { 
-                job.setLastDate(java.time.LocalDate.parse(req.lastDate())); 
+                job.setLastDate(java.time.LocalDate.parse(req.lastDate().trim())); 
             } catch (Exception e) {
-                logger.warn("Failed to parse lastDate: {}", req.lastDate());
+                logger.info("Non-ISO lastDate on update (e.g. recurring schedule): {}, setting 90 days deadline", req.lastDate());
+                job.setLastDate(java.time.LocalDate.now().plusMonths(3));
             }
         }
         // Contact details - only update if provided and validate email format
@@ -1178,15 +1197,151 @@ public class JobController {
 
     // === START OF REQUIRED HELPER METHOD PLACEHOLDERS ===
 
-    // Placeholder: Assumes JobStatus enum exists and has a valueOf method
+    // Standardize filter metadata: split compound entries (e.g. "Professor / Associate Professor / Assistant Professor")
     private List<String> distinctStrings(List<String> values) {
-        return values.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
+        if (values == null) return Collections.emptyList();
+        Set<String> set = new LinkedHashSet<>();
+        for (String val : values) {
+            if (val == null || val.isBlank()) continue;
+            // Split any compound entries like "Professor / Associate Professor / Assistant Professor" or "Cardiology, Neurology"
+            String[] tokens = val.split("[,/|]| and ");
+            for (String token : tokens) {
+                String trimmed = token.trim();
+                // Filter out non-speciality junk or pure punctuation/numbers
+                if (!trimmed.isEmpty() && trimmed.length() >= 2 && !trimmed.matches("^[0-9\\s.,;:-]+$")) {
+                    set.add(trimmed);
+                }
+            }
+        }
+        return set.stream().sorted(String.CASE_INSENSITIVE_ORDER).collect(Collectors.toList());
+    }
+
+    private static final List<String> INDIAN_STATES = List.of(
+        "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
+        "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa",
+        "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka",
+        "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur",
+        "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan",
+        "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+    );
+
+    private static final Map<String, String> CITY_TO_STATE = Map.ofEntries(
+        Map.entry("lucknow", "Uttar Pradesh"),
+        Map.entry("kanpur", "Uttar Pradesh"),
+        Map.entry("varanasi", "Uttar Pradesh"),
+        Map.entry("agra", "Uttar Pradesh"),
+        Map.entry("noida", "Uttar Pradesh"),
+        Map.entry("ghaziabad", "Uttar Pradesh"),
+        Map.entry("gorakhpur", "Uttar Pradesh"),
+        Map.entry("prayagraj", "Uttar Pradesh"),
+        Map.entry("allahabad", "Uttar Pradesh"),
+        Map.entry("meerut", "Uttar Pradesh"),
+        Map.entry("bareilly", "Uttar Pradesh"),
+        Map.entry("aligarh", "Uttar Pradesh"),
+        Map.entry("bhopal", "Madhya Pradesh"),
+        Map.entry("indore", "Madhya Pradesh"),
+        Map.entry("gwalior", "Madhya Pradesh"),
+        Map.entry("jabalpur", "Madhya Pradesh"),
+        Map.entry("ujjain", "Madhya Pradesh"),
+        Map.entry("patna", "Bihar"),
+        Map.entry("gaya", "Bihar"),
+        Map.entry("muzaffarpur", "Bihar"),
+        Map.entry("bhagalpur", "Bihar"),
+        Map.entry("delhi", "Delhi"),
+        Map.entry("new delhi", "Delhi"),
+        Map.entry("mumbai", "Maharashtra"),
+        Map.entry("pune", "Maharashtra"),
+        Map.entry("nagpur", "Maharashtra"),
+        Map.entry("nashik", "Maharashtra"),
+        Map.entry("aurangabad", "Maharashtra"),
+        Map.entry("thane", "Maharashtra"),
+        Map.entry("navi mumbai", "Maharashtra"),
+        Map.entry("jaipur", "Rajasthan"),
+        Map.entry("jodhpur", "Rajasthan"),
+        Map.entry("udaipur", "Rajasthan"),
+        Map.entry("kota", "Rajasthan"),
+        Map.entry("bikaner", "Rajasthan"),
+        Map.entry("ajmer", "Rajasthan"),
+        Map.entry("ahmedabad", "Gujarat"),
+        Map.entry("surat", "Gujarat"),
+        Map.entry("vadodara", "Gujarat"),
+        Map.entry("rajkot", "Gujarat"),
+        Map.entry("kolkata", "West Bengal"),
+        Map.entry("howrah", "West Bengal"),
+        Map.entry("siliguri", "West Bengal"),
+        Map.entry("bengaluru", "Karnataka"),
+        Map.entry("bangalore", "Karnataka"),
+        Map.entry("mysore", "Karnataka"),
+        Map.entry("mysuru", "Karnataka"),
+        Map.entry("mangalore", "Karnataka"),
+        Map.entry("mangaluru", "Karnataka"),
+        Map.entry("hyderabad", "Telangana"),
+        Map.entry("secunderabad", "Telangana"),
+        Map.entry("warangal", "Telangana"),
+        Map.entry("chennai", "Tamil Nadu"),
+        Map.entry("coimbatore", "Tamil Nadu"),
+        Map.entry("madurai", "Tamil Nadu"),
+        Map.entry("trichy", "Tamil Nadu"),
+        Map.entry("salem", "Tamil Nadu"),
+        Map.entry("chandigarh", "Chandigarh"),
+        Map.entry("mohali", "Punjab"),
+        Map.entry("ludhiana", "Punjab"),
+        Map.entry("amritsar", "Punjab"),
+        Map.entry("jalandhar", "Punjab"),
+        Map.entry("gurugram", "Haryana"),
+        Map.entry("gurgaon", "Haryana"),
+        Map.entry("faridabad", "Haryana"),
+        Map.entry("panipat", "Haryana"),
+        Map.entry("ambala", "Haryana"),
+        Map.entry("rohtak", "Haryana"),
+        Map.entry("karnal", "Haryana"),
+        Map.entry("dehradun", "Uttarakhand"),
+        Map.entry("rishikesh", "Uttarakhand"),
+        Map.entry("haridwar", "Uttarakhand"),
+        Map.entry("shimla", "Himachal Pradesh"),
+        Map.entry("dharamshala", "Himachal Pradesh"),
+        Map.entry("ranchi", "Jharkhand"),
+        Map.entry("jamshedpur", "Jharkhand"),
+        Map.entry("dhanbad", "Jharkhand"),
+        Map.entry("raipur", "Chhattisgarh"),
+        Map.entry("bilaspur", "Chhattisgarh"),
+        Map.entry("bhubaneswar", "Odisha"),
+        Map.entry("cuttack", "Odisha"),
+        Map.entry("guwahati", "Assam"),
+        Map.entry("thiruvananthapuram", "Kerala"),
+        Map.entry("kochi", "Kerala"),
+        Map.entry("kozhikode", "Kerala")
+    );
+
+    private String extractStateFromLocation(String location, String description) {
+        if (location != null && !location.isBlank()) {
+            String locLower = location.toLowerCase(Locale.ROOT).trim();
+            for (String st : INDIAN_STATES) {
+                if (locLower.contains(st.toLowerCase(Locale.ROOT))) {
+                    return st;
+                }
+            }
+            for (Map.Entry<String, String> e : CITY_TO_STATE.entrySet()) {
+                if (locLower.contains(e.getKey())) {
+                    return e.getValue();
+                }
+            }
+            if (locLower.matches(".*\\b(u\\.?p\\.?|uttar\\s*pradesh)\\b.*")) return "Uttar Pradesh";
+            if (locLower.matches(".*\\b(m\\.?p\\.?|madhya\\s*pradesh)\\b.*")) return "Madhya Pradesh";
+            if (locLower.matches(".*\\b(h\\.?p\\.?|himachal\\s*pradesh)\\b.*")) return "Himachal Pradesh";
+            if (locLower.matches(".*\\b(a\\.?p\\.?|andhra\\s*pradesh)\\b.*")) return "Andhra Pradesh";
+            if (locLower.matches(".*\\b(t\\.?n\\.?|tamil\\s*nadu)\\b.*")) return "Tamil Nadu";
+            if (locLower.matches(".*\\b(w\\.?b\\.?|west\\s*bengal)\\b.*")) return "West Bengal";
+        }
+        if (description != null && !description.isBlank()) {
+            String descLower = description.toLowerCase(Locale.ROOT);
+            for (String st : INDIAN_STATES) {
+                if (descLower.contains(st.toLowerCase(Locale.ROOT))) {
+                    return st;
+                }
+            }
+        }
+        return "";
     }
 
     private Optional<Job> resolvePublicJob(String idOrSlug) {
@@ -1209,8 +1364,19 @@ public class JobController {
         if (target.size() >= limit || !hasText(value)) {
             return;
         }
-        if (value.toLowerCase(Locale.ROOT).contains(needle)) {
-            target.add(value.trim());
+        String[] tokens = value.split("[,/|]| and ");
+        if (tokens.length > 1) {
+            for (String token : tokens) {
+                if (target.size() >= limit) break;
+                String trimmed = token.trim();
+                if (trimmed.length() >= 2 && trimmed.toLowerCase(Locale.ROOT).contains(needle) && !trimmed.matches("^[0-9\\s.,;:-]+$")) {
+                    target.add(trimmed);
+                }
+            }
+        } else {
+            if (value.toLowerCase(Locale.ROOT).contains(needle)) {
+                target.add(value.trim());
+            }
         }
     }
 
@@ -1328,6 +1494,7 @@ public class JobController {
         Object jobRoles,
         String department,
         String location,
+        String state,
         String qualification,
         String experience,
         String experienceLevel,
@@ -1400,6 +1567,7 @@ public class JobController {
         }
         m.put("jobRoles", roles);
         m.put("location", j.getLocation());
+        m.put("state", extractStateFromLocation(j.getLocation(), j.getDescription()));
         m.put("qualification", j.getQualification());
         m.put("experience", j.getExperience());
         m.put("experienceLevel", j.getExperienceLevel() != null ? j.getExperienceLevel().name().toLowerCase() : null);
