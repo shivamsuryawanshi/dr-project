@@ -460,6 +460,14 @@ export function JobCard({
     const isFacultyJob = /\b(faculty|professor|assoc\w*\s+prof|asst\w*\s+prof|assistant\s+professor|tutor|lecturer|demonstrator)\b/i.test(
       `${job.title || ''} ${view.displayTitle || ''} ${job.category || ''} ${roles.join(' ')}`
     );
+    const isSeniorOrJuniorResident = /\b(senior[\s_]*resident|junior[\s_]*resident|sr\b|jr\b)\b/i.test(
+      `${job.title || ''} ${view.displayTitle || ''} ${job.category || ''} ${roles.join(' ')}`
+    );
+    const postNamesList = Array.isArray(view.postNames) ? view.postNames : [];
+    const hasAnyRealMO = /\b(medical\s*officer|gdmo|general\s*duty\s*medical\s*officer)\b/i.test(
+      `${job.title || ''} ${view.displayTitle || ''} ${postNamesList.join(' ')}`.replace(/medical\s*officer\s*\/\s*resident/gi, '')
+    ) && !/\b(senior[\s_]*resident|junior[\s_]*resident)\b/i.test(job.title || view.displayTitle || '');
+
     const hasPharmacology = /\bpharmacolog\w*\b/i.test(allContextText);
     const hasRealPharmacy = /\b(pharmacist|b\.?\s*pharm|d\.?\s*pharm|m\.?\s*pharm|pharm\.?\s*d|druggist|dispenser)\b/i.test(allContextText);
     const hasPsychiatry = /\bpsychiatr\w*\b/i.test(allContextText);
@@ -467,6 +475,18 @@ export function JobCard({
 
     const filteredRoles = roles.filter((role) => {
       const lower = role.toLowerCase().trim();
+      // If card is Senior/Junior Resident or Faculty, and circular has no genuine Medical Officer post, strip Medical Officer
+      if ((isSeniorOrJuniorResident || isFacultyJob) && !hasAnyRealMO) {
+        if (
+          lower === 'medical officer' ||
+          lower === 'mo' ||
+          lower === 'gdmo' ||
+          lower === 'medical officer / resident' ||
+          lower.includes('medical officer')
+        ) {
+          return false;
+        }
+      }
       // If it's a Faculty circular, don't show separate bogus role tags for Pharmacology/Psychiatry
       if (isFacultyJob) {
         if ((lower === 'pharmacy' || lower === 'pharmacist') && !hasRealPharmacy) return false;
@@ -483,7 +503,13 @@ export function JobCard({
       return true;
     });
 
-    return sortPositions(filteredRoles);
+    const sorted = sortPositions(filteredRoles);
+    if (sorted.length === 0) {
+      if (/\bsenior[\s_]*resident\b/i.test(allContextText)) return ['Senior Resident'];
+      if (/\bjunior[\s_]*resident\b/i.test(allContextText)) return ['Junior Resident'];
+      if (isFacultyJob) return ['Faculty'];
+    }
+    return sorted;
   }, [job, view]);
 
   const openDetails = () => {

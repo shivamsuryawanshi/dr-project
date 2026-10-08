@@ -358,7 +358,7 @@ const trim = (value?: string | null) => value?.trim() || '';
  * Standardize Medical Officer variants into a single unified category.
  * Maps GDMO, Lady MO, Emergency MO, Casualty MO, Factory MO, AYUSH MO to 'Medical Officer'.
  */
-export function inferCategory(value?: string | null): JobCategory {
+export function inferCategory(value?: string | null, fallbackCadre?: string | null): JobCategory {
   const t = trim(value).toLowerCase();
   if (
     /medical\s*officer|gdm[o]?|casualty\s*medical|emergency\s*medical|\bemo\b|\blmo\b|\bfmo\b|lady\s*medical|female\s*medical|factory\s*medical|ayush\s*medical|general\s*duty\s*medical/.test(
@@ -389,6 +389,10 @@ export function inferCategory(value?: string | null): JobCategory {
   if (/administration|administrator/.test(t)) return 'Hospital Administration';
   if (/research|scientist|life science/.test(t)) return 'Life Science & Research';
   if (/technician|technologist|paramedic/.test(t)) return 'Paramedical';
+  if (fallbackCadre && fallbackCadre.trim()) {
+    const fb = inferCategory(fallbackCadre);
+    if (fb) return fb;
+  }
   return 'Medical Officer';
 }
 
@@ -817,7 +821,7 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   let currentCadreRole = '';
 
   // Pre-detect overall cadre role from explicit notice header, category, or title
-  const explicitRoleMatch = normalizedText.match(/(?:^|\n)\s*(?:\*\s*)?(?:Role|Job\s*Role|Category|Cadre)\s*[:\-]\s*([^\n\r]+)/i);
+  const explicitRoleMatch = normalizedText.match(/(?:^|\n)\s*(?:\*\s*)?(?:Post|Posts|Designation|Position|Role|Job\s*Role|Category|Cadre)\s*[:\-]\s*([^\n\r]+)/i);
   if (explicitRoleMatch) {
     const roleCandidate = standardizePositionName(explicitRoleMatch[1].trim());
     if (/^(Senior Resident|Junior Resident|Medical Officer|Professor|Associate Professor|Assistant Professor|Additional Professor|Tutor|Demonstrator|Specialist|Consultant|Part[- ]?Time Specialist|Resident Specialist|Full[- ]?Time Specialist|PT\/FT Specialist|PGMO|GDMO)$/i.test(roleCandidate)) {
@@ -850,7 +854,7 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     }
 
     // Skip header lines or meta lines
-    if (/^(LAST DATE|DATE OF INTERVIEW|VENUE|WEBSITE|WALK-IN|SELECTION|AGE LIMIT|SALARY|PAY|EXPERIENCE|ELIGIBILITY|CONTRACT|IMPORTANT|DEPARTMENT BREAKDOWN|SPECIALTY-WISE|TITLE|ORGANIZATION|LOCATION|STATE|SECTOR)\b/i.test(cleanLine)) {
+    if (/^(LAST DATE|DATE OF INTERVIEW|VENUE|WEBSITE|WALK-IN|SELECTION|AGE LIMIT|SALARY|PAY|EXPERIENCE|ELIGIBILITY|CONTRACT|IMPORTANT|DEPARTMENT BREAKDOWN|DEPARTMENT-WISE|SPECIALTY-WISE|TITLE|ORGANIZATION|LOCATION|STATE|SECTOR)\b/i.test(cleanLine)) {
       continue;
     }
 
@@ -858,6 +862,59 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     const cadreHeaderMatch = cleanLine.match(/^(Professor|Associate Professor|Assistant Professor|Additional Professor|Senior Resident|Junior Resident|Part[- ]?Time Specialist|Resident Specialist|Full[- ]?Time Specialist|PT\/FT Specialist|Super\s*Specialist|Full[- ]?Time\s*Super\s*Specialist|Part[- ]?Time\s*Super\s*Specialist|PGMO|GDMO|Tutor|Demonstrator|Medical Officer|Specialist|Consultant)\s*[:\-]?\s*$/i);
     if (cadreHeaderMatch) {
       currentCadreRole = standardizePositionName(cadreHeaderMatch[1]);
+      continue;
+    }
+
+    // Check markdown table lines e.g. "| Obs. & Gynae | 08 | 08 |" or "| Department | Senior Resident | Total |"
+    if (cleanLine.includes('|')) {
+      if (/^\|?[\s\-:|]+\|?$/.test(cleanLine)) {
+        continue;
+      }
+      const cells = cleanLine.split('|').map((c) => c.trim()).filter(Boolean);
+      if (cells.length >= 2) {
+        const isHeaderRow = cells.some((c) => /^(department|speciality|specialty|discipline|subject|s\.?\s*no|sr\.?\s*no)\b/i.test(c));
+        if (isHeaderRow) {
+          const headerRoleCell = cells.find((c) =>
+            /^(Senior Resident|Junior Resident|Assistant Professor|Associate Professor|Professor|Tutor|Demonstrator|Specialist|Consultant|Medical Officer|GDMO)\b/i.test(c)
+          );
+          if (headerRoleCell) {
+            currentCadreRole = standardizePositionName(headerRoleCell);
+          }
+          continue;
+        }
+
+        if (/^(total|grand\s*total)\b/i.test(cells[0])) {
+          const totalValStr = cells[cells.length - 1] || cells[1];
+          const totalNum = parseInt(totalValStr.replace(/[^0-9]/g, ''), 10);
+          if (!isNaN(totalNum) && totalNum > 0 && !result.numberOfPosts) {
+            result.numberOfPosts = totalNum;
+          }
+          continue;
+        }
+
+        const dept = cells[0].replace(/^\s*(?:\d+[\.\)\-:]|\([0-9a-zA-Z]+\)|[ivxIVX]+[\.\)\-:])\s*/, '').trim();
+        if (!/^(note|advertised|applicable|qualification|eligibility|tenure|venue)/i.test(dept) && dept.length >= 2) {
+          let vacCount = NaN;
+          for (let cIdx = 1; cIdx < cells.length; cIdx++) {
+            const numMatch = cells[cIdx].match(/^[0-9]{1,4}$/);
+            if (numMatch) {
+              vacCount = parseInt(numMatch[0], 10);
+              break;
+            }
+          }
+          if (!isNaN(vacCount) && vacCount > 0 && vacCount < 10000) {
+            totalPostsSum += vacCount;
+            detectedPostTitles.push(dept);
+            parsedVacancies.push({
+              department: dept,
+              numberOfVacancies: vacCount,
+              postName: currentCadreRole || dept,
+              category: inferCategory(currentCadreRole || dept, currentCadreRole),
+            });
+            continue;
+          }
+        }
+      }
       continue;
     }
 
@@ -901,7 +958,7 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
             department: pName,
             numberOfVacancies: count,
             postName: extractedRole || currentCadreRole || pName,
-            category: inferCategory(extractedRole || currentCadreRole || pName),
+            category: inferCategory(extractedRole || currentCadreRole || pName, currentCadreRole),
           });
         }
       }
@@ -917,7 +974,7 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
         department: c.name,
         numberOfVacancies: c.count,
         postName: c.name,
-        category: inferCategory(c.name),
+        category: inferCategory(c.name, currentCadreRole),
       });
     }
   }
@@ -1033,6 +1090,17 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
       }
       if (!result.title) {
         result.title = detectedRoles.slice(0, 3).join(' / ');
+      }
+    }
+  }
+
+  // Safety filter: If the post is for Residency or Faculty, strip any spurious Medical Officer role unless explicitly advertised
+  if (result.jobRoles && result.jobRoles.length > 0 && isFacultyOrResidency) {
+    const hasGenuineMO = /\b(gdmo|general\s+duty\s+medical\s+officer|medical\s+officer\s+recruitment)\b/i.test(normalizedText);
+    if (!hasGenuineMO) {
+      result.jobRoles = result.jobRoles.filter((r) => r !== 'Medical Officer' && r !== 'GDMO');
+      if (result.category === 'Medical Officer' || result.category === 'GDMO') {
+        result.category = (result.jobRoles[0] as JobCategory) || (currentCadreRole as JobCategory) || 'Senior Resident';
       }
     }
   }

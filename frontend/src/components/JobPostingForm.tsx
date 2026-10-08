@@ -241,7 +241,7 @@ const defaultData: JobFormData = {
   organization: '',
   sector: 'private',
   category: 'Medical Officer',
-  jobRoles: ['Medical Officer'],
+  jobRoles: [],
   location: '',
   state: '',
   qualification: '',
@@ -333,19 +333,28 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
 
   const toggleRole = (role: string) => {
     setFormData((p) => {
-      const current = p.jobRoles || (p.category ? [p.category] : ['Medical Officer']);
+      const current = Array.isArray(p.jobRoles) && p.jobRoles.length > 0
+        ? p.jobRoles
+        : (p.category ? [p.category] : []);
       const exists = current.includes(role);
       let updated: string[];
       if (exists) {
         updated = current.filter((r) => r !== role);
-        if (updated.length === 0) updated = [role];
       } else {
-        updated = [...current, role];
+        // If current only contains default ['Medical Officer'], replace it with the newly chosen role
+        if (current.length === 1 && current[0] === 'Medical Officer' && role !== 'Medical Officer') {
+          updated = [role];
+        } else {
+          updated = [...current, role];
+        }
+      }
+      if (updated.length === 0) {
+        updated = [role];
       }
       return {
         ...p,
         jobRoles: updated,
-        category: (updated[0] as JobCategory) || p.category,
+        category: (updated[0] as JobCategory) || (role as JobCategory),
       };
     });
   };
@@ -406,11 +415,11 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
           (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
         publishImmediately: true,
         vacancies: recData.departments.map((d) => ({
-          postName: d.postName || formData.title.trim() || recData?.title || 'Medical Officer / Resident',
+          postName: d.postName || cleanTitle || recData?.title || 'Senior Resident',
           department: d.department,
           speciality: d.department,
           numberOfVacancies: d.numberOfVacancies || 1,
-          category: d.category || undefined,
+          category: d.category || (formData.category && formData.category !== 'Medical Officer' ? formData.category : (cleanTitle.toLowerCase().includes('senior resident') ? 'Senior Resident' : undefined)),
           qualification: formData.qualification || undefined,
           experience: formData.experience || undefined,
           ageLimit: formData.ageLimit || undefined,
@@ -1234,16 +1243,23 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
                       </div>
                       <Label className="jpf-field-label">Job Roles (Multi-Select) *</Label>
                     </div>
-                    <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      {(formData.jobRoles || [formData.category]).length} selected
-                    </span>
+                    {(() => {
+                      const activeRoles = Array.isArray(formData.jobRoles) && formData.jobRoles.length > 0
+                        ? formData.jobRoles
+                        : (formData.category ? [formData.category] : []);
+                      return (
+                        <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                          {activeRoles.length} selected
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   {/* Selected tags */}
                   <div className="flex flex-wrap gap-1.5 mb-2.5 min-h-[34px] p-2 bg-slate-50 rounded-lg border border-slate-200">
-                    {(formData.jobRoles && formData.jobRoles.length > 0
+                    {(Array.isArray(formData.jobRoles) && formData.jobRoles.length > 0
                       ? formData.jobRoles
-                      : [formData.category]
+                      : (formData.category ? [formData.category] : [])
                     ).map((role) => (
                       <span
                         key={role}
@@ -1269,9 +1285,10 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
                     </div>
                     <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
                       {jobCategories.map((cat) => {
-                        const isSelected = (
-                          formData.jobRoles || [formData.category]
-                        ).includes(cat);
+                        const activeRoles = Array.isArray(formData.jobRoles) && formData.jobRoles.length > 0
+                          ? formData.jobRoles
+                          : (formData.category ? [formData.category] : []);
+                        const isSelected = activeRoles.includes(cat);
                         return (
                           <button
                             key={cat}

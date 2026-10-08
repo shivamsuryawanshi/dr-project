@@ -759,6 +759,44 @@ public class AdminJobController {
         if (req.officialWebsite() != null) {
             job.setOfficialWebsite(clip(normalizeUrl(req.officialWebsite()), 500));
         }
+        sanitizeJobRolesAndCategory(job);
+    }
+
+    private void sanitizeJobRolesAndCategory(Job job) {
+        String titleLower = Optional.ofNullable(job.getTitle()).orElse("").toLowerCase(Locale.ROOT);
+        String rolesStr = Optional.ofNullable(job.getJobRoles()).orElse("");
+        boolean isResidencyOrFaculty = titleLower.contains("senior resident")
+                || titleLower.contains("junior resident")
+                || titleLower.contains("faculty")
+                || titleLower.contains("professor")
+                || rolesStr.toLowerCase(Locale.ROOT).contains("senior resident")
+                || rolesStr.toLowerCase(Locale.ROOT).contains("junior resident")
+                || rolesStr.toLowerCase(Locale.ROOT).contains("faculty")
+                || rolesStr.toLowerCase(Locale.ROOT).contains("professor");
+
+        boolean hasGenuineMO = (titleLower.contains("medical officer") || titleLower.contains("gdmo"))
+                && !titleLower.contains("senior resident")
+                && !titleLower.contains("junior resident");
+
+        if (isResidencyOrFaculty && !hasGenuineMO && rolesStr != null && !rolesStr.isBlank()) {
+            List<String> cleaned = Arrays.stream(rolesStr.split(","))
+                    .map(String::trim)
+                    .filter(r -> !r.equalsIgnoreCase("Medical Officer") && !r.equalsIgnoreCase("GDMO") && !r.equalsIgnoreCase("MO"))
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (!cleaned.isEmpty()) {
+                job.setJobRoles(clip(String.join(", ", cleaned), 1000));
+            }
+            if (job.getCategory() == Job.JobCategory.MEDICAL_OFFICER) {
+                if (titleLower.contains("senior resident") || rolesStr.toLowerCase(Locale.ROOT).contains("senior resident")) {
+                    job.setCategory(Job.JobCategory.SENIOR_RESIDENT);
+                } else if (titleLower.contains("junior resident") || rolesStr.toLowerCase(Locale.ROOT).contains("junior resident")) {
+                    job.setCategory(Job.JobCategory.JUNIOR_RESIDENT);
+                } else if (titleLower.contains("faculty") || titleLower.contains("professor") || rolesStr.toLowerCase(Locale.ROOT).contains("faculty")) {
+                    job.setCategory(Job.JobCategory.FACULTY);
+                }
+            }
+        }
     }
 
     private Employer resolveOrCreateEmployer(String organization, String type) {

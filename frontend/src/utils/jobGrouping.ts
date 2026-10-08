@@ -309,21 +309,23 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
     const hasPsychiatry = /\bpsychiatr\w*\b/i.test(groupContextText);
     const hasRealPsychology = /\b(psycholog\w*|mental\s*health|counselor|counsellor)\b/i.test(groupContextText);
 
-    const hasAnyRealMO = items.some((item) =>
-      /\b(medical\s*officer|gdmo|general\s*duty\s*medical\s*officer)\b/i.test(
-        `${item._basePostName || ''} ${item.postName || ''} ${item.title || ''}`
-      )
-    );
+    const hasAnyRealMO = items.some((item) => {
+      const text = `${item._basePostName || ''} ${item.postName || ''} ${item.title || ''}`.replace(/medical\s*officer\s*\/\s*resident/gi, '');
+      return (
+        /\b(medical\s*officer|gdmo|general\s*duty\s*medical\s*officer)\b/i.test(text) &&
+        !/\b(senior[\s_]*resident|junior[\s_]*resident)\b/i.test(text)
+      );
+    });
 
     const isSeniorOrJuniorResidentGroup = items.some((item) =>
-      /\b(senior\s*resident|junior\s*resident|sr\b|jr\b)\b/i.test(
+      /\b(senior[\s_]*resident|junior[\s_]*resident|sr\b|jr\b)\b/i.test(
         `${item._basePostName || ''} ${item.postName || ''} ${item.title || ''}`
       )
     );
 
     const filteredRoles = allRoles.filter((r) => {
       const lower = r.toLowerCase().trim();
-      if (!hasAnyRealMO && (lower === 'medical officer' || lower === 'mo' || lower === 'gdmo')) {
+      if (!hasAnyRealMO && (lower === 'medical officer' || lower === 'mo' || lower === 'gdmo' || lower === 'medical officer / resident')) {
         return false;
       }
       if ((isFacultyGroup || isSeniorOrJuniorResidentGroup) && !hasAnyRealMO && lower.includes('medical officer')) {

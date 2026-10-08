@@ -431,7 +431,7 @@ public class RecruitmentManagementService {
         job.setTitle(clip(v.getPostName() + (hasText(speciality) ? " - " + speciality : ""), 200));
         job.setDescription(buildDescription(r, v));
         job.setSector(r.getSector());
-        job.setCategory(mapJobCategory(v.getPostName()));
+        Job.JobCategory cat = mapJobCategory(v.getPostName());
 
         List<String> roles = new ArrayList<>();
         String postNameLower = Optional.ofNullable(v.getPostName()).orElse("").toLowerCase(Locale.ROOT);
@@ -441,13 +441,33 @@ public class RecruitmentManagementService {
         if (toScan.contains("senior resident") || toScan.contains(" sr resident") || toScan.matches(".*\\bsr\\b.*")) roles.add("Senior Resident");
         if (toScan.contains("junior resident") || toScan.contains(" jr resident") || toScan.matches(".*\\bjr\\b.*")) roles.add("Junior Resident");
         if ((toScan.contains("professor") || toScan.contains("faculty") || toScan.contains("lecturer") || toScan.contains("tutor") || toScan.contains("demonstrator")) && !roles.contains("Faculty")) roles.add("Faculty");
-        if ((toScan.contains("medical officer") || toScan.contains("gdmo") || toScan.matches(".*\\bmo\\b.*")) && !roles.contains("Medical Officer")) roles.add("Medical Officer");
+
+        boolean isResidencyOrFaculty = roles.contains("Senior Resident") || roles.contains("Junior Resident") || roles.contains("Faculty");
+        boolean hasGenuineMO = (postNameLower.contains("medical officer") || postNameLower.contains("gdmo") || postNameLower.contains("general duty medical officer"))
+                && !postNameLower.contains("senior resident") && !postNameLower.contains("junior resident");
+
+        if (hasGenuineMO || (!isResidencyOrFaculty && (toScan.contains("medical officer") || toScan.contains("gdmo")))) {
+            if (!roles.contains("Medical Officer")) {
+                roles.add("Medical Officer");
+            }
+        }
+
         if (toScan.contains("specialist") && !roles.contains("Specialist")) roles.add("Specialist");
         if (toScan.contains("consultant") && !roles.contains("Consultant")) roles.add("Consultant");
         if (toScan.contains("dental") || toScan.contains("dentist") || toScan.contains("bds") || toScan.contains("mds")) roles.add("Dental");
         if (toScan.contains("ayush") || toScan.contains("ayurved") || toScan.contains("homeopath") || toScan.contains("bams") || toScan.contains("bhms")) roles.add("AYUSH");
         if (toScan.contains("nurse") || toScan.contains("nursing")) roles.add("Nursing");
         if (toScan.contains("paramedical") || toScan.contains("radiograph") || toScan.contains("lab tech")) roles.add("Paramedical");
+
+        if (cat == Job.JobCategory.MEDICAL_OFFICER && roles.contains("Senior Resident")) {
+            cat = Job.JobCategory.SENIOR_RESIDENT;
+        } else if (cat == Job.JobCategory.MEDICAL_OFFICER && roles.contains("Junior Resident")) {
+            cat = Job.JobCategory.JUNIOR_RESIDENT;
+        } else if (cat == Job.JobCategory.MEDICAL_OFFICER && roles.contains("Faculty")) {
+            cat = Job.JobCategory.FACULTY;
+        }
+        job.setCategory(cat);
+
         if (!roles.isEmpty()) {
             job.setJobRoles(clip(String.join(", ", roles), 1000));
         }
