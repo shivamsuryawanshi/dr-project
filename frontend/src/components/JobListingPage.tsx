@@ -52,10 +52,10 @@ function matchesWhatTitle(job: any, keyword: string) {
   const q = trimmedKeyword.toLowerCase();
 
   // Strict cadre checking: prevents unrelated roles (e.g. Assistant Professor, Junior Resident) from matching a Senior Resident search
-  const queryHasSR = /\b(senior\s*resident|sr\b|sr\s*resident)\b/i.test(q);
-  const queryHasJR = /\b(junior\s*resident|jr\b|jr\s*resident)\b/i.test(q);
-  const queryHasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer)\b/i.test(q);
-  const queryHasMO = /\b(medical\s*officer|gdmo)\b/i.test(q);
+  const queryHasSR = /\b(senior[\s_]*resident|sr\b|sr[\s_]*resident|senior[\s_]*residency)\b/i.test(q);
+  const queryHasJR = /\b(junior[\s_]*resident|jr\b|jr[\s_]*resident|junior[\s_]*residency)\b/i.test(q);
+  const queryHasFaculty = /\b(faculty|professor|associate[\s_]*prof|assistant[\s_]*prof|lecturer)\b/i.test(q);
+  const queryHasMO = /\b(medical[\s_]*officer|gdmo)\b/i.test(q);
 
   const roleText = [
     job?.displayTitle,
@@ -63,19 +63,33 @@ function matchesWhatTitle(job: any, keyword: string) {
     ...(Array.isArray(job?.postNames) ? job.postNames : []),
     ...(Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.jobRoles]),
     job?.category,
-  ].filter(Boolean).map((s) => String(s).toLowerCase()).join(' ');
+  ].filter(Boolean).map((s) => String(s).toLowerCase().replace(/_/g, ' ')).join(' ');
 
-  const isJobSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(roleText);
-  const isJobJR = /\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency)\b/i.test(roleText);
-  const isJobFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal)\b/i.test(roleText);
-  const isJobMO = /\b(medical\s*officer|gdmo|general\s*duty)\b/i.test(roleText);
+  const isJobSR = /\b(senior[\s_]*resident|sr\b|sr[\s_]*resident|senior[\s_]*residency)\b/i.test(roleText);
+  const isJobJR = /\b(junior[\s_]*resident|jr\b|jr[\s_]*resident|junior[\s_]*residency)\b/i.test(roleText);
+  const isJobFaculty = /\b(faculty|professor|associate[\s_]*prof|assistant[\s_]*prof|lecturer|tutor|dean|principal)\b/i.test(roleText);
+  const isJobMO = /\b(medical[\s_]*officer|gdmo|general[\s_]*duty)\b/i.test(roleText);
 
   if (queryHasSR && !queryHasJR && !isJobSR) return false;
   if (queryHasJR && !queryHasSR && !isJobJR) return false;
   if (queryHasFaculty && !isJobFaculty) return false;
   if (queryHasMO && !isJobMO) return false;
 
-  const targetParts = [
+  // Pure cadre queries match immediately once cadre is verified
+  if (queryHasSR && isJobSR && !q.replace(/\b(senior[\s_]*resident|sr\b|sr[\s_]*resident|senior[\s_]*residency)\b/gi, '').trim()) {
+    return true;
+  }
+  if (queryHasJR && isJobJR && !q.replace(/\b(junior[\s_]*resident|jr\b|jr[\s_]*resident|junior[\s_]*residency)\b/gi, '').trim()) {
+    return true;
+  }
+  if (queryHasFaculty && isJobFaculty && !q.replace(/\b(faculty|professor|associate[\s_]*prof|assistant[\s_]*prof|lecturer)\b/gi, '').trim()) {
+    return true;
+  }
+  if (queryHasMO && isJobMO && !q.replace(/\b(medical[\s_]*officer|gdmo)\b/gi, '').trim()) {
+    return true;
+  }
+
+  const haystack = [
     job?.displayTitle,
     job?.title,
     ...(Array.isArray(job?.postNames) ? job.postNames : []),
@@ -94,13 +108,14 @@ function matchesWhatTitle(job: any, keyword: string) {
     job?.location,
   ]
     .filter(Boolean)
-    .map((s) => String(s).toLowerCase());
+    .map((s) => String(s).toLowerCase().replace(/_/g, ' '))
+    .join(' ');
 
-  if (targetParts.length === 0) return false;
+  if (!haystack.trim()) return false;
 
   const groups = roleGroups(trimmedKeyword);
   return groups.some((tokens) =>
-    targetParts.some((target) => tokens.every((token) => target.includes(token)))
+    tokens.every((token) => haystack.includes(token))
   );
 }
 
@@ -128,9 +143,23 @@ function filterByWhatTitle(content: any[], keyword: string) {
 export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [selectedJobOption, setSelectedJobOption] = useState("");
-  const [locationQuery, setLocationQuery] = useState("");
-  const [filters, setFilters] = useState<FilterOptions>(emptyJobFilters());
+
+  const getUrlSearchState = () => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get("search")?.trim() || "";
+    const locationParam = params.get("location")?.trim() || "";
+    const categoryParam = params.get("category");
+    return { searchParam, locationParam, categoryParam };
+  };
+
+  const initialUrlState = getUrlSearchState();
+  const [selectedJobOption, setSelectedJobOption] = useState(initialUrlState.searchParam);
+  const [locationQuery, setLocationQuery] = useState(initialUrlState.locationParam);
+  const [filters, setFilters] = useState<FilterOptions>(() => ({
+    ...emptyJobFilters(),
+    locations: initialUrlState.locationParam && !isGlobalLocation(initialUrlState.locationParam) ? [initialUrlState.locationParam] : [],
+    categories: initialUrlState.categoryParam ? [initialUrlState.categoryParam] : [],
+  }));
   const [jobs, setJobs] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [metaCategories, setMetaCategories] = useState<string[]>([]);
@@ -142,31 +171,29 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
   const [metaStates, setMetaStates] = useState<string[]>([]);
   const [metaCities, setMetaCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasSearched, setHasSearched] = useState(Boolean(initialUrlState.searchParam));
   const [showingFallback, setShowingFallback] = useState(false);
   const [fallbackReason, setFallbackReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
   const resultsRef = useRef<HTMLDivElement>(null);
-  const isInitialMount = useRef(true);
   const lastSearchParams = useRef<string>("");
+  const activeRequestIdRef = useRef(0);
   const effectiveSector = sector || (filters.sector || undefined);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const searchParam = params.get("search");
+    const searchParam = params.get("search")?.trim() || "";
     const locationParam = params.get("location")?.trim() || "";
     const categoryParam = params.get("category");
 
+    setSelectedJobOption(searchParam);
+    setLocationQuery(locationParam);
     if (searchParam) {
-      setSelectedJobOption(searchParam);
       setHasSearched(true);
-    } else {
-      setSelectedJobOption("");
     }
 
-    setLocationQuery(locationParam);
     setFilters((prev) => ({
       ...prev,
       locations: locationParam && !isGlobalLocation(locationParam) ? [locationParam] : [],
@@ -210,10 +237,10 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
         city: filters.city,
       });
 
-      if (currentParams === lastSearchParams.current && !isInitialMount.current) return;
+      if (currentParams === lastSearchParams.current) return;
       lastSearchParams.current = currentParams;
-      isInitialMount.current = false;
 
+      const currentSeq = ++activeRequestIdRef.current;
       setLoading(true);
       setShowingFallback(false);
       setFallbackReason("");
@@ -237,6 +264,8 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
         if (filters.city) params.city = filters.city;
 
         const initialResponse = await fetchJobs(params);
+        if (currentSeq !== activeRequestIdRef.current) return;
+
         const initialContent = Array.isArray(initialResponse?.content) ? initialResponse.content : [];
         let content = filterByWhatTitle(initialContent, keyword);
 
@@ -245,6 +274,8 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
           delete fallbackParams.location;
 
           const fallback = await fetchJobs(fallbackParams);
+          if (currentSeq !== activeRequestIdRef.current) return;
+
           const fallbackContent = Array.isArray(fallback?.content) ? fallback.content : [];
           const titleMatchedFallback = filterByWhatTitle(fallbackContent, keyword);
 
@@ -258,6 +289,8 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
             );
           }
         }
+
+        if (currentSeq !== activeRequestIdRef.current) return;
 
         const normalizedJobs = content.map((job: any) => ({
           ...job,
@@ -288,12 +321,15 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
           trackSearch(keyword, locationQuery || activeLocation, normalizedJobs.length);
         }
       } catch (error) {
+        if (currentSeq !== activeRequestIdRef.current) return;
         console.error("Error fetching jobs:", error);
         setJobs([]);
         setTotal(0);
         setCurrentPage(1);
       } finally {
-        setLoading(false);
+        if (currentSeq === activeRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 

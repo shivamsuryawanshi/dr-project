@@ -72,10 +72,10 @@ function matchesQuery(job: any, query?: string) {
   const q = query.trim().toLowerCase();
 
   // Strict cadre checking: prevents unrelated roles from matching
-  const queryHasSR = /\b(senior\s*resident|sr\b|sr\s*resident)\b/i.test(q);
-  const queryHasJR = /\b(junior\s*resident|jr\b|jr\s*resident)\b/i.test(q);
-  const queryHasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer)\b/i.test(q);
-  const queryHasMO = /\b(medical\s*officer|gdmo)\b/i.test(q);
+  const queryHasSR = /\b(senior[\s_]*resident|sr\b|sr[\s_]*resident|senior[\s_]*residency)\b/i.test(q);
+  const queryHasJR = /\b(junior[\s_]*resident|jr\b|jr[\s_]*resident|junior[\s_]*residency)\b/i.test(q);
+  const queryHasFaculty = /\b(faculty|professor|associate[\s_]*prof|assistant[\s_]*prof|lecturer)\b/i.test(q);
+  const queryHasMO = /\b(medical[\s_]*officer|gdmo)\b/i.test(q);
 
   const roleText = clean([
     job?.displayTitle,
@@ -83,17 +83,31 @@ function matchesQuery(job: any, query?: string) {
     ...(job?.postNames || []),
     ...(Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.jobRoles]),
     job?.category,
-  ].filter(Boolean).join(' ')).toLowerCase();
+  ].filter(Boolean).join(' ')).toLowerCase().replace(/_/g, ' ');
 
-  const isJobSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(roleText);
-  const isJobJR = /\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency)\b/i.test(roleText);
-  const isJobFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal)\b/i.test(roleText);
-  const isJobMO = /\b(medical\s*officer|gdmo|general\s*duty)\b/i.test(roleText);
+  const isJobSR = /\b(senior[\s_]*resident|sr\b|sr[\s_]*resident|senior[\s_]*residency)\b/i.test(roleText);
+  const isJobJR = /\b(junior[\s_]*resident|jr\b|jr[\s_]*resident|junior[\s_]*residency)\b/i.test(roleText);
+  const isJobFaculty = /\b(faculty|professor|associate[\s_]*prof|assistant[\s_]*prof|lecturer|tutor|dean|principal)\b/i.test(roleText);
+  const isJobMO = /\b(medical[\s_]*officer|gdmo|general[\s_]*duty)\b/i.test(roleText);
 
   if (queryHasSR && !queryHasJR && !isJobSR) return false;
   if (queryHasJR && !queryHasSR && !isJobJR) return false;
   if (queryHasFaculty && !isJobFaculty) return false;
   if (queryHasMO && !isJobMO) return false;
+
+  // Pure cadre queries match immediately once cadre is verified
+  if (queryHasSR && isJobSR && !q.replace(/\b(senior[\s_]*resident|sr\b|sr[\s_]*resident|senior[\s_]*residency)\b/gi, '').trim()) {
+    return true;
+  }
+  if (queryHasJR && isJobJR && !q.replace(/\b(junior[\s_]*resident|jr\b|jr[\s_]*resident|junior[\s_]*residency)\b/gi, '').trim()) {
+    return true;
+  }
+  if (queryHasFaculty && isJobFaculty && !q.replace(/\b(faculty|professor|associate[\s_]*prof|assistant[\s_]*prof|lecturer)\b/gi, '').trim()) {
+    return true;
+  }
+  if (queryHasMO && isJobMO && !q.replace(/\b(medical[\s_]*officer|gdmo)\b/gi, '').trim()) {
+    return true;
+  }
 
   const groups = queryGroups(query);
   if (!groups.length) return true;
@@ -112,7 +126,7 @@ function matchesQuery(job: any, query?: string) {
     job?._groupSearchText,
     organisation(job),
     job?.location,
-  ].filter(Boolean).join(' ')).toLowerCase();
+  ].filter(Boolean).join(' ')).toLowerCase().replace(/_/g, ' ');
   // Comma-separated role groups are OR; words within each role are AND.
   return groups.some((tokens) => tokens.every((token) => haystack.includes(token)));
 }

@@ -249,7 +249,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
     setJobQuery(next);
     setJobSuggestions([]);
     setShowJobDropdown(false);
-    onLiveSearch?.(next, locationQuery);
+    if (onLiveSearch) {
+      onLiveSearch(next, locationQuery);
+    } else {
+      const params = new URLSearchParams();
+      if (next.trim()) params.set('search', next.trim());
+      if (locationQuery.trim()) params.set('location', locationQuery.trim());
+      const path = sector === 'government' ? '/govt-jobs' : sector === 'private' ? '/private-jobs' : '/jobs';
+      navigate(`${path}${params.toString() ? `?${params}` : ''}`);
+    }
   };
 
   const chooseLocation = (suggestion: string) => {
@@ -257,7 +265,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
     setLocationSuggestions([]);
     setShowLocationDropdown(false);
     setShowAllCities(false);
-    onLiveSearch?.(jobQuery, suggestion);
+    if (onLiveSearch) {
+      onLiveSearch(jobQuery, suggestion);
+    } else {
+      const params = new URLSearchParams();
+      if (jobQuery.trim()) params.set('search', jobQuery.trim());
+      if (suggestion.trim()) params.set('location', suggestion.trim());
+      const path = sector === 'government' ? '/govt-jobs' : sector === 'private' ? '/private-jobs' : '/jobs';
+      navigate(`${path}${params.toString() ? `?${params}` : ''}`);
+    }
   };
 
   const isJobDropdownOpen = Boolean(showJobDropdown && jobSuggestions.length > 0);
