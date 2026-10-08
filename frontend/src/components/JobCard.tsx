@@ -333,16 +333,19 @@ export function JobCard({
   const view = job as any;
   const sector = job.sector || 'private';
   const isGovernment = sector === 'government';
+  const sourceRecruitmentId = view.sourceRecruitmentId;
+  const grouped = Boolean(view.recruitmentGrouped && sourceRecruitmentId);
   const displayTitle = useMemo(() => {
+    if (view.recruitmentGrouped || (view.groupedVacancyRows && view.groupedVacancyRows > 1) || (view.departments && view.departments.length > 1)) {
+      return resolveStandardCardTitle(job);
+    }
     const candidate = String(view.displayTitle || job.title || '').trim();
     const isGeneric = !candidate || /^(various\s*departments(\s*\(multiple\s*department\))?|medical\s*vacancy|\+\s*\d+\s*more)/i.test(candidate);
     if (!isGeneric) {
       return candidate.replace(/\s*-\s*Multiple\s*Departments/gi, '').trim();
     }
     return resolveStandardCardTitle(job);
-  }, [view.displayTitle, job.title, job]);
-  const sourceRecruitmentId = view.sourceRecruitmentId;
-  const grouped = Boolean(view.recruitmentGrouped && sourceRecruitmentId);
+  }, [view.displayTitle, job.title, job, view.recruitmentGrouped, view.groupedVacancyRows, view.departments]);
 
   const rawOrg = [
     job.organization,

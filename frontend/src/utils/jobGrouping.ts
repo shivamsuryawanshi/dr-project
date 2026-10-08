@@ -14,11 +14,21 @@ function unique(values: unknown[]) {
 }
 
 function basePostName(job: any) {
-  const title = clean(job?.displayTitle || job?.title);
-  const suffixes = unique([job?.speciality, job?.department]);
+  let title = clean(job?.displayTitle || job?.title);
+  const suffixes = unique([
+    job?.speciality,
+    job?.department,
+    ...(job?.departments || []),
+    ...(job?.specialities || []),
+  ]);
   for (const suffix of suffixes) {
-    const marker = ` - ${suffix}`;
-    if (title.toLowerCase().endsWith(marker.toLowerCase())) return title.slice(0, title.length - marker.length).trim();
+    const cleanSuffix = String(suffix).replace(/^\s*(?:\d+[\.\)\-:]|\([0-9a-zA-Z]+\))\s*/, '').trim();
+    const markers = [` - ${suffix}`, ` - ${cleanSuffix}`];
+    for (const marker of markers) {
+      if (title.toLowerCase().endsWith(marker.toLowerCase())) {
+        title = title.slice(0, title.length - marker.length).trim();
+      }
+    }
   }
   return title;
 }
@@ -58,6 +68,33 @@ function searchTextFor(job: any) {
 }
 
 function matchesQuery(job: any, query?: string) {
+  if (!query?.trim()) return true;
+  const q = query.trim().toLowerCase();
+
+  // Strict cadre checking: prevents unrelated roles from matching
+  const queryHasSR = /\b(senior\s*resident|sr\b|sr\s*resident)\b/i.test(q);
+  const queryHasJR = /\b(junior\s*resident|jr\b|jr\s*resident)\b/i.test(q);
+  const queryHasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer)\b/i.test(q);
+  const queryHasMO = /\b(medical\s*officer|gdmo)\b/i.test(q);
+
+  const roleText = clean([
+    job?.displayTitle,
+    job?.title,
+    ...(job?.postNames || []),
+    ...(Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.jobRoles]),
+    job?.category,
+  ].filter(Boolean).join(' ')).toLowerCase();
+
+  const isJobSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(roleText);
+  const isJobJR = /\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency)\b/i.test(roleText);
+  const isJobFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal)\b/i.test(roleText);
+  const isJobMO = /\b(medical\s*officer|gdmo|general\s*duty)\b/i.test(roleText);
+
+  if (queryHasSR && !queryHasJR && !isJobSR) return false;
+  if (queryHasJR && !queryHasSR && !isJobJR) return false;
+  if (queryHasFaculty && !isJobFaculty) return false;
+  if (queryHasMO && !isJobMO) return false;
+
   const groups = queryGroups(query);
   if (!groups.length) return true;
   const haystack = clean([
@@ -91,12 +128,30 @@ export function resolveStandardCardTitle(input: any): string {
   const items = Array.isArray(input) ? input : [input];
   const first = items[0] || {};
 
-  const departments = unique(items.flatMap((item) => [item.department, item.speciality])).filter(Boolean);
+  const departments = unique(items.flatMap((item) => [item.department, item.speciality, ...(item.departments || []), ...(item.specialities || [])])).filter(Boolean);
   const postNames = unique(items.map((item) => item._basePostName || basePostName(item))).filter(Boolean);
+  const hasMultipleSpecialties = departments.length > 1 || items.length > 1 || Boolean(first?.recruitmentGrouped);
 
   let rawUserTitle = clean(first?.title || first?.displayTitle || '');
   rawUserTitle = rawUserTitle.replace(/\s*-\s*Multiple\s*Departments/gi, '').trim();
   const isLegacyConcat = /\+\s*\d+\s*more\s*posts/i.test(rawUserTitle);
+
+  // If this is a multi-specialty circular, check if rawUserTitle is just one child department's title:
+  // e.g. "Senior Resident - 5. Pathology" or "Senior Resident - Pathology"
+  if (hasMultipleSpecialties && rawUserTitle) {
+    const isChildDeptTitle = departments.some((d) => {
+      const cleanD = d.replace(/^\s*(?:\d+[\.\)\-:]|\([0-9a-zA-Z]+\))\s*/, '').trim().toLowerCase();
+      const lowerTitle = rawUserTitle.toLowerCase();
+      return (
+        lowerTitle.endsWith(` - ${d.toLowerCase()}`) ||
+        lowerTitle.endsWith(` - ${cleanD}`) ||
+        new RegExp(`\\s*-\\s*(?:\\d+[\\.\\)]\\s*)?${cleanD.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i').test(rawUserTitle)
+      );
+    });
+    if (isChildDeptTitle) {
+      rawUserTitle = '';
+    }
+  }
 
   // If user provided a specific non-generic title, always preserve it!
   const isGeneric =
@@ -132,8 +187,6 @@ export function resolveStandardCardTitle(input: any): string {
   if (hasConsultant) detectedCadres.push('Specialist / Consultant');
   if (hasParamedical) detectedCadres.push('Paramedical Staff');
   if (hasResearch) detectedCadres.push('Research / Survey');
-
-  const hasMultipleSpecialties = departments.length > 1 || items.length > 1;
 
   // 1. Single core cadre detected across the circular:
   if (detectedCadres.length === 1) {

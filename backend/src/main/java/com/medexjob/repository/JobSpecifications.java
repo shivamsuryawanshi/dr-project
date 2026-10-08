@@ -143,6 +143,48 @@ public final class JobSpecifications {
 
             List<String> tokens = tokenize(searchQuery);
             if (!tokens.isEmpty()) {
+                String queryLower = searchQuery.toLowerCase(Locale.ROOT).trim();
+                boolean queryHasSR = queryLower.contains("senior resident") || queryLower.matches(".*\\bsr\\s*resident.*") || queryLower.matches("^sr\\b.*");
+                boolean queryHasJR = queryLower.contains("junior resident") || queryLower.matches(".*\\bjr\\s*resident.*") || queryLower.matches("^jr\\b.*");
+                boolean queryHasFaculty = queryLower.contains("professor") || queryLower.contains("faculty") || queryLower.contains("lecturer") || queryLower.contains("tutor");
+                boolean queryHasMO = queryLower.contains("medical officer") || queryLower.contains("gdmo");
+
+                if (queryHasSR && !queryHasJR) {
+                    predicates.add(cb.or(
+                            like(cb, root.get("title"), "senior resident"),
+                            like(cb, root.get("title"), "sr resident"),
+                            like(cb, root.get("jobRoles"), "senior resident"),
+                            cb.equal(root.get("category"), Job.JobCategory.SENIOR_RESIDENT),
+                            vacancyMatches(cb, query, root, "senior resident")
+                    ));
+                } else if (queryHasJR && !queryHasSR) {
+                    predicates.add(cb.or(
+                            like(cb, root.get("title"), "junior resident"),
+                            like(cb, root.get("title"), "jr resident"),
+                            like(cb, root.get("jobRoles"), "junior resident"),
+                            cb.equal(root.get("category"), Job.JobCategory.JUNIOR_RESIDENT),
+                            vacancyMatches(cb, query, root, "junior resident")
+                    ));
+                } else if (queryHasFaculty && !queryHasSR && !queryHasJR) {
+                    predicates.add(cb.or(
+                            like(cb, root.get("title"), "professor"),
+                            like(cb, root.get("title"), "faculty"),
+                            like(cb, root.get("title"), "lecturer"),
+                            like(cb, root.get("title"), "tutor"),
+                            like(cb, root.get("jobRoles"), "Faculty"),
+                            cb.equal(root.get("category"), Job.JobCategory.FACULTY),
+                            vacancyMatches(cb, query, root, "professor")
+                    ));
+                } else if (queryHasMO && !queryHasSR && !queryHasJR && !queryHasFaculty) {
+                    predicates.add(cb.or(
+                            like(cb, root.get("title"), "medical officer"),
+                            like(cb, root.get("title"), "gdmo"),
+                            like(cb, root.get("jobRoles"), "Medical Officer"),
+                            cb.equal(root.get("category"), Job.JobCategory.MEDICAL_OFFICER),
+                            vacancyMatches(cb, query, root, "medical officer")
+                    ));
+                }
+
                 Predicate exactTitlePhrase = like(cb, root.get("title"), searchQuery);
                 Predicate exactEmployerPhrase = like(cb, employerJoin.get("companyName"), searchQuery);
                 Predicate exactSpecialityPhrase = like(cb, root.get("speciality"), searchQuery);
@@ -207,8 +249,9 @@ public final class JobSpecifications {
                 Expression<Integer> relevanceOrder = cb.<Integer>selectCase()
                         .when(exactTitlePhrase, 1)
                         .when(allTitleTokensMatch, 2)
-                        .when(anyExactPhrase, 3)
-                        .otherwise(4);
+                        .when(like(cb, root.get("jobRoles"), searchQuery), 3)
+                        .when(anyExactPhrase, 4)
+                        .otherwise(5);
                 query.orderBy(cb.asc(relevanceOrder), cb.desc(root.get("createdAt")));
             }
 

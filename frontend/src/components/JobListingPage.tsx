@@ -49,6 +49,31 @@ function roleGroups(value: string) {
 function matchesWhatTitle(job: any, keyword: string) {
   const trimmedKeyword = keyword.trim();
   if (!trimmedKeyword) return true;
+  const q = trimmedKeyword.toLowerCase();
+
+  // Strict cadre checking: prevents unrelated roles (e.g. Assistant Professor, Junior Resident) from matching a Senior Resident search
+  const queryHasSR = /\b(senior\s*resident|sr\b|sr\s*resident)\b/i.test(q);
+  const queryHasJR = /\b(junior\s*resident|jr\b|jr\s*resident)\b/i.test(q);
+  const queryHasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer)\b/i.test(q);
+  const queryHasMO = /\b(medical\s*officer|gdmo)\b/i.test(q);
+
+  const roleText = [
+    job?.displayTitle,
+    job?.title,
+    ...(Array.isArray(job?.postNames) ? job.postNames : []),
+    ...(Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.jobRoles]),
+    job?.category,
+  ].filter(Boolean).map((s) => String(s).toLowerCase()).join(' ');
+
+  const isJobSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(roleText);
+  const isJobJR = /\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency)\b/i.test(roleText);
+  const isJobFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal)\b/i.test(roleText);
+  const isJobMO = /\b(medical\s*officer|gdmo|general\s*duty)\b/i.test(roleText);
+
+  if (queryHasSR && !queryHasJR && !isJobSR) return false;
+  if (queryHasJR && !queryHasSR && !isJobJR) return false;
+  if (queryHasFaculty && !isJobFaculty) return false;
+  if (queryHasMO && !isJobMO) return false;
 
   const targetParts = [
     job?.displayTitle,
@@ -79,8 +104,25 @@ function matchesWhatTitle(job: any, keyword: string) {
   );
 }
 
+function searchRelevance(job: any, keyword: string): number {
+  const q = keyword.toLowerCase().trim();
+  const title = String(job?.displayTitle || job?.title || '').toLowerCase();
+  const postNames = (Array.isArray(job?.postNames) ? job.postNames : []).map((p: any) => String(p).toLowerCase());
+  const roles = (Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.category]).map((r: any) => String(r || '').toLowerCase());
+
+  if (title === q) return 100;
+  if (title.startsWith(q)) return 90;
+  if (title.includes(q)) return 80;
+  if (postNames.some((p: string) => p.includes(q))) return 70;
+  if (roles.some((r: string) => r.includes(q))) return 60;
+  return 10;
+}
+
 function filterByWhatTitle(content: any[], keyword: string) {
-  return keyword.trim() ? content.filter((job) => matchesWhatTitle(job, keyword)) : content;
+  if (!keyword.trim()) return content;
+  return content
+    .filter((job) => matchesWhatTitle(job, keyword))
+    .sort((a, b) => searchRelevance(b, keyword) - searchRelevance(a, keyword));
 }
 
 export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {

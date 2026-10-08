@@ -873,6 +873,7 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
 
     if (postLineMatch) {
       let pName = postLineMatch[1].trim();
+      pName = pName.replace(/^\s*(?:\d+[\.\)\-:]|\([0-9a-zA-Z]+\)|[ivxIVX]+[\.\)\-:])\s*/, '').trim();
       const count = parseInt(postLineMatch[2], 10);
       if (
         pName.length >= 2 &&
