@@ -816,7 +816,9 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   // Junior Resident – 4Post
   // ==========================================
   const parsedVacancies: ParsedDepartmentVacancy[] = [];
+  const cadreSummaryVacancies: ParsedDepartmentVacancy[] = [];
   let totalPostsSum = 0;
+  let summaryPostsSum = 0;
   const detectedPostTitles: string[] = [];
   let currentCadreRole = '';
 
@@ -828,7 +830,17 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
       currentCadreRole = roleCandidate;
     }
   }
-  if (!currentCadreRole) {
+
+  // Check if circular contains multiple distinct cadres (e.g. MO + Nursing + Paramedical)
+  const hasNursingOrParamedicalInNotice = /\b(nurse|nursing|staff\s*nurse|anm|gnm|paramedic|lab\s*tech|pharmacist)\b/i.test(normalizedText);
+  const hasResidentInNotice = /\b(senior\s*resident|junior\s*resident)\b/i.test(normalizedText);
+  const hasFacultyInNotice = /\b(professor|tutor|demonstrator)\b/i.test(normalizedText);
+  const hasMOInNotice = /\bmedical\s+officer\b/i.test(normalizedText);
+
+  const cadreTypeCount = [hasNursingOrParamedicalInNotice, hasResidentInNotice, hasFacultyInNotice, hasMOInNotice].filter(Boolean).length;
+  const isMultiCadreCircular = cadreTypeCount >= 2;
+
+  if (!currentCadreRole && !isMultiCadreCircular) {
     if (/\bsenior\s+resident\b/i.test(normalizedText) && !/\b(junior\s+resident|professor|tutor)\b/i.test(normalizedText)) {
       currentCadreRole = 'Senior Resident';
     } else if (/\bjunior\s+resident\b/i.test(normalizedText) && !/\b(senior\s+resident|professor|tutor)\b/i.test(normalizedText)) {
@@ -838,11 +850,89 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     }
   }
 
+  // Helper: Infer precise role and category per vacancy item
+  const inferRoleAndCategory = (name: string, fallbackCadre?: string): { postName: string; category: JobCategory } => {
+    const clean = name.trim();
+    const lower = clean.toLowerCase();
+
+    // 1. Nursing
+    if (/\b(nurse|nursing|staff\s*nurse|anm|gnm|sister\s*tutor|b\.?\s*sc\s*nurs\w*)\b/i.test(lower)) {
+      return { postName: 'Nursing Staff', category: 'Nursing' };
+    }
+
+    // 2. Paramedical / Pharmacy / Tech
+    if (/\b(pharmacist|pharmacy|b\.?\s*pharm|d\.?\s*pharm|dispenser)\b/i.test(lower)) {
+      return { postName: 'Paramedical Staff', category: 'Pharmacy' };
+    }
+    if (/\b(paramedic\w*|lab\s*tech\w*|technician|radiograph\w*|x-ray|ecg|ot\s*tech|lab\s*manager|dialysis)\b/i.test(lower)) {
+      return { postName: 'Paramedical Staff', category: 'Paramedical' };
+    }
+
+    // 3. Senior Resident
+    if (/\b(senior\s*resident|sr\b|sr\.)/i.test(lower)) {
+      return { postName: 'Senior Resident', category: 'Senior Resident' };
+    }
+
+    // 4. Junior Resident
+    if (/\b(junior\s*resident|jr\b|jr\.)/i.test(lower)) {
+      return { postName: 'Junior Resident', category: 'Junior Resident' };
+    }
+
+    // 5. Faculty
+    if (/\b(assistant\s*professor|asst\.?\s*prof)/i.test(lower)) {
+      return { postName: 'Assistant Professor', category: 'Faculty' };
+    }
+    if (/\b(associate\s*professor|assoc\.?\s*prof)/i.test(lower)) {
+      return { postName: 'Associate Professor', category: 'Faculty' };
+    }
+    if (/\b(professor|prof\.)/i.test(lower)) {
+      return { postName: 'Professor', category: 'Faculty' };
+    }
+    if (/\b(tutor|demonstrator|lecturer)/i.test(lower)) {
+      return { postName: 'Tutor', category: 'Faculty' };
+    }
+
+    // 6. Medical Officer
+    if (/\b(medical\s*officer|gdmo|general\s*duty\s*medical|duty\s*medical\s*officer|casualty\s*medical\s*officer|lady\s*medical\s*officer|female\s*medical\s*officer)\b/i.test(lower)) {
+      return { postName: 'Medical Officer', category: 'Medical Officer' };
+    }
+
+    // 7. Specialist / Consultant / Clinical Department Head
+    if (/\b(specialist|super\s*specialist|consultant|paediatrician|pediatrician|physician|surgeon|cardiologist|radiologist|pathologist|psychiatrist|dermatologist|anesthetist|anaesthetist|orthopedician|gynecologist|obstetrician)\b/i.test(lower)) {
+      if (fallbackCadre && fallbackCadre !== 'Medical Officer') {
+        return { postName: fallbackCadre, category: inferCategory(fallbackCadre) };
+      }
+      return { postName: 'Specialist', category: 'Specialist' };
+    }
+
+    // 8. Fallback to fallbackCadre if specified
+    if (fallbackCadre) {
+      return { postName: fallbackCadre, category: inferCategory(fallbackCadre) };
+    }
+
+    // 9. Default to clean name
+    return { postName: clean, category: inferCategory(clean) };
+  };
+
   const cadreSummaryList: Array<{ name: string; count: number }> = [];
+  let inCadreSummarySection = false;
+  let inDeptBreakdownSection = false;
 
   for (const rawLine of lines) {
     const cleanLine = rawLine.replace(/^[🟩🟥⬛⬜🟧🟨*#•\->\s]+/, '').trim();
     if (!cleanLine) continue;
+
+    // Detect Cadre-Wise Summary section vs Department Breakdown section
+    if (/^(?:cadre[- ]wise(?:\s*summary)?|summary\s*of\s*(?:posts?|vacanc(?:y|ies))|category[- ]wise\s*summary|cadre\s*summary|post[- ]wise\s*summary|abstract\s*of\s*(?:posts?|vacanc(?:y|ies))|abstract\s*notification)\b/i.test(cleanLine)) {
+      inCadreSummarySection = true;
+      inDeptBreakdownSection = false;
+      continue;
+    }
+    if (/^(?:department[- ]wise(?:\s*vacancy\s*breakdown)?|specialt(?:y|ies)[- ]wise(?:\s*breakdown)?|discipline[- ]wise(?:\s*breakdown)?|detailed\s+(?:vacancy|vacancies|breakdown)|breakdown\s+of\s*posts?|post[- ]wise\s*breakdown|department\s*breakdown)\b/i.test(cleanLine)) {
+      inDeptBreakdownSection = true;
+      inCadreSummarySection = false;
+      continue;
+    }
 
     // Skip TOTAL POSTS / TOTAL VACANCIES lines from being parsed as departments!
     const totalLineMatch = cleanLine.match(/^(?:TOTAL\s*POSTS?|TOTAL\s*VACANC(?:Y|IES)|TOTAL\s*VACANT\s*POSTS?|GRAND\s*TOTAL|TOTAL)\s*[:\-–—=]\s*([0-9]{1,4})/i);
@@ -855,6 +945,8 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
 
     // Skip header lines or meta lines
     if (/^(LAST DATE|DATE OF INTERVIEW|VENUE|WEBSITE|WALK-IN|SELECTION|AGE LIMIT|SALARY|PAY|EXPERIENCE|ELIGIBILITY|CONTRACT|IMPORTANT|DEPARTMENT BREAKDOWN|DEPARTMENT-WISE|SPECIALTY-WISE|TITLE|ORGANIZATION|LOCATION|STATE|SECTOR)\b/i.test(cleanLine)) {
+      inCadreSummarySection = false;
+      inDeptBreakdownSection = false;
       continue;
     }
 
@@ -905,11 +997,12 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
           if (!isNaN(vacCount) && vacCount > 0 && vacCount < 10000) {
             totalPostsSum += vacCount;
             detectedPostTitles.push(dept);
+            const { postName: inferredPost, category: inferredCat } = inferRoleAndCategory(dept, currentCadreRole);
             parsedVacancies.push({
               department: dept,
               numberOfVacancies: vacCount,
-              postName: currentCadreRole || dept,
-              category: inferCategory(currentCadreRole || dept, currentCadreRole),
+              postName: inferredPost,
+              category: inferredCat,
             });
             continue;
           }
@@ -940,9 +1033,21 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
         count > 0 &&
         count < 10000
       ) {
-        const isCadreName = /^(professor|associate professor|assistant professor|additional professor|senior resident|junior resident|part[- ]?time\s*specialist|resident\s*specialist|full[- ]?time\s*specialist|pt\/ft\s*(contractual\s*)?specialist|super\s*specialist|full[- ]?time\s*super\s*specialist|part[- ]?time\s*super\s*specialist|specialist|pgmo|gdmo|medical officer|tutor|demonstrator|consultant)$/i.test(pName);
-        if (isCadreName && !currentCadreRole) {
+        const isCadreSummaryLine =
+          inCadreSummarySection ||
+          /^(professor|associate professor|assistant professor|additional professor|senior resident|junior resident|part[- ]?time\s*specialist|resident\s*specialist|full[- ]?time\s*specialist|pt\/ft\s*(contractual\s*)?specialist|super\s*specialist|full[- ]?time\s*super\s*specialist|part[- ]?time\s*super\s*specialist|specialist|pgmo|gdmo|medical officer|tutor|demonstrator|consultant)$/i.test(pName) ||
+          /^(medical\s*officers?\s*\/\s*specialists?|nursing\s*staff|paramedical\s*staff)/i.test(pName);
+
+        if (inCadreSummarySection || (isCadreSummaryLine && !currentCadreRole && !inDeptBreakdownSection)) {
+          summaryPostsSum += count;
           cadreSummaryList.push({ name: pName, count });
+          const { postName: sPost, category: sCat } = inferRoleAndCategory(pName, currentCadreRole);
+          cadreSummaryVacancies.push({
+            department: pName,
+            numberOfVacancies: count,
+            postName: sPost,
+            category: sCat,
+          });
         } else {
           // If formatted like "Forensic Medicine (Professor)" or "Professor - Forensic Medicine"
           let extractedRole = currentCadreRole;
@@ -954,28 +1059,24 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
 
           totalPostsSum += count;
           detectedPostTitles.push(pName);
+          const { postName: inferredPost, category: inferredCat } = inferRoleAndCategory(pName, extractedRole || currentCadreRole);
           parsedVacancies.push({
             department: pName,
             numberOfVacancies: count,
-            postName: extractedRole || currentCadreRole || pName,
-            category: inferCategory(extractedRole || currentCadreRole || pName, currentCadreRole),
+            postName: inferredPost,
+            category: inferredCat,
           });
         }
       }
     }
   }
 
-  // If specific department lines were not present, fall back to cadre summary lines
-  if (parsedVacancies.length === 0 && cadreSummaryList.length > 0) {
-    for (const c of cadreSummaryList) {
-      totalPostsSum += c.count;
-      detectedPostTitles.push(c.name);
-      parsedVacancies.push({
-        department: c.name,
-        numberOfVacancies: c.count,
-        postName: c.name,
-        category: inferCategory(c.name, currentCadreRole),
-      });
+  // If specific detailed department lines were not present, fall back to cadre summary lines
+  if (parsedVacancies.length === 0 && cadreSummaryVacancies.length > 0) {
+    for (const c of cadreSummaryVacancies) {
+      totalPostsSum += c.numberOfVacancies;
+      detectedPostTitles.push(c.department);
+      parsedVacancies.push(c);
     }
   }
 
@@ -987,12 +1088,16 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     }
 
     const distinctRoles = [
-      ...new Set(
-        parsedVacancies
+      ...new Set([
+        ...parsedVacancies
           .map((v) => v.postName)
           .filter(Boolean)
-          .map((p) => standardizePositionName(p))
-      ),
+          .map((p) => standardizePositionName(p)),
+        ...cadreSummaryVacancies
+          .map((v) => v.postName)
+          .filter(Boolean)
+          .map((p) => standardizePositionName(p)),
+      ]),
     ];
 
     if (distinctRoles.length === 1 && distinctRoles[0]) {
@@ -1006,8 +1111,14 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
       result.category = inferCategory(coreRole);
       result.jobRoles = [coreRole];
     } else if (distinctRoles.length > 1) {
-      if (!result.title) result.title = `${distinctRoles.slice(0, 2).join(' & ')} (Multiple Specialties)`;
-      result.category = inferCategory(distinctRoles[0]);
+      if (!result.title) {
+        if (distinctRoles.length === 2) {
+          result.title = `${distinctRoles[0]} & ${distinctRoles[1]} (Multiple Vacancies)`;
+        } else {
+          result.title = `${distinctRoles.slice(0, 2).join(', ')} & ${distinctRoles[2]} (Multiple Vacancies)`;
+        }
+      }
+      result.category = 'Multiple Roles' as JobCategory;
       result.jobRoles = distinctRoles;
     } else {
       if (!result.title) {
@@ -1105,29 +1216,35 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     }
   }
 
-  // Explicit Category / Primary Role detection if present in raw notice
+  // Explicit Category / Primary Role detection if present in raw notice (excluding Cadre-Wise section headers)
   const categoryKeyMatch = normalizedText.match(
-    /(?:^|\n)\s*(?:\*\s*)?(?:Category|Primary\s*Category|Cadre)\s*[:\-]\s*([^\n\r]+)/i
+    /(?:^|\n)\s*(?:\*\s*)?(?:Category|Primary\s*Category|Cadre)(?!\s*[-–—]wise)\s*[:\-]\s*([^\n\r]+)/i
   );
   if (categoryKeyMatch) {
-    const parsedCat = inferCategory(categoryKeyMatch[1].trim());
-    result.category = parsedCat;
+    const rawCat = categoryKeyMatch[1].trim();
+    if (!/^(wise|summary|breakdown)/i.test(rawCat)) {
+      const parsedCat = inferCategory(rawCat);
+      result.category = parsedCat;
+    }
   }
 
   // Explicit Post Title detection if present
   const titleKeyMatch = normalizedText.match(
-    /(?:^|\n)\s*(?:\*\s*)?(?:Title|Job\s+Title|Post\s+Job\s+Title|Post\s+Name|Name\s+of\s+(?:the\s+)?Post|Designation|Position|Job\s+Role|Role|Post(?!\s+(?:No|Code|Count|Number|of\s+Vacanc)))\s*[:\-]\s*([^\n\r]+)/i
+    /(?:^|\n)\s*(?:\*\s*)?(?:Title|Job\s+Title|Post\s+Job\s+Title|Post\s+Name|Name\s+of\s+(?:the\s+)?Post|Designation|Position|Job\s+Role|Role|Post(?!\s+(?:No|Code|Count|Number|of\s+Vacanc|[-–—]wise)))\s*[:\-]\s*([^\n\r]+)/i
   );
   if (titleKeyMatch) {
     result.title = titleKeyMatch[1].trim();
   }
 
-  // Explicit Speciality / Department detection if present
+  // Explicit Speciality / Department detection if present (excluding Department-Wise section headers)
   const specKeyMatch = normalizedText.match(
-    /(?:^|\n)\s*(?:\*\s*)?(?:Speciality|Specialty|Department)\s*[:\-]\s*([^\n\r]+)/i
+    /(?:^|\n)\s*(?:\*\s*)?(?:Speciality|Specialty|Department)(?!\s*[-–—]wise)\s*[:\-]\s*([^\n\r]+)/i
   );
   if (specKeyMatch) {
-    result.speciality = specKeyMatch[1].trim();
+    const rawSpec = specKeyMatch[1].trim();
+    if (!/^(wise|breakdown|summary)/i.test(rawSpec)) {
+      result.speciality = rawSpec;
+    }
   }
 
   // ==========================================

@@ -387,12 +387,27 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
         }
       }
 
+      // Filter out summary rows if detailed breakdown rows are present
+      let deptsToPublish = recData.departments;
+      const summaryCandidateRows = deptsToPublish.filter((d) =>
+        /^(medical\s*officers?\s*\/\s*specialists?|nursing\s*staff\s*\(|paramedical\s*staff\s*\(|senior\s*resident\s*–|cadre[- ]wise|summary\b)/i.test(d.department) ||
+        /^(medical\s*officers?\s*\/\s*specialists?|nursing\s*staff\s*\(staff\s*nurse,\s*anm\)|paramedical\s*staff\s*\(lab\s*tech,\s*pharmacist,\s*lab\s*manager\))$/i.test(d.department)
+      );
+      if (summaryCandidateRows.length > 0 && summaryCandidateRows.length < deptsToPublish.length) {
+        const nonSummaryRows = deptsToPublish.filter((d) => !summaryCandidateRows.includes(d));
+        const sSum = summaryCandidateRows.reduce((s, r) => s + (r.numberOfVacancies || 0), 0);
+        const nsSum = nonSummaryRows.reduce((s, r) => s + (r.numberOfVacancies || 0), 0);
+        if (sSum === nsSum && nsSum > 0) {
+          deptsToPublish = nonSummaryRows;
+        }
+      }
+
       const payload: ManualRecruitmentPayload = {
         organisationName: formData.organization.trim() || 'Medical Institution / Hospital',
         title: cleanTitle,
         sector: (formData.sector as 'government' | 'private') || 'government',
         location: formData.location ? (formData.state ? `${formData.location}, ${formData.state}` : formData.location) : 'India',
-        totalVacancies: formData.numberOfPosts || recData.totalVacancies,
+        totalVacancies: formData.numberOfPosts || deptsToPublish.reduce((s, d) => s + (d.numberOfVacancies || 0), 0),
         applicationLastDate: /^\d{4}-\d{2}-\d{2}$/.test((formData.lastDate || '').trim())
           ? formData.lastDate?.trim()
           : undefined,
@@ -414,7 +429,7 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
           (isValidWebUrl(formData.officialWebsite) ? formData.officialWebsite : undefined) ||
           (isValidWebUrl(formData.applyLink) ? formData.applyLink : undefined),
         publishImmediately: true,
-        vacancies: recData.departments.map((d) => ({
+        vacancies: deptsToPublish.map((d) => ({
           postName: d.postName || cleanTitle || recData?.title || 'Senior Resident',
           department: d.department,
           speciality: d.department,

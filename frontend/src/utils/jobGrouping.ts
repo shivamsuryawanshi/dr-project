@@ -1,4 +1,5 @@
 import { isGenericNotice, isRegulatoryDump } from './extractedFieldDisplay';
+import { extractPositionsFromText } from './recruitmentBreakdown';
 
 const SEARCH_STOPWORDS = new Set([
   'a', 'an', 'and', 'at', 'for', 'in', 'of', 'on', 'the', 'to', 'with',
@@ -167,7 +168,7 @@ export function resolveStandardCardTitle(input: any): string {
     }
   }
 
-  // If user provided a specific non-generic title, always preserve it!
+  // If user provided a specific non-generic title, check if it needs refinement for multi-cadre
   const isGeneric =
     !rawUserTitle ||
     /^(various\s*departments(\s*\(multiple\s*department\))?|medical\s*vacancy|vacancy|recruitment\s*notification|medical\s*staff\s*recruitment)$/i.test(
@@ -175,13 +176,9 @@ export function resolveStandardCardTitle(input: any): string {
     ) ||
     isLegacyConcat;
 
-  if (!isGeneric) {
-    return rawUserTitle;
-  }
-
   // Extract ONLY cadre / designation fields from vacancy titles and categories
   const cadreText = items
-    .map((item) => `${item._basePostName || ''} ${item.postName || ''} ${item.category || ''}`)
+    .map((item) => `${item._basePostName || ''} ${item.postName || ''} ${item.department || ''} ${item.speciality || ''} ${item.category || ''}`)
     .join(' ')
     .toLowerCase();
 
@@ -189,18 +186,30 @@ export function resolveStandardCardTitle(input: any): string {
   const hasSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(cadreText);
   const hasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal|demonstrator)\b/i.test(cadreText);
   const hasMO = /\b(medical\s*officer|gdmo|general\s*duty\s*medical\s*officer|duty\s*medical\s*officer)\b/i.test(cadreText);
-  const hasConsultant = /\b(consultant|specialist|super\s*specialist|attending\s*consultant)\b/i.test(cadreText);
-  const hasParamedical = /\b(paramedical|nurse|nursing|technician|radiographer|optometrist|dietician|ecg)\b/i.test(cadreText) || (/\b(pharmacist|dispenser)\b/i.test(cadreText) && !/\bpharmacolog/i.test(cadreText));
+  const hasConsultant = /\b(consultant|specialist|super\s*specialist|attending\s*consultant|paediatrician|pediatrician|surgeon)\b/i.test(cadreText);
+  const hasNursing = /\b(nurse|nursing|staff\s*nurse|anm|gnm)\b/i.test(cadreText);
+  const hasParamedical = /\b(paramedical|technician|radiographer|optometrist|dietician|ecg|lab\s*tech|lab\s*manager)\b/i.test(cadreText) || (/\b(pharmacist|dispenser)\b/i.test(cadreText) && !/\bpharmacolog/i.test(cadreText));
   const hasResearch = /\b(research\s*scientist|research\s*fellow|project\s*fellow|research\s*associate|survey\s*officer)\b/i.test(cadreText);
 
   const detectedCadres: string[] = [];
+  if (hasMO) detectedCadres.push('Medical Officer');
+  if (hasNursing) detectedCadres.push('Nursing Staff');
+  if (hasParamedical) detectedCadres.push('Paramedical Staff');
+  if (hasConsultant) detectedCadres.push('Specialist');
   if (hasSR) detectedCadres.push('Senior Resident');
   if (hasJR) detectedCadres.push('Junior Resident');
   if (hasFaculty) detectedCadres.push('Faculty');
-  if (hasMO) detectedCadres.push('Medical Officer');
-  if (hasConsultant) detectedCadres.push('Specialist / Consultant');
-  if (hasParamedical) detectedCadres.push('Paramedical Staff');
   if (hasResearch) detectedCadres.push('Research / Survey');
+
+  const hasMultipleCadres = detectedCadres.length >= 2;
+  const titleMentionsOnlyOneCadre =
+    rawUserTitle &&
+    detectedCadres.some((c) => rawUserTitle.toLowerCase().includes(c.toLowerCase())) &&
+    !detectedCadres.some((c) => rawUserTitle.toLowerCase().includes('&') || rawUserTitle.toLowerCase().includes('and') || rawUserTitle.toLowerCase().includes(','));
+
+  if (!isGeneric && !(hasMultipleCadres && titleMentionsOnlyOneCadre && (rawUserTitle.includes('(Multiple Specialties)') || rawUserTitle.includes('(Multiple Vacancies)')))) {
+    return rawUserTitle;
+  }
 
   // 1. Single core cadre detected across the circular:
   if (detectedCadres.length === 1) {
@@ -210,10 +219,10 @@ export function resolveStandardCardTitle(input: any): string {
 
   // 2. Multiple distinct cadres detected:
   if (detectedCadres.length === 2) {
-    return `${detectedCadres[0]} & ${detectedCadres[1]} (Multiple Specialties)`;
+    return `${detectedCadres[0]} & ${detectedCadres[1]} (Multiple Vacancies)`;
   }
   if (detectedCadres.length > 2) {
-    return 'Medical Staff (Multiple Specialties)';
+    return `${detectedCadres.slice(0, 2).join(', ')} & ${detectedCadres[2]} (Multiple Vacancies)`;
   }
 
   // 3. Cadre not in standard list, but distinct postNames exist:
@@ -252,25 +261,45 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
   }
 
   const grouped = [...groups.values()].map((items) => {
-    const first = items[0];
-    const departments = unique(items.map((item) => item.department || item.speciality)).filter(Boolean);
-    const postNames = unique(items.map((item) => item._basePostName || basePostName(item))).filter(Boolean);
-    const displayTitle = resolveStandardCardTitle(items);
-    const specialities = unique(items.map((item) => item.speciality));
-    const locations = unique(items.map((item) => item.location));
-    const states = unique(items.map((item) => item.state));
-    const qualifications = unique(items.map((item) => item.qualification)).filter((value) => !isRegulatoryDump(value) && !isGenericNotice(value));
-    const salaries = unique(items.map((item) => item.salary || item.salaryRange)).filter((value) => !isRegulatoryDump(value));
-    const experiences = unique(items.map((item) => item.experience)).filter((value) => !isRegulatoryDump(value) && !isGenericNotice(value));
-    const totalPosts = items.reduce((sum, item) => sum + Math.max(0, Number(item.numberOfPosts || 0)), 0);
+    // Deduplicate duplicate cadre-wise summary rows if detailed breakdown rows are also present
+    let effectiveItems = items;
+    const summaryCandidateItems = items.filter((item) => {
+      const d = String(item.department || item.speciality || item._basePostName || '').toLowerCase().trim();
+      return (
+        /^(medical\s*officers?\s*\/\s*specialists?|nursing\s*staff\s*\(|paramedical\s*staff\s*\(|senior\s*resident\s*–|cadre[- ]wise|summary\b)/i.test(d) ||
+        /\b(?:summary|cadre-wise|abstract)\b/i.test(d) ||
+        /^(medical\s*officers?\s*\/\s*specialists?|nursing\s*staff\s*\(staff\s*nurse,\s*anm\)|paramedical\s*staff\s*\(lab\s*tech,\s*pharmacist,\s*lab\s*manager\))$/i.test(d)
+      );
+    });
+
+    if (summaryCandidateItems.length > 0 && summaryCandidateItems.length < items.length) {
+      const nonSummaryItems = items.filter((item) => !summaryCandidateItems.includes(item));
+      const summarySum = summaryCandidateItems.reduce((s, it) => s + Math.max(0, Number(it.numberOfPosts || 0)), 0);
+      const nonSummarySum = nonSummaryItems.reduce((s, it) => s + Math.max(0, Number(it.numberOfPosts || 0)), 0);
+      if (summarySum === nonSummarySum && nonSummarySum > 0) {
+        effectiveItems = nonSummaryItems;
+      }
+    }
+
+    const first = effectiveItems[0] || items[0];
+    const departments = unique(effectiveItems.map((item) => item.department || item.speciality)).filter(Boolean);
+    const postNames = unique(effectiveItems.map((item) => item._basePostName || basePostName(item))).filter(Boolean);
+    const displayTitle = resolveStandardCardTitle(effectiveItems);
+    const specialities = unique(effectiveItems.map((item) => item.speciality));
+    const locations = unique(effectiveItems.map((item) => item.location));
+    const states = unique(effectiveItems.map((item) => item.state));
+    const qualifications = unique(effectiveItems.map((item) => item.qualification)).filter((value) => !isRegulatoryDump(value) && !isGenericNotice(value));
+    const salaries = unique(effectiveItems.map((item) => item.salary || item.salaryRange)).filter((value) => !isRegulatoryDump(value));
+    const experiences = unique(effectiveItems.map((item) => item.experience)).filter((value) => !isRegulatoryDump(value) && !isGenericNotice(value));
+    const totalPosts = effectiveItems.reduce((sum, item) => sum + Math.max(0, Number(item.numberOfPosts || 0)), 0);
     const org = organisation(first);
     const searchText = unique([
       displayTitle, org, ...postNames, ...departments, ...specialities, ...locations, ...states,
-      ...qualifications, ...salaries, ...experiences, ...items.map((item) => item.description),
+      ...qualifications, ...salaries, ...experiences, ...effectiveItems.map((item) => item.description),
     ]).join(' ');
 
     const allRoles = unique(
-      items.flatMap((item) => {
+      effectiveItems.flatMap((item) => {
         const rList: string[] = [];
         if (Array.isArray(item.jobRoles)) {
           item.jobRoles.forEach((r: any) => {
@@ -289,6 +318,14 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
           item.category.split(/[/,]| and /i).forEach((p: string) => {
             if (p.trim()) rList.push(p.trim());
           });
+        }
+        if (item.department) {
+          const fromDept = extractPositionsFromText(item.department);
+          fromDept.forEach((p) => rList.push(p));
+        }
+        if (item.speciality) {
+          const fromSpec = extractPositionsFromText(item.speciality);
+          fromSpec.forEach((p) => rList.push(p));
         }
         return rList;
       })

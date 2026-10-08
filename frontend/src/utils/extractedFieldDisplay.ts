@@ -154,6 +154,17 @@ export function departmentSubtitle(vacancy: {
 
   const isCompositeOrMulti = (val: string) => /[/&,]|(?:\band\b)|multiple|various/i.test(val);
 
+  // Cadre sanity checks for existing data where postName was erroneously saved as Medical Officer
+  if (/\b(nurse|nursing|staff\s*nurse|anm|gnm|sister\s*tutor)\b/i.test(name)) {
+    return 'Nursing Staff';
+  }
+  if (/\b(paramedic|lab\s*tech|technician|pharmacist|pharmacy|radiograph|lab\s*manager)\b/i.test(name)) {
+    return 'Paramedical Staff';
+  }
+  if (/\b(paediatrician|pediatrician)\b/i.test(name) && (!postName || /medical\s*officer/i.test(postName))) {
+    return 'Specialist';
+  }
+
   if (speciality && speciality.toLowerCase() !== name.toLowerCase() && !isCompositeOrMulti(speciality)) {
     return speciality;
   }

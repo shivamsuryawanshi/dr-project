@@ -80,13 +80,38 @@ function getJobCategoryTheme(job: any): CategoryTheme {
     job.displayTitle,
     job.department,
     job.speciality,
+    ...(Array.isArray(job.departments) ? job.departments : []),
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 
+  const hasMO = /\b(medical\s*officer|gdmo|general\s*duty|smo\b|cmo\b|rmo\b|casualty\s*medical|duty\s*doctor)\b/i.test(textToScan);
+  const hasSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(textToScan);
+  const hasJR = /\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency)\b/i.test(textToScan);
+  const hasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|director|principal)\b/i.test(textToScan);
+  const hasNursing = /\b(nurse|nursing|staff\s*nurse|anm|gnm)\b/i.test(textToScan);
+  const hasParamedical = /\b(paramedical|technician|pharmacist|lab\s*tech|radiographer|lab\s*manager)\b/i.test(textToScan);
+
+  const cadreCount = [hasMO, hasSR, hasJR, hasFaculty, hasNursing, hasParamedical].filter(Boolean).length;
+
+  // Multi-cadre circulars (e.g. MO + Nursing + Paramedical, or Faculty + Resident)
+  if (cadreCount >= 2 || /\b(various\s*departments|multiple\s*departments|various\s*posts|multiple\s*roles|multiple\s*cadres)\b/i.test(textToScan) || job.category === 'Multiple Roles') {
+    return {
+      type: 'OTHER',
+      roleBadgeLabel: '🏢 Multiple Roles',
+      badgeClass: 'badge-role-multiple',
+      themeClass: 'theme-multiple-indigo',
+      iconBg: '#4f46e5',
+      calendarColor: '#4f46e5',
+      watermark: 'hospital',
+      watermarkColor: '#c7d2fe',
+      Icon: Building2,
+    };
+  }
+
   // 1. 🟥 JR (Junior Resident)
-  if (/\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency)\b/i.test(textToScan)) {
+  if (hasJR) {
     return {
       type: 'JR',
       roleBadgeLabel: '🟥 JR',
@@ -101,7 +126,7 @@ function getJobCategoryTheme(job: any): CategoryTheme {
   }
 
   // 2. ⬛ SR (Senior Resident)
-  if (/\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(textToScan)) {
+  if (hasSR) {
     return {
       type: 'SR',
       roleBadgeLabel: '⬛ SR',
@@ -116,7 +141,7 @@ function getJobCategoryTheme(job: any): CategoryTheme {
   }
 
   // 3. 🟨 FACULTY
-  if (/\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|director|principal)\b/i.test(textToScan)) {
+  if (hasFaculty) {
     return {
       type: 'FACULTY',
       roleBadgeLabel: '🟨 FACULTY',
@@ -131,7 +156,7 @@ function getJobCategoryTheme(job: any): CategoryTheme {
   }
 
   // 4. 🟩 MO / GDMO
-  if (/\b(medical\s*officer|gdmo|general\s*duty|smo\b|cmo\b|rmo\b|casualty\s*medical|duty\s*doctor)\b/i.test(textToScan)) {
+  if (hasMO) {
     return {
       type: 'MO_GDMO',
       roleBadgeLabel: '🟩 MO / GDMO',
@@ -160,8 +185,23 @@ function getJobCategoryTheme(job: any): CategoryTheme {
     };
   }
 
-  // 6. 🟦 PARAMEDICAL
-  if (/\b(paramedical|nurse|nursing|technician|pharmacist|lab\s*tech|physiotherapist|radiographer)\b/i.test(textToScan)) {
+  // 6a. 🌹 NURSING
+  if (hasNursing) {
+    return {
+      type: 'OTHER',
+      roleBadgeLabel: '🌹 NURSING',
+      badgeClass: 'badge-role-nursing',
+      themeClass: 'theme-rose',
+      iconBg: '#be123c',
+      calendarColor: '#be123c',
+      watermark: 'cross',
+      watermarkColor: '#fecdd3',
+      Icon: HeartPulse,
+    };
+  }
+
+  // 6b. 🟦 PARAMEDICAL
+  if (hasParamedical) {
     return {
       type: 'OTHER',
       roleBadgeLabel: '🟦 PARAMEDICAL',
@@ -176,7 +216,7 @@ function getJobCategoryTheme(job: any): CategoryTheme {
   }
 
   // 7. 🏢 Multiple Departments / Various Departments
-  if (/\b(various\s*departments|multiple\s*departments|various\s*posts|multiple\s*roles)\b/i.test(textToScan) || job.recruitmentGrouped) {
+  if (job.recruitmentGrouped) {
     return {
       type: 'OTHER',
       roleBadgeLabel: '🏢 Multiple Departments',
@@ -213,6 +253,7 @@ function getJobCategoryTheme(job: any): CategoryTheme {
  * ⬛ Senior Resident -> Black
  * 🟨 Faculty -> Yellow / Amber
  * 🟪 Specialist / Consultant & Clinical Departments -> Purple
+ * 🌹 Nursing Staff -> Rose / Pink
  * 🟦 Paramedical -> Cyan / Teal
  * 🟦 Research / Survey -> Blue
  * 🟧 PG Counselling / Info -> Orange
@@ -266,7 +307,7 @@ export function getRoleBadgeColorStyle(role: string): {
   }
 
   // 5. 🟪 Consultant / Specialist & Clinical Departments
-  if (/\b(consultant|specialist|super\s*specialist|intensivist|surgeon|physician|cardiolog|neurolog|nephrolog|oncolog|pediatric|radiolog|patholog|anesthes|anaesthes|gynecolog|obstetric|orthopedic|dermatolog|ent|ophthalmolog|psychiatr|dentist|dental|surgery|medicine|anatomy|physiology|biochemistry|microbiology|pharmacology)\b/i.test(r)) {
+  if (/\b(consultant|specialist|super\s*specialist|intensivist|surgeon|physician|cardiolog|neurolog|nephrolog|oncolog|pediatric|paediatric|radiolog|patholog|anesthes|anaesthes|gynecolog|obstetric|orthopedic|dermatolog|ent|ophthalmolog|psychiatr|dentist|dental|surgery|medicine|anatomy|physiology|biochemistry|microbiology|pharmacology)\b/i.test(r)) {
     return {
       bg: '#f5f3ff',
       text: '#6d28d9',
@@ -275,8 +316,18 @@ export function getRoleBadgeColorStyle(role: string): {
     };
   }
 
-  // 6. 🟦 Paramedical / Nursing / Tech
-  if (/\b(paramedical|nurse|nursing|technician|pharmacist|lab|physiotherap|radiographer|optometrist|dietician|ecg)\b/i.test(r)) {
+  // 6a. 🌹 Nursing Staff
+  if (/\b(nurse|nursing|staff\s*nurse|anm|gnm|sister\s*tutor)\b/i.test(r)) {
+    return {
+      bg: '#fff1f2',
+      text: '#be123c',
+      border: '#fecdd3',
+      dotColor: '#e11d48',
+    };
+  }
+
+  // 6b. 🟦 Paramedical Staff / Pharmacy / Tech
+  if (/\b(paramedical|technician|pharmacist|pharmacy|lab|physiotherap|radiographer|optometrist|dietician|ecg)\b/i.test(r)) {
     return {
       bg: '#ecfeff',
       text: '#0e7490',
@@ -445,6 +496,24 @@ export function JobCard({
     if (titleToScan) {
       const detected = extractPositionsFromText(titleToScan);
       detected.forEach((d) => addRole(d));
+    }
+
+    if (Array.isArray(view.departments) && view.departments.length > 0) {
+      view.departments.forEach((d: string) => {
+        if (typeof d === 'string') {
+          const detected = extractPositionsFromText(d);
+          detected.forEach((dt) => addRole(dt));
+        }
+      });
+    }
+
+    if (Array.isArray(view.specialities) && view.specialities.length > 0) {
+      view.specialities.forEach((s: string) => {
+        if (typeof s === 'string') {
+          const detected = extractPositionsFromText(s);
+          detected.forEach((dt) => addRole(dt));
+        }
+      });
     }
 
     const allContextText = [

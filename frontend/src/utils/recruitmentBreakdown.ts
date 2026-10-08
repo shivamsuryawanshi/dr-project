@@ -51,6 +51,14 @@ const STANDARD_ACADEMIC_ORDER = [
   'consultant',
   'pgmo',
   'gdmo',
+  'nursing staff',
+  'staff nurse',
+  'anm',
+  'paramedical staff',
+  'pharmacist',
+  'lab technician',
+  'dental surgeon',
+  'ayush medical officer',
 ];
 
 export function stripCountSuffix(text: string): string {
@@ -176,6 +184,10 @@ export const KNOWN_DESIGNATIONS: Array<{ regex: RegExp; name: string }> = [
   { regex: /\bconsultant\b/i, name: 'Consultant' },
   { regex: /\bpgmo\b/i, name: 'PGMO' },
   { regex: /\bgdmo\b/i, name: 'GDMO' },
+  { regex: /\b(nursing\s*staff|staff\s*nurse|sister\s*tutor|anm|gnm)\b/i, name: 'Nursing Staff' },
+  { regex: /\b(paramedical\s*staff|lab\s*tech\w*|radiographer|pharmacist|lab\s*manager|technician)\b/i, name: 'Paramedical Staff' },
+  { regex: /\bdental\s*surgeon\b/i, name: 'Dental Surgeon' },
+  { regex: /\bayush\s*medical\s*officer\b/i, name: 'AYUSH Medical Officer' },
 ];
 
 export function extractPositionsFromText(text?: string): string[] {
@@ -269,6 +281,18 @@ export function standardizePositionName(raw: string): string {
   if (/^consultant\.?$/i.test(clean)) {
     return 'Consultant';
   }
+  if (/^(nursing\s*staff|staff\s*nurse|anm|gnm|sister\s*tutor)$/i.test(clean)) {
+    return 'Nursing Staff';
+  }
+  if (/^(paramedical\s*staff|lab\s*tech\w*|lab\s*manager|pharmacist|technician)$/i.test(clean)) {
+    return 'Paramedical Staff';
+  }
+  if (/^dental\s*surgeon$/i.test(clean)) {
+    return 'Dental Surgeon';
+  }
+  if (/^ayush\s*medical\s*officer$/i.test(clean)) {
+    return 'AYUSH Medical Officer';
+  }
   const matched = extractPositionsFromText(clean);
   if (matched.length === 1) {
     return matched[0];
@@ -299,22 +323,30 @@ function extractPositionsFromVacancies(vacancies?: VacancyRecord[]): string[] {
 
   for (const v of vacancies) {
     const pName = (v.postName || '').trim();
-    if (!pName) continue;
+    if (pName) {
+      const fromKnown = extractPositionsFromText(pName);
+      fromKnown.forEach((p) => found.add(p));
 
-    const fromKnown = extractPositionsFromText(pName);
-    fromKnown.forEach((p) => found.add(p));
-
-    const parts = pName.split(/[,;/]|\band\b|&/i).map((s) => s.trim()).filter(Boolean);
-    if (parts.length > 1) {
-      for (const part of parts) {
-        if (part.length >= 2 && !isReservedColumn(part)) {
-          found.add(standardizePositionName(part));
+      const parts = pName.split(/[,;/]|\band\b|&/i).map((s) => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        for (const part of parts) {
+          if (part.length >= 2 && !isReservedColumn(part)) {
+            found.add(standardizePositionName(part));
+          }
         }
+      } else if (pName.length >= 2 && !isReservedColumn(pName) && fromKnown.length === 0) {
+        found.add(standardizePositionName(pName));
       }
-    } else if (pName.length >= 2 && !isReservedColumn(pName) && fromKnown.length === 0) {
-      found.add(standardizePositionName(pName));
     }
 
+    if (v.department) {
+      const fromDept = extractPositionsFromText(v.department);
+      fromDept.forEach((p) => found.add(p));
+    }
+    if (v.speciality) {
+      const fromSpec = extractPositionsFromText(v.speciality);
+      fromSpec.forEach((p) => found.add(p));
+    }
     if (v.category) {
       const fromCat = extractPositionsFromText(v.category);
       fromCat.forEach((p) => found.add(p));
@@ -359,7 +391,33 @@ export function matchesPositionName(targetText: string, selectedPosition: string
     if (/(female|lady|emergency|casualty|dental|ayush)\s*medical\s*officer/i.test(normText)) {
       return false;
     }
+    if (/\b(nursing|staff\s*nurse|anm|paramedical|pharmacist|lab\s*tech)/i.test(normText)) {
+      return false;
+    }
     return /\b(medical\s*officer|mo|gdmo)\b/i.test(normText);
+  }
+
+  if (normSel === 'nursing staff') {
+    return /\b(nursing\s*staff|staff\s*nurse|nurse|anm|gnm|sister\s*tutor)\b/i.test(normText);
+  }
+
+  if (normSel === 'paramedical staff') {
+    return /\b(paramedical|paramedical\s*staff|lab\s*tech\w*|lab\s*manager|pharmacist|pharmacy|radiographer|technician)\b/i.test(normText);
+  }
+
+  if (normSel === 'dental surgeon') {
+    return /\bdental\s*surgeon\b/i.test(normText);
+  }
+
+  if (normSel === 'ayush medical officer') {
+    return /\bayush\s*medical\s*officer\b/i.test(normText);
+  }
+
+  if (normSel === 'specialist') {
+    if (/(part[- ]?time|full[- ]?time|resident|pt\/ft|super)\s*(contractual\s*)?specialist/i.test(normText)) {
+      return false;
+    }
+    return /\b(specialist|paediatrician|pediatrician|consultant)\b/i.test(normText);
   }
 
   if (normSel === 'professor') {
@@ -413,13 +471,6 @@ export function matchesPositionName(targetText: string, selectedPosition: string
 
   if (normSel === 'part time super specialist') {
     return /\b(part[- ]?time\s*super\s*specialist|ptss)\b/i.test(normText);
-  }
-
-  if (normSel === 'specialist') {
-    if (/(part[- ]?time|full[- ]?time|resident|pt\/ft|super)\s*(contractual\s*)?specialist/i.test(normText)) {
-      return false;
-    }
-    return /\bspecialist\b/i.test(normText);
   }
 
   if (normSel === 'pgmo') {
@@ -513,23 +564,26 @@ export function parseRecruitmentBreakdown(
     if (fromTitle.length === 1) defaultNoticeRole = fromTitle[0];
   }
   if (!defaultNoticeRole && descriptionText) {
-    const explicitRoleMatch = descriptionText.match(
-      /(?:^|\n)\s*(?:#+\s*)?(?:(?:Post(?:\s*:\s*\d+)?|Role|Cadre)\s*[:\-–—*#•\s]*)?(Senior Resident|Junior Resident|Medical Officer|Professor|Associate Professor|Assistant Professor|Additional Professor|Tutor|Demonstrator|Part[- ]?Time Specialist|Resident Specialist|Full[- ]?Time Specialist|PT\/FT Specialist|PGMO|GDMO|Specialist|Consultant)\s*[:\-–—]\s*(?:\d+\s*posts?|\d+\s*vacanc(?:y|ies))/i
-    );
-    if (explicitRoleMatch) {
-      defaultNoticeRole = standardizePositionName(explicitRoleMatch[1]);
-    } else {
-      const fromDesc = extractPositionsFromText(descriptionText);
-      if (fromDesc.length === 1) defaultNoticeRole = fromDesc[0];
+    const fromDesc = extractPositionsFromText(descriptionText);
+    if (fromDesc.length === 1) {
+      defaultNoticeRole = fromDesc[0];
+    } else if (fromDesc.length <= 2) {
+      const explicitRoleMatch = descriptionText.match(
+        /(?:^|\n)\s*(?:#+\s*)?(?:(?:Post(?:\s*:\s*\d+)?|Role|Cadre)\s*[:\-–—*#•\s]*)?(Senior Resident|Junior Resident|Professor|Associate Professor|Assistant Professor|Additional Professor|Tutor|Demonstrator|Part[- ]?Time Specialist|Resident Specialist|Full[- ]?Time Specialist|PT\/FT Specialist|PGMO|GDMO)\s*[:\-–—]\s*(?:\d+\s*posts?|\d+\s*vacanc(?:y|ies))/i
+      );
+      if (explicitRoleMatch) {
+        defaultNoticeRole = standardizePositionName(explicitRoleMatch[1]);
+      }
     }
   }
   if (!defaultNoticeRole && vacancies && vacancies.length > 0) {
+    const distinctVacRoles = new Set<string>();
     for (const v of vacancies) {
       const fromV = extractPositionsFromText(v.postName);
-      if (fromV.length === 1) {
-        defaultNoticeRole = fromV[0];
-        break;
-      }
+      fromV.forEach((p) => distinctVacRoles.add(p));
+    }
+    if (distinctVacRoles.size === 1) {
+      defaultNoticeRole = Array.from(distinctVacRoles)[0];
     }
   }
 
@@ -660,8 +714,8 @@ export function parseRecruitmentBreakdown(
         }
       }
 
-      // 3. Orientation C: Single-Cadre Department Table (e.g. Department | No. of Posts | Category)
-      if (deptColIndex !== -1 && posCols.length === 0 && countColIdx !== -1 && defaultNoticeRole) {
+      // 3. Orientation C: Single-Cadre or Multi-Cadre Department Table (e.g. Department | No. of Posts | Category)
+      if (deptColIndex !== -1 && posCols.length === 0 && countColIdx !== -1) {
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (/^[|:\-\s]+$/.test(row)) continue;
@@ -696,14 +750,36 @@ export function parseRecruitmentBreakdown(
             }
           }
 
-          positionsFound.add(defaultNoticeRole);
           const normKey = normalizeDeptKey(cleanDept);
+
+          // Determine the role for this row
+          let rowRole = '';
+          if (vacancies && vacancies.length > 0) {
+            const matchingVac = vacancies.find(
+              (v) => normalizeDeptKey(v.department || v.speciality || '') === normKey
+            );
+            if (matchingVac?.postName && matchingVac.postName !== matchingVac.department) {
+              rowRole = standardizePositionName(matchingVac.postName);
+            }
+          }
+          if (!rowRole) {
+            const fromDept = extractPositionsFromText(cleanDept);
+            if (fromDept.length > 0) {
+              rowRole = fromDept[0];
+            } else if (/\b(paediatrician|pediatrician|surgeon|physician)\b/i.test(cleanDept)) {
+              rowRole = 'Specialist';
+            }
+          }
+          const finalRole = rowRole || defaultNoticeRole;
+          if (!finalRole) continue;
+
+          positionsFound.add(finalRole);
           const existing = breakdownMap.get(normKey) || {
             department: cleanDept,
             positions: {},
             total: 0,
           };
-          existing.positions[defaultNoticeRole] = (existing.positions[defaultNoticeRole] || 0) + count;
+          existing.positions[finalRole] = (existing.positions[finalRole] || 0) + count;
           existing.total = Object.values(existing.positions).reduce((sum, v) => sum + v, 0);
           breakdownMap.set(normKey, existing);
         }
@@ -1125,8 +1201,9 @@ export function getVacancyPositionMatch(
     }
   }
 
-  // 3. Single designation check on postName
+  // 3. Single designation check on postName or department
   const pName = (vacancy.postName || '').trim();
+  const dName = (vacancy.department || vacancy.speciality || '').trim();
   const designations = extractPositionsFromText(pName);
 
   if (designations.length === 1) {
@@ -1134,12 +1211,17 @@ export function getVacancyPositionMatch(
       const c = Number(vacancy.numberOfVacancies || 0);
       return { matches: c > 0, count: c };
     }
+    if (dName && matchesPositionName(dName, selectedPosition)) {
+      const c = Number(vacancy.numberOfVacancies || 0);
+      return { matches: c > 0, count: c };
+    }
     return { matches: false, count: 0 };
   }
 
-  // 4. Composite postName (e.g. "Professor / Associate Professor / Assistant Professor" or "Senior Resident / Junior Resident")
+  // 4. Composite postName or matching department
   if (
     matchesPositionName(pName, selectedPosition) ||
+    (dName && matchesPositionName(dName, selectedPosition)) ||
     designations.some((d) => matchesPositionName(d, selectedPosition))
   ) {
     const c = Number(vacancy.numberOfVacancies || 0);
