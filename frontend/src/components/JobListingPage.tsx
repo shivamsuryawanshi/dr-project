@@ -50,22 +50,32 @@ function matchesWhatTitle(job: any, keyword: string) {
   const trimmedKeyword = keyword.trim();
   if (!trimmedKeyword) return true;
 
-  const targetTitles = [
+  const targetParts = [
     job?.displayTitle,
     job?.title,
     ...(Array.isArray(job?.postNames) ? job.postNames : []),
+    ...(Array.isArray(job?.departments) ? job.departments : []),
+    ...(Array.isArray(job?.specialities) ? job.specialities : []),
     job?.category,
+    ...(Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.jobRoles]),
     job?.speciality,
     job?.department,
+    job?.description,
+    job?.requirements,
+    job?._groupSearchText,
+    job?.organization,
+    job?.organisationName,
+    job?.employer?.companyName,
+    job?.location,
   ]
     .filter(Boolean)
     .map((s) => String(s).toLowerCase());
 
-  if (targetTitles.length === 0) return false;
+  if (targetParts.length === 0) return false;
 
   const groups = roleGroups(trimmedKeyword);
   return groups.some((tokens) =>
-    targetTitles.some((target) => tokens.every((token) => target.includes(token)))
+    targetParts.some((target) => tokens.every((token) => target.includes(token)))
   );
 }
 
@@ -376,7 +386,7 @@ export function JobListingPage({ onNavigate, sector }: JobListingPageProps) {
     if (count > 0 && acrossAllLocations) return `Showing ${count} ${jobWord} across all locations${pageSuffix}`;
     if (count > 0 && requestedLocation) return `Showing ${count} ${jobWord} in “${requestedLocation}”${pageSuffix}`;
     if (count > 0) return `Showing ${count} ${jobWord}${pageSuffix}`;
-    if (keyword) return `No job titles found matching “${keyword}”`;
+    if (keyword) return `No jobs found matching “${keyword}”`;
     return "No jobs available";
   };
 

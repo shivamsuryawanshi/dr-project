@@ -335,11 +335,9 @@ export function JobCard({
   const isGovernment = sector === 'government';
   const displayTitle = useMemo(() => {
     const candidate = String(view.displayTitle || job.title || '').trim();
-    if (candidate && !/\+\s*\d+\s*more\s*posts/i.test(candidate)) {
-      const cleanCandidate = candidate.replace(/\s*-\s*(Northern\s*Railway|AIIMS|ESIC|Hospital|State\s*Cancer|Railway|Medical\s*College).*$/i, '').trim();
-      if (cleanCandidate && cleanCandidate !== 'Various Departments (Multiple Department)') {
-        return cleanCandidate;
-      }
+    const isGeneric = !candidate || /^(various\s*departments(\s*\(multiple\s*department\))?|medical\s*vacancy|\+\s*\d+\s*more)/i.test(candidate);
+    if (!isGeneric) {
+      return candidate.replace(/\s*-\s*Multiple\s*Departments/gi, '').trim();
     }
     return resolveStandardCardTitle(job);
   }, [view.displayTitle, job.title, job]);

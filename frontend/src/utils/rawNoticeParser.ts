@@ -928,19 +928,35 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
       result.numberOfPosts = totalPostsSum;
     }
 
-    // Map title from detected post titles
-    if (!result.title) {
-      result.title = detectedPostTitles.slice(0, 3).join(' / ');
-    }
+    const distinctRoles = [
+      ...new Set(
+        parsedVacancies
+          .map((v) => v.postName)
+          .filter(Boolean)
+          .map((p) => standardizePositionName(p))
+      ),
+    ];
 
-    // Standardize category: if any post is MO/GDMO/EMO/Lady MO, category = 'Medical Officer'
-    const hasMO = detectedPostTitles.some((p) =>
-      /medical officer|gdmo|emo|lmo|fmo|casualty|emergency|lady/i.test(p)
-    );
-    if (hasMO) {
-      result.category = 'Medical Officer';
+    if (distinctRoles.length === 1 && distinctRoles[0]) {
+      const coreRole = distinctRoles[0];
+      if (parsedVacancies.length >= 2) {
+        if (!result.title) result.title = `${coreRole} (Multiple Specialties)`;
+      } else {
+        const dept = parsedVacancies[0]?.department;
+        if (!result.title) result.title = dept && dept !== coreRole ? `${coreRole} - ${dept}` : coreRole;
+      }
+      result.category = inferCategory(coreRole);
+      result.jobRoles = [coreRole];
+    } else if (distinctRoles.length > 1) {
+      if (!result.title) result.title = `${distinctRoles.slice(0, 2).join(' & ')} (Multiple Specialties)`;
+      result.category = inferCategory(distinctRoles[0]);
+      result.jobRoles = distinctRoles;
     } else {
-      result.category = inferCategory(detectedPostTitles[0]);
+      if (!result.title) {
+        result.title = detectedPostTitles.slice(0, 3).join(' / ');
+      }
+      result.category = inferCategory(detectedPostTitles[0] || 'Medical Officer');
+      result.jobRoles = [result.category];
     }
   }
 
@@ -967,7 +983,7 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   const roleKeywords: Array<{ role: JobCategory; regex: RegExp }> = [
     {
       role: 'Medical Officer',
-      regex: /\b(medical\s+officer|gdmo|general\s+duty\s+medical\s+officer|lady\s+medical\s+officer|female\s+medical\s+officer|emergency\s+medical\s+officer|casualty\s+medical\s+officer|factory\s+medical\s+officer|ayush\s+medical\s+officer|\bmo\b|\bemo\b|\blmo\b|\bfmo\b)\b/i,
+      regex: /\b(medical\s+officer|gdmo|general\s+duty\s+medical\s+officer|lady\s+medical\s+officer|female\s+medical\s+officer|casualty\s+medical\s+officer|duty\s+medical\s+officer)\b/i,
     },
     { role: 'Senior Resident', regex: /\b(senior\s+resident|sr\b|sr\.)/i },
     { role: 'Junior Resident', regex: /\b(junior\s+resident|jr\b|jr\.)/i },
@@ -991,27 +1007,32 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
 
   const isFacultyOrResidency = /\b(faculty|professor|assoc\w*\s+prof|asst\w*\s+prof|assistant\s+professor|tutor|lecturer|senior\s+resident|junior\s+resident|sr\b|jr\b)\b/i.test(normalizedText);
 
-  for (const r of roleKeywords) {
-    // Prevent pharmacology from falsely tagging Pharmacy
-    if (r.role === 'Pharmacy' && (/pharmacolog/i.test(normalizedText) || isFacultyOrResidency) && !/\b(pharmacist|b\.?\s*pharm|d\.?\s*pharm|m\.?\s*pharm|pharm\.?\s*d|dispenser)\b/i.test(normalizedText)) {
-      continue;
+  if (!result.jobRoles || result.jobRoles.length === 0) {
+    for (const r of roleKeywords) {
+      if (r.role === 'Medical Officer' && isFacultyOrResidency && !/\b(gdmo|general\s+duty\s+medical\s+officer|medical\s+officer\s+recruitment)\b/i.test(normalizedText)) {
+        continue;
+      }
+      // Prevent pharmacology from falsely tagging Pharmacy
+      if (r.role === 'Pharmacy' && (/pharmacolog/i.test(normalizedText) || isFacultyOrResidency) && !/\b(pharmacist|b\.?\s*pharm|d\.?\s*pharm|m\.?\s*pharm|pharm\.?\s*d|dispenser)\b/i.test(normalizedText)) {
+        continue;
+      }
+      // Prevent psychiatry from falsely tagging Psychology
+      if (r.role === 'Psychology & Mental Health' && (/psychiatr/i.test(normalizedText) || isFacultyOrResidency) && !/\b(psycholog\w*|clinical\s*psycholog\w*|counselor|counsellor|mental\s*health)\b/i.test(normalizedText)) {
+        continue;
+      }
+      if (r.regex.test(normalizedText) && !detectedRoles.includes(r.role)) {
+        detectedRoles.push(r.role);
+      }
     }
-    // Prevent psychiatry from falsely tagging Psychology
-    if (r.role === 'Psychology & Mental Health' && (/psychiatr/i.test(normalizedText) || isFacultyOrResidency) && !/\b(psycholog\w*|clinical\s*psycholog\w*|counselor|counsellor|mental\s*health)\b/i.test(normalizedText)) {
-      continue;
-    }
-    if (r.regex.test(normalizedText) && !detectedRoles.includes(r.role)) {
-      detectedRoles.push(r.role);
-    }
-  }
 
-  if (detectedRoles.length > 0) {
-    result.jobRoles = detectedRoles;
-    if (!result.category) {
-      result.category = detectedRoles[0] as JobCategory;
-    }
-    if (!result.title) {
-      result.title = detectedRoles.slice(0, 3).join(' / ');
+    if (detectedRoles.length > 0) {
+      result.jobRoles = detectedRoles;
+      if (!result.category) {
+        result.category = detectedRoles[0] as JobCategory;
+      }
+      if (!result.title) {
+        result.title = detectedRoles.slice(0, 3).join(' / ');
+      }
     }
   }
 

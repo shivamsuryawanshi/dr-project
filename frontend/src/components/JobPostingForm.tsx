@@ -366,9 +366,7 @@ export function JobPostingForm({ onCancel, onSave, initialData, isEditing = fals
     setPublishingRecruitment(true);
     try {
       const rawTitle = formData.title.trim() || recData.title || 'Medical Staff';
-      const cleanTitle = rawTitle.toLowerCase().includes('recruitment')
-        ? rawTitle
-        : `${rawTitle} Recruitment ${new Date().getFullYear()} - Multiple Departments`;
+      const cleanTitle = rawTitle.replace(/\s*-\s*Multiple\s*Departments/gi, '').trim();
 
       let notificationPdfUrl: string | undefined = undefined;
       if (formData.pdfFile) {

@@ -69,6 +69,10 @@ function matchesQuery(job: any, query?: string) {
     job?.department,
     job?.speciality,
     job?.category,
+    ...(Array.isArray(job?.jobRoles) ? job.jobRoles : [job?.jobRoles]),
+    job?.description,
+    job?.requirements,
+    job?._groupSearchText,
     organisation(job),
     job?.location,
   ].filter(Boolean).join(' ')).toLowerCase();
@@ -78,17 +82,9 @@ function matchesQuery(job: any, query?: string) {
 
 /**
  * Resolves standard card title according to user specifications:
- * Strictly 2 title types:
- * 1. Individual Cadre/Role:
- *    - Junior Resident (JR)
- *    - Senior Resident (SR)
- *    - Faculty
- *    - Medical Officer (MO / GDMO)
- *    - Consultant / Specialist
- *    - Paramedical Staff
- *    - Research / Survey
- * 2. Various Departments (Multiple Department):
- *    - Whenever there are multiple departments, multiple roles, or multiple posts.
+ * - Reflects core role post (e.g., "Senior Resident (Multiple Specialties)")
+ * - Preserves custom/user-edited titles without forcing "Various Departments"
+ * - Accurately represents single or multiple specialties
  */
 export function resolveStandardCardTitle(input: any): string {
   if (!input) return 'Medical Vacancy';
@@ -98,79 +94,74 @@ export function resolveStandardCardTitle(input: any): string {
   const departments = unique(items.flatMap((item) => [item.department, item.speciality])).filter(Boolean);
   const postNames = unique(items.map((item) => item._basePostName || basePostName(item))).filter(Boolean);
 
-  const rawUserTitle = clean(first?.title || first?.displayTitle || '');
+  let rawUserTitle = clean(first?.title || first?.displayTitle || '');
+  rawUserTitle = rawUserTitle.replace(/\s*-\s*Multiple\s*Departments/gi, '').trim();
   const isLegacyConcat = /\+\s*\d+\s*more\s*posts/i.test(rawUserTitle);
 
-  // Extract ONLY cadre / designation fields (never clinical department names)
+  // If user provided a specific non-generic title, always preserve it!
+  const isGeneric =
+    !rawUserTitle ||
+    /^(various\s*departments(\s*\(multiple\s*department\))?|medical\s*vacancy|vacancy|recruitment\s*notification|medical\s*staff\s*recruitment)$/i.test(
+      rawUserTitle
+    ) ||
+    isLegacyConcat;
+
+  if (!isGeneric) {
+    return rawUserTitle;
+  }
+
+  // Extract ONLY cadre / designation fields from vacancy titles and categories
   const cadreText = items
-    .map((item) => `${item.title || ''} ${item.displayTitle || ''} ${item.category || ''} ${item._basePostName || ''} ${Array.isArray(item.jobRoles) ? item.jobRoles.join(' ') : (item.jobRoles || '')}`)
+    .map((item) => `${item._basePostName || ''} ${item.postName || ''} ${item.category || ''}`)
     .join(' ')
     .toLowerCase();
 
-  // Detect individual cadres based strictly on designation / role keywords
   const hasJR = /\b(junior\s*resident|jr\b|jr\s*resident|junior\s*residency|house\s*job|house\s*physician|house\s*surgeon)\b/i.test(cadreText);
   const hasSR = /\b(senior\s*resident|sr\b|sr\s*resident|senior\s*residency)\b/i.test(cadreText);
-  const hasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal)\b/i.test(cadreText);
-  const hasMO = /\b(medical\s*officer|gdmo|general\s*duty|smo\b|cmo\b|rmo\b|casualty\s*medical|duty\s*doctor|fmo|imo|ayush|ayurved|homeopath|unani)\b/i.test(cadreText);
-  // Match explicit consultant/specialist posts only (not medical specialties like radiology or pathology)
-  const hasConsultant = /\b(consultant|specialist|super\s*specialist|attending\s*consultant|intensivist)\b/i.test(cadreText);
+  const hasFaculty = /\b(faculty|professor|associate\s*prof|assistant\s*prof|lecturer|tutor|dean|principal|demonstrator)\b/i.test(cadreText);
+  const hasMO = /\b(medical\s*officer|gdmo|general\s*duty\s*medical\s*officer|duty\s*medical\s*officer)\b/i.test(cadreText);
+  const hasConsultant = /\b(consultant|specialist|super\s*specialist|attending\s*consultant)\b/i.test(cadreText);
   const hasParamedical = /\b(paramedical|nurse|nursing|technician|radiographer|optometrist|dietician|ecg)\b/i.test(cadreText) || (/\b(pharmacist|dispenser)\b/i.test(cadreText) && !/\bpharmacolog/i.test(cadreText));
   const hasResearch = /\b(research\s*scientist|research\s*fellow|project\s*fellow|research\s*associate|survey\s*officer)\b/i.test(cadreText);
 
   const detectedCadres: string[] = [];
-  if (hasJR) detectedCadres.push('Junior Resident (JR)');
-  if (hasSR) detectedCadres.push('Senior Resident (SR)');
+  if (hasSR) detectedCadres.push('Senior Resident');
+  if (hasJR) detectedCadres.push('Junior Resident');
   if (hasFaculty) detectedCadres.push('Faculty');
-  if (hasMO) detectedCadres.push('Medical Officer (MO / GDMO)');
-  if (hasConsultant) detectedCadres.push('Consultant / Specialist');
+  if (hasMO) detectedCadres.push('Medical Officer');
+  if (hasConsultant) detectedCadres.push('Specialist / Consultant');
   if (hasParamedical) detectedCadres.push('Paramedical Staff');
   if (hasResearch) detectedCadres.push('Research / Survey');
 
-  // 1. If exactly 1 cadre detected across the circular (e.g. all 618 posts in Odisha are Junior Resident, or Faculty in Basti):
-  // It is an individual cadre recruitment! Do NOT call it "Various Departments"!
+  const hasMultipleSpecialties = departments.length > 1 || items.length > 1;
+
+  // 1. Single core cadre detected across the circular:
   if (detectedCadres.length === 1) {
-    if (rawUserTitle && !isLegacyConcat && !/various\s*departments/i.test(rawUserTitle)) {
-      const cleanUser = rawUserTitle.replace(/\s*-\s*(Northern\s*Railway|AIIMS|ESIC|Hospital|State\s*Cancer|Railway|Medical\s*College).*$/i, '').trim();
-      if (cleanUser && !/^\d+\s*posts?$/i.test(cleanUser)) {
-        if (/junior\s*resident/i.test(cleanUser)) return 'Junior Resident (JR)';
-        if (/senior\s*resident/i.test(cleanUser)) return 'Senior Resident (SR)';
-        if (/faculty|professor/i.test(cleanUser)) return 'Faculty';
-        if (/medical\s*officer|gdmo/i.test(cleanUser)) return 'Medical Officer (MO / GDMO)';
-        if (/consultant|specialist/i.test(cleanUser)) return 'Consultant / Specialist';
-        return cleanUser;
-      }
-    }
-    return detectedCadres[0];
+    const cadre = detectedCadres[0];
+    return hasMultipleSpecialties ? `${cadre} (Multiple Specialties)` : cadre;
   }
 
-  // 2. If multiple distinct cadres exist (e.g. MO + Specialist + Paramedical) or legacy concatenation or explicit multiple departments:
-  const allText = items
-    .map((item) => `${item.title || ''} ${item.displayTitle || ''} ${item.category || ''} ${item._basePostName || ''} ${Array.isArray(item.jobRoles) ? item.jobRoles.join(' ') : (item.jobRoles || '')} ${item.department || ''} ${item.speciality || ''}`)
-    .join(' ')
-    .toLowerCase();
-  const hasMultipleCadres = detectedCadres.length > 1;
-  const hasMultipleKeywords = /\b(various\s*departments|multiple\s*departments|various\s*disciplines|multiple\s*disciplines|various\s*posts|multiple\s*roles)\b/i.test(allText);
-  if (hasMultipleCadres || isLegacyConcat || hasMultipleKeywords) {
-    return 'Various Departments (Multiple Department)';
+  // 2. Multiple distinct cadres detected:
+  if (detectedCadres.length === 2) {
+    return `${detectedCadres[0]} & ${detectedCadres[1]} (Multiple Specialties)`;
+  }
+  if (detectedCadres.length > 2) {
+    return 'Medical Staff (Multiple Specialties)';
   }
 
-  // 3. If user provided a clean custom title:
-  if (rawUserTitle && !isLegacyConcat && !/various\s*departments/i.test(rawUserTitle)) {
-    const cleanUser = rawUserTitle.replace(/\s*-\s*(Northern\s*Railway|AIIMS|ESIC|Hospital|State\s*Cancer|Railway|Medical\s*College).*$/i, '').trim();
-    if (cleanUser) return cleanUser;
-  }
-
-  // 4. If single distinct post name:
+  // 3. Cadre not in standard list, but distinct postNames exist:
   if (postNames.length === 1 && postNames[0]) {
-    return postNames[0];
+    return hasMultipleSpecialties ? `${postNames[0]} (Multiple Specialties)` : postNames[0];
+  }
+  if (postNames.length === 2) {
+    return `${postNames[0]} & ${postNames[1]} (Multiple Specialties)`;
+  }
+  if (postNames.length > 2) {
+    return `${postNames[0]} & More (Multiple Specialties)`;
   }
 
-  // 5. Multiple departments fallback:
-  if (departments.length > 1 || items.length > 1) {
-    return 'Various Departments (Multiple Department)';
-  }
-
-  return clean(first?.title) || 'Medical Vacancy';
+  // 4. Fallback for multi-specialty:
+  return hasMultipleSpecialties ? 'Medical Staff (Multiple Specialties)' : 'Medical Vacancy';
 }
 
 export function groupRecruitmentJobs(jobs: any[], query?: string) {
@@ -251,8 +242,26 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
     const hasPsychiatry = /\bpsychiatr\w*\b/i.test(groupContextText);
     const hasRealPsychology = /\b(psycholog\w*|mental\s*health|counselor|counsellor)\b/i.test(groupContextText);
 
+    const hasAnyRealMO = items.some((item) =>
+      /\b(medical\s*officer|gdmo|general\s*duty\s*medical\s*officer)\b/i.test(
+        `${item._basePostName || ''} ${item.postName || ''} ${item.title || ''}`
+      )
+    );
+
+    const isSeniorOrJuniorResidentGroup = items.some((item) =>
+      /\b(senior\s*resident|junior\s*resident|sr\b|jr\b)\b/i.test(
+        `${item._basePostName || ''} ${item.postName || ''} ${item.title || ''}`
+      )
+    );
+
     const filteredRoles = allRoles.filter((r) => {
       const lower = r.toLowerCase().trim();
+      if (!hasAnyRealMO && (lower === 'medical officer' || lower === 'mo' || lower === 'gdmo')) {
+        return false;
+      }
+      if ((isFacultyGroup || isSeniorOrJuniorResidentGroup) && !hasAnyRealMO && lower.includes('medical officer')) {
+        return false;
+      }
       if (isFacultyGroup) {
         if ((lower === 'pharmacy' || lower === 'pharmacist') && !hasRealPharmacy) return false;
         if ((lower.includes('psychology') || lower === 'psychology & mental health') && !hasRealPsychology) return false;
@@ -265,6 +274,12 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
       }
       return true;
     });
+
+    const itemCategories = unique(items.map((item) => item.category)).filter((c) => c && c !== 'Multiple Roles');
+    let resolvedCategory = itemCategories.length === 1 ? itemCategories[0] : first.category;
+    if (resolvedCategory === 'Medical Officer' && !hasAnyRealMO && (isFacultyGroup || isSeniorOrJuniorResidentGroup)) {
+      resolvedCategory = isSeniorOrJuniorResidentGroup ? 'Senior Resident' : 'Faculty';
+    }
 
     return {
       ...first,
@@ -285,7 +300,7 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
       qualification: qualifications.length > 1 ? 'Varies by post' : (qualifications[0] || first.qualification),
       salary: salaries.length > 1 ? 'Varies by post' : (salaries[0] || first.salary),
       experience: experiences.length > 1 ? 'Varies by post' : (experiences[0] || first.experience),
-      category: unique(items.map((item) => item.category)).length === 1 ? first.category : 'Multiple Roles',
+      category: resolvedCategory || (itemCategories.length === 1 ? itemCategories[0] : 'Multiple Roles'),
       _groupSearchText: searchText,
     };
   });

@@ -2,10 +2,15 @@ package com.medexjob.repository;
 
 import com.medexjob.entity.Employer;
 import com.medexjob.entity.Job;
+import com.medexjob.entity.VacancyRecord;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
@@ -105,14 +110,16 @@ public final class JobSpecifications {
                         like(cb, root.get("speciality"), speciality),
                         like(cb, root.get("title"), speciality),
                         like(cb, root.get("jobRoles"), speciality),
-                        like(cb, root.get("description"), speciality)
+                        like(cb, root.get("description"), speciality),
+                        vacancyMatches(cb, query, root, speciality)
                 ));
             }
             if (hasText(department)) {
                 predicates.add(cb.or(
                         like(cb, root.get("department"), department),
                         like(cb, root.get("title"), department),
-                        like(cb, root.get("description"), department)
+                        like(cb, root.get("description"), department),
+                        vacancyMatches(cb, query, root, department)
                 ));
             }
             if (hasText(qualification)) {
@@ -144,6 +151,9 @@ public final class JobSpecifications {
                 Predicate exactLocationPhrase = like(cb, root.get("location"), searchQuery);
                 Predicate exactJobRolesPhrase = like(cb, root.get("jobRoles"), searchQuery);
                 Predicate exactCategoryPhrase = cb.like(cb.lower(root.get("category").as(String.class)), "%" + searchQuery.trim().toLowerCase(Locale.ROOT).replace(' ', '_') + "%");
+                Predicate exactDescriptionPhrase = like(cb, root.get("description"), searchQuery);
+                Predicate exactRequirementsPhrase = like(cb, root.get("requirements"), searchQuery);
+                Predicate exactVacancyPhrase = vacancyMatches(cb, query, root, searchQuery);
 
                 Predicate anyExactPhrase = cb.or(
                         exactTitlePhrase,
@@ -153,7 +163,10 @@ public final class JobSpecifications {
                         exactQualificationPhrase,
                         exactLocationPhrase,
                         exactJobRolesPhrase,
-                        exactCategoryPhrase
+                        exactCategoryPhrase,
+                        exactDescriptionPhrase,
+                        exactRequirementsPhrase,
+                        exactVacancyPhrase
                 );
 
                 List<Predicate> perTokenPredicates = new ArrayList<>();
@@ -173,7 +186,9 @@ public final class JobSpecifications {
                     tokenMatches.add(like(cb, root.get("jobType"), token));
                     tokenMatches.add(like(cb, root.get("jobRoles"), token));
                     tokenMatches.add(like(cb, root.get("description"), token));
+                    tokenMatches.add(like(cb, root.get("requirements"), token));
                     tokenMatches.add(cb.like(cb.lower(root.get("category").as(String.class)), "%" + token + "%"));
+                    tokenMatches.add(vacancyMatches(cb, query, root, token));
 
                     if (token.equals("government") || token.equals("govt") || token.equals("public")) {
                         tokenMatches.add(cb.equal(root.get("sector"), Job.JobSector.GOVERNMENT));
@@ -200,6 +215,48 @@ public final class JobSpecifications {
             query.distinct(true);
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static Predicate vacancyMatches(
+            CriteriaBuilder cb,
+            CriteriaQuery<?> query,
+            Root<Job> root,
+            String text) {
+        if (!hasText(text)) {
+            return cb.disjunction();
+        }
+
+        Subquery<java.util.UUID> recSubquery = query.subquery(java.util.UUID.class);
+        Root<VacancyRecord> vr1 = recSubquery.from(VacancyRecord.class);
+        recSubquery.select(vr1.get("recruitment").get("id"));
+        recSubquery.where(cb.or(
+                like(cb, vr1.get("department"), text),
+                like(cb, vr1.get("speciality"), text),
+                like(cb, vr1.get("subSpeciality"), text),
+                like(cb, vr1.get("postName"), text),
+                like(cb, vr1.get("qualification"), text),
+                like(cb, vr1.get("otherEligibilityRequirements"), text)
+        ));
+
+        Subquery<java.util.UUID> jobSubquery = query.subquery(java.util.UUID.class);
+        Root<VacancyRecord> vr2 = jobSubquery.from(VacancyRecord.class);
+        jobSubquery.select(vr2.get("publishedJobId"));
+        jobSubquery.where(cb.and(
+                cb.isNotNull(vr2.get("publishedJobId")),
+                cb.or(
+                        like(cb, vr2.get("department"), text),
+                        like(cb, vr2.get("speciality"), text),
+                        like(cb, vr2.get("subSpeciality"), text),
+                        like(cb, vr2.get("postName"), text),
+                        like(cb, vr2.get("qualification"), text),
+                        like(cb, vr2.get("otherEligibilityRequirements"), text)
+                )
+        ));
+
+        return cb.or(
+                cb.and(cb.isNotNull(root.get("sourceRecruitmentId")), root.get("sourceRecruitmentId").in(recSubquery)),
+                root.get("id").in(jobSubquery)
+        );
     }
 
     private static Predicate like(jakarta.persistence.criteria.CriteriaBuilder cb,
