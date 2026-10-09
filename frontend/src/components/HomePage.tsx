@@ -134,8 +134,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
         const [feat, latest, all, gov, priv, meta, news, overview] = await Promise.all([
           fetchJobs({ featured: true, size: 6, status: "active" }).then((r) => r.content ?? []),
           fetchJobs({ size: 6, sort: "createdAt,desc", status: "active" }).then((r) => r.content ?? []),
-          fetchJobs({ size: 10, sort: "createdAt,desc", status: "active" }).then((r) => r.content ?? []),
-          fetchJobs({ sector: "government", size: 10, status: "active" }).then((r) => r.content ?? []),
+          fetchJobs({ size: 12, sort: "createdAt,desc", status: "active" }).then((r) => r.content ?? []),
+          fetchJobs({ sector: "government", size: 12, status: "active" }).then((r) => r.content ?? []),
           fetchJobs({ sector: "private", size: 10, status: "active" }).then((r) => r.content ?? []),
           fetchJobsMeta(),
           fetchHomepageNews(),
@@ -179,8 +179,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
         );
 
         setFeaturedJobs(finalFeat.slice(0, 6));
-        setAllJobs(finalAll.slice(0, 10));
-        setGovernmentJobs(finalGov.slice(0, 3));
+        setAllJobs(finalAll.slice(0, 12));
+        setGovernmentJobs(finalGov.slice(0, 12));
         setPrivateJobs(Array.isArray(priv) ? priv.filter((job) => (job.sector?.toLowerCase() || "") === "private").slice(0, 3) : []);
         setNewsUpdates(Array.isArray(news) ? news.slice(0, 6) : []);
       } catch (e) {
