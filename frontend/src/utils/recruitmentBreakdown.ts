@@ -152,7 +152,7 @@ function isReservedColumn(header: string): boolean {
   }
 
   // Pure count / vacancy headers
-  if (/^(total\s*)?(no\.?\s*of\s*)?(posts?|vacanc(y|ies)|seats?)(\s*\([^)]*\))?$/i.test(clean)) {
+  if (/^(total|grand\s*total|sum|total\s*(posts?|vacanc(?:y|ies)|seats?)|no\.?\s*of\s*(posts?|vacanc(?:y|ies)|seats?)|posts?|vacanc(?:y|ies)|seats?)(\s*\([^)]*\))?$/i.test(clean)) {
     return true;
   }
 
@@ -630,7 +630,7 @@ export function parseRecruitmentBreakdown(
           if (postColIdx === -1) postColIdx = idx;
         } else if (/^(department|dept\.?|speciality|specialty|specialization|discipline|subject|branch|name\s*of\s*(dept|department|speciality)?)$/i.test(cell)) {
           if (deptColIndex === -1) deptColIndex = idx;
-        } else if (/^(total\s*)?(no\.?\s*of\s*)?(posts?|vacanc(y|ies)|seats?)(\s*\([^)]*\))?$/i.test(cell)) {
+        } else if (/^(total|grand\s*total|sum|total\s*(posts?|vacanc(?:y|ies)|seats?)|no\.?\s*of\s*(posts?|vacanc(?:y|ies)|seats?)|posts?|vacanc(?:y|ies)|seats?)(\s*\([^)]*\))?$/i.test(cell)) {
           if (countColIdx === -1) countColIdx = idx;
         }
       });

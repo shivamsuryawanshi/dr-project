@@ -918,6 +918,11 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
   let inCadreSummarySection = false;
   let inDeptBreakdownSection = false;
 
+  let tableHeaderCols: string[] = [];
+  let tableDeptColIdx = -1;
+  let tableTotalColIdx = -1;
+  let tableCategoryColIndices: number[] = [];
+
   for (const rawLine of lines) {
     const cleanLine = rawLine.replace(/^[🟩🟥⬛⬜🟧🟨*#•\->\s]+/, '').trim();
     if (!cleanLine) continue;
@@ -937,8 +942,11 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     // Skip TOTAL POSTS / TOTAL VACANCIES lines from being parsed as departments!
     const totalLineMatch = cleanLine.match(/^(?:TOTAL\s*POSTS?|TOTAL\s*VACANC(?:Y|IES)|TOTAL\s*VACANT\s*POSTS?|GRAND\s*TOTAL|TOTAL)\s*[:\-–—=]\s*([0-9]{1,4})/i);
     if (totalLineMatch) {
-      if (!result.numberOfPosts) {
-        result.numberOfPosts = parseInt(totalLineMatch[1], 10);
+      const statedPosts = parseInt(totalLineMatch[1], 10);
+      if (!isNaN(statedPosts) && statedPosts > 0) {
+        if (!result.numberOfPosts || statedPosts > result.numberOfPosts) {
+          result.numberOfPosts = statedPosts;
+        }
       }
       continue;
     }
@@ -947,6 +955,10 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
     if (/^(LAST DATE|DATE OF INTERVIEW|VENUE|WEBSITE|WALK-IN|SELECTION|AGE LIMIT|SALARY|PAY|EXPERIENCE|ELIGIBILITY|CONTRACT|IMPORTANT|DEPARTMENT BREAKDOWN|DEPARTMENT-WISE|SPECIALTY-WISE|TITLE|ORGANIZATION|LOCATION|STATE|SECTOR)\b/i.test(cleanLine)) {
       inCadreSummarySection = false;
       inDeptBreakdownSection = false;
+      tableHeaderCols = [];
+      tableDeptColIdx = -1;
+      tableTotalColIdx = -1;
+      tableCategoryColIndices = [];
       continue;
     }
 
@@ -962,10 +974,47 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
       if (/^\|?[\s\-:|]+\|?$/.test(cleanLine)) {
         continue;
       }
-      const cells = cleanLine.split('|').map((c) => c.trim()).filter(Boolean);
+      let cells = cleanLine.split('|').map((c) => c.trim());
+      if (cells.length > 0 && cells[0] === '') cells.shift();
+      if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+
       if (cells.length >= 2) {
-        const isHeaderRow = cells.some((c) => /^(department|speciality|specialty|discipline|subject|s\.?\s*no|sr\.?\s*no)\b/i.test(c));
+        const isHeaderRow = cells.some((c) =>
+          /^(department|dept\.?|speciality|specialty|discipline|subject|name\s*of\s*(?:dept|department|speciality|specialty|post)|s\.?\s*no|sr\.?\s*no)\b/i.test(c)
+        );
         if (isHeaderRow) {
+          tableHeaderCols = cells;
+          tableDeptColIdx = cells.findIndex((c) =>
+            /^(department|dept\.?|speciality|specialty|discipline|subject|name\s*of\s*(?:dept|department|speciality|specialty))\b/i.test(c)
+          );
+          if (tableDeptColIdx === -1) {
+            tableDeptColIdx = cells.findIndex((c) =>
+              /^(name\s*of\s*post|post|designation)\b/i.test(c)
+            );
+          }
+          if (tableDeptColIdx === -1) {
+            tableDeptColIdx = /^(s\.?\s*no|sr\.?\s*no)\b/i.test(cells[0]) ? 1 : 0;
+          }
+
+          // Priority 1 for Total column: "Total", "Grand Total", "Total Posts", "Total Vacancies"
+          tableTotalColIdx = cells.findIndex((c) =>
+            /^(total|grand\s*total|sum|total\s*(posts?|vacanc(?:y|ies)|seats?))\b/i.test(c)
+          );
+          // Priority 2: "No. of Posts", "Posts", "Vacancies" if no explicit "Total"
+          if (tableTotalColIdx === -1) {
+            tableTotalColIdx = cells.findIndex((c) =>
+              /^(no\.?\s*of\s*(posts?|vacanc(?:y|ies)|seats?)|posts?|vacanc(?:y|ies)|seats?)(\s*\([^)]*\))?$/i.test(c)
+            );
+          }
+
+          // Category/Reservation columns (UR, EWS, OBC, SC, ST, etc.)
+          tableCategoryColIndices = [];
+          cells.forEach((c, idx) => {
+            if (/^(ur|unreserved|gen|general|sc|st|obc|ews|pwd|pwbd|ph)(\s*\([^)]*\))?$/i.test(c)) {
+              tableCategoryColIndices.push(idx);
+            }
+          });
+
           const headerRoleCell = cells.find((c) =>
             /^(Senior Resident|Junior Resident|Assistant Professor|Associate Professor|Professor|Tutor|Demonstrator|Specialist|Consultant|Medical Officer|GDMO)\b/i.test(c)
           );
@@ -975,25 +1024,71 @@ export function parseRawVacancyNotice(rawText: string): ParsedNoticeResult {
           continue;
         }
 
-        if (/^(total|grand\s*total)\b/i.test(cells[0])) {
-          const totalValStr = cells[cells.length - 1] || cells[1];
-          const totalNum = parseInt(totalValStr.replace(/[^0-9]/g, ''), 10);
-          if (!isNaN(totalNum) && totalNum > 0 && !result.numberOfPosts) {
-            result.numberOfPosts = totalNum;
+        const firstCell = cells[0];
+        const deptCell = (tableDeptColIdx >= 0 && cells.length > tableDeptColIdx ? cells[tableDeptColIdx] : cells[0]) || '';
+        if (/^(total|grand\s*total)\b/i.test(firstCell) || /^(total|grand\s*total)\b/i.test(deptCell)) {
+          let totalNum = NaN;
+          if (tableTotalColIdx !== -1 && cells.length > tableTotalColIdx) {
+            totalNum = parseInt(cells[tableTotalColIdx].replace(/[^0-9]/g, ''), 10);
+          }
+          if (isNaN(totalNum)) {
+            for (let cIdx = cells.length - 1; cIdx >= 0; cIdx--) {
+              const n = parseInt(cells[cIdx].replace(/[^0-9]/g, ''), 10);
+              if (!isNaN(n) && n > 0) {
+                totalNum = n;
+                break;
+              }
+            }
+          }
+          if (!isNaN(totalNum) && totalNum > 0) {
+            if (!result.numberOfPosts || totalNum > result.numberOfPosts) {
+              result.numberOfPosts = totalNum;
+            }
           }
           continue;
         }
 
-        const dept = cells[0].replace(/^\s*(?:\d+[\.\)\-:]|\([0-9a-zA-Z]+\)|[ivxIVX]+[\.\)\-:])\s*/, '').trim();
+        const dept = (deptCell || cells[0]).replace(/^\s*(?:\d+[\.\)\-:]|\([0-9a-zA-Z]+\)|[ivxIVX]+[\.\)\-:])\s*/, '').trim();
         if (!/^(note|advertised|applicable|qualification|eligibility|tenure|venue)/i.test(dept) && dept.length >= 2) {
           let vacCount = NaN;
-          for (let cIdx = 1; cIdx < cells.length; cIdx++) {
-            const numMatch = cells[cIdx].match(/^[0-9]{1,4}$/);
-            if (numMatch) {
-              vacCount = parseInt(numMatch[0], 10);
-              break;
+
+          // Priority 1: If header had an explicit Total column, extract count from that column index
+          if (tableTotalColIdx !== -1 && cells.length > tableTotalColIdx) {
+            const rawVal = cells[tableTotalColIdx].replace(/[^0-9]/g, '');
+            if (rawVal.length > 0) {
+              vacCount = parseInt(rawVal, 10);
             }
           }
+
+          // Priority 2: If no Total column, but reservation/category columns exist (UR, OBC, SC, ST, EWS), sum them!
+          if ((isNaN(vacCount) || vacCount <= 0) && tableCategoryColIndices.length >= 2) {
+            let catSum = 0;
+            for (const cIdx of tableCategoryColIndices) {
+              if (cells.length > cIdx) {
+                const n = parseInt(cells[cIdx].replace(/[^0-9]/g, ''), 10);
+                if (!isNaN(n) && n > 0) catSum += n;
+              }
+            }
+            if (catSum > 0) vacCount = catSum;
+          }
+
+          // Priority 3: Scan backwards from the rightmost column towards column 1.
+          // In virtually all recruitment tables, the Total or count is at or near the end (rightmost).
+          // Scanning left-to-right is dangerous because column 1/2 is typically UR (reservation) or qualification!
+          if (isNaN(vacCount) || vacCount <= 0) {
+            for (let cIdx = cells.length - 1; cIdx >= 1; cIdx--) {
+              if (cIdx === tableDeptColIdx) continue;
+              const rawVal = cells[cIdx].trim();
+              if (/^[0-9]{1,4}$/.test(rawVal)) {
+                const n = parseInt(rawVal, 10);
+                if (n > 0) {
+                  vacCount = n;
+                  break;
+                }
+              }
+            }
+          }
+
           if (!isNaN(vacCount) && vacCount > 0 && vacCount < 10000) {
             totalPostsSum += vacCount;
             detectedPostTitles.push(dept);

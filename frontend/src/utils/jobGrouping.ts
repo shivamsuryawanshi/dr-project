@@ -1,5 +1,5 @@
 import { isGenericNotice, isRegulatoryDump } from './extractedFieldDisplay';
-import { extractPositionsFromText } from './recruitmentBreakdown';
+import { extractPositionsFromText, parseRecruitmentBreakdown } from './recruitmentBreakdown';
 
 const SEARCH_STOPWORDS = new Set([
   'a', 'an', 'and', 'at', 'for', 'in', 'of', 'on', 'the', 'to', 'with',
@@ -240,14 +240,69 @@ export function resolveStandardCardTitle(input: any): string {
   return hasMultipleSpecialties ? 'Medical Staff (Multiple Specialties)' : 'Medical Vacancy';
 }
 
+export function extractStatedTotalPosts(text?: string, sourceRecruitment?: any): number | null {
+  if (sourceRecruitment?.totalVacancies && Number(sourceRecruitment.totalVacancies) > 0) {
+    return Number(sourceRecruitment.totalVacancies);
+  }
+  if (!text) return null;
+
+  // 1. Explicit Total Posts / Total Vacancies line in notice text
+  const m1 = text.match(/(?:TOTAL\s*POSTS?|TOTAL\s*VACANC(?:Y|IES)|TOTAL\s*VACANT\s*POSTS?|GRAND\s*TOTAL)\s*[:\-–—=]\s*([0-9]{1,4})\b/i);
+  if (m1) {
+    const val = parseInt(m1[1], 10);
+    if (!isNaN(val) && val > 0 && val < 10000) return val;
+  }
+
+  // 2. Cadre-Wise summary or header summary: "Total – 55 Posts" or "Senior Resident – 55 Posts"
+  const m2 = text.match(/(?:^|\n)\s*(?:Total|Grand Total)\s*[:\-–—=]\s*([0-9]{1,4})\s*(?:posts?|vacanc(?:y|ies))/im);
+  if (m2) {
+    const val = parseInt(m2[1], 10);
+    if (!isNaN(val) && val > 0 && val < 10000) return val;
+  }
+
+  // 3. Markdown table Total row: e.g. "| Total | | 10 | 10 | 13 | 15 | 7 | 55 |" or "| Total | 55 |"
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (line.includes('|') && /\|\s*(?:total|grand\s*total)\b/i.test(line)) {
+      const cells = line.split('|').map((c) => c.trim()).filter(Boolean);
+      for (let cIdx = cells.length - 1; cIdx >= 1; cIdx--) {
+        const numMatch = cells[cIdx].match(/^[0-9]{1,4}$/);
+        if (numMatch) {
+          const val = parseInt(numMatch[0], 10);
+          if (val > 0 && val < 10000) return val;
+        }
+      }
+    }
+  }
+
+  // 4. Try breakdownMap from parseRecruitmentBreakdown
+  try {
+    const bd = parseRecruitmentBreakdown(text);
+    if (bd && bd.breakdownMap && bd.breakdownMap.size > 0) {
+      let bdSum = 0;
+      for (const d of bd.breakdownMap.values()) {
+        bdSum += d.total || 0;
+      }
+      if (bdSum > 0) return bdSum;
+    }
+  } catch (ignored) {}
+
+  return null;
+}
+
 export function groupRecruitmentJobs(jobs: any[], query?: string) {
   const groups = new Map<string, any[]>();
   const standalone: any[] = [];
 
   for (const job of Array.isArray(jobs) ? jobs : []) {
     if (!job?.sourceRecruitmentId) {
+      let jobPosts = Number(job?.numberOfPosts || 0);
+      const statedTotal = extractStatedTotalPosts(job?.description, job?.sourceRecruitment);
+      if (statedTotal && statedTotal > jobPosts) {
+        jobPosts = statedTotal;
+      }
       const displayTitle = resolveStandardCardTitle(job);
-      const enriched = { ...job, displayTitle, title: displayTitle };
+      const enriched = { ...job, displayTitle, title: displayTitle, numberOfPosts: jobPosts || job?.numberOfPosts };
       const searchText = searchTextFor(enriched);
       standalone.push({ ...enriched, _groupSearchText: searchText, title: displayTitle });
       continue;
@@ -291,7 +346,12 @@ export function groupRecruitmentJobs(jobs: any[], query?: string) {
     const qualifications = unique(effectiveItems.map((item) => item.qualification)).filter((value) => !isRegulatoryDump(value) && !isGenericNotice(value));
     const salaries = unique(effectiveItems.map((item) => item.salary || item.salaryRange)).filter((value) => !isRegulatoryDump(value));
     const experiences = unique(effectiveItems.map((item) => item.experience)).filter((value) => !isRegulatoryDump(value) && !isGenericNotice(value));
-    const totalPosts = effectiveItems.reduce((sum, item) => sum + Math.max(0, Number(item.numberOfPosts || 0)), 0);
+    const itemPostsSum = effectiveItems.reduce((sum, item) => sum + Math.max(0, Number(item.numberOfPosts || 0)), 0);
+    const statedTotal = extractStatedTotalPosts(
+      first?.description || effectiveItems.map((it) => it.description).find(Boolean),
+      first?.sourceRecruitment || effectiveItems.map((it) => it.sourceRecruitment).find(Boolean)
+    );
+    const totalPosts = statedTotal && statedTotal > itemPostsSum ? statedTotal : itemPostsSum;
     const org = organisation(first);
     const searchText = unique([
       displayTitle, org, ...postNames, ...departments, ...specialities, ...locations, ...states,
