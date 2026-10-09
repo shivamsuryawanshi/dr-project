@@ -126,6 +126,41 @@ function convertHtmlTablesToMarkdown(text: string): string {
   });
 }
 
+export function isDisallowedDepartmentName(name?: string): boolean {
+  if (!name) return true;
+  const clean = name.replace(/[*#`_]/g, '').trim().toLowerCase();
+  if (clean.length < 2) return true;
+
+  // 1. Total / Summary keywords
+  if (
+    /^(total|grand\s*total|total\s*posts?|total\s*vacanc(?:y|ies)|total\s*vacant\s*posts?|all\s*specialt(?:y|ies)|all\s*departments?|cadre[- ]wise(?:\s*summary)?|summary\b|abstract\b|abstract\s*notification|department[- ]wise(?:\s*vacancy\s*breakdown)?|specialt(?:y|ies)[- ]wise|vacancy\s*breakdown|category[- ]wise\s*summary)/i.test(
+      clean
+    )
+  ) {
+    return true;
+  }
+
+  // 2. Pure roles / designations
+  if (
+    /^(senior\s*resident|junior\s*resident|professor|associate\s*professor|assistant\s*professor|additional\s*professor|tutor|demonstrator|specialist|consultant|medical\s*officer|gdmo|pgmo|nursing\s*staff|paramedical\s*staff|staff\s*nurse|technician|pharmacist|medical\s*officers?\s*\/\s*specialists?|nursing\s*staff\s*\(staff\s*nurse,\s*anm\)|paramedical\s*staff\s*\(lab\s*tech,\s*pharmacist,\s*lab\s*manager\))$/i.test(
+      clean
+    )
+  ) {
+    return true;
+  }
+
+  // 3. Metadata / section headers
+  if (
+    /^(last\s*date|date\s*of|interview|walk[- ]?in|venue|salary|pay|eligibility|qualification|experience|age\s*limit|selection|organization|sector|location|state|submission\s*address|important|note)\b/i.test(
+      clean
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function isReservedColumn(header: string): boolean {
   const clean = header
     .replace(/[*_#`]/g, '')
@@ -895,62 +930,68 @@ export function parseRecruitmentBreakdown(
     tableBlocks.forEach(processTableRows);
 
     // 2. Line-by-line pattern detection (e.g. "Anesthesia: Senior Resident - 4, Junior Resident - 3" or "Anesthesia (SR: 4, JR: 3)")
-    for (const line of lines) {
-      if (line.includes('|')) continue;
-      const deptMatch = line.match(/^[\d.*•\-\s]*([A-Za-z&/\s]{3,40}?)\s*[:\-–—(]\s*(?:(\d+)\s*(?:posts?|vacanc(?:y|ies))?\s*[,(])?\s*(.*)$/i);
-      if (deptMatch) {
-        const deptCandidate = deptMatch[1].trim();
-        const rest = deptMatch[3] || '';
-        const posMatches = [
-          ...rest.matchAll(
-            /(female\s*medical\s*officer|fmo|emergency\s*medical\s*officer|emo|senior\s*resident|junior\s*resident|\bsr\b|\bjr\b|professor|assistant\s*professor|associate\s*professor|tutor|demonstrator|part[- ]?time\s*specialist|resident\s*specialist|full[- ]?time\s*specialist|pt\/ft\s*specialist|specialist|pgmo|gdmo|medical\s*officer|consultant)\s*[:\-–—\s]?\s*(\d+)/gi
-          ),
-        ];
-        if (posMatches.length > 0) {
-          const normKey = normalizeDeptKey(deptCandidate);
-          const existing = breakdownMap.get(normKey) || {
-            department: deptCandidate,
-            positions: {},
-            total: 0,
-          };
-          for (const pm of posMatches) {
-            const pName = standardizePositionName(pm[1]);
-            const pCount = parseInt(pm[2], 10) || 0;
-            existing.positions[pName] = (existing.positions[pName] || 0) + pCount;
-            positionsFound.add(pName);
-          }
-          existing.total = Object.values(existing.positions).reduce((sum, v) => sum + v, 0);
-          breakdownMap.set(normKey, existing);
-        }
-      }
-    }
-
-    // 3. Section-based parsing (e.g. "Senior Resident:\n1. Anesthesia - 4\n\nJunior Resident:\n1. Anesthesia - 3")
-    let currentRoleSection = '';
-    for (const line of lines) {
-      const roleHeaderMatch = line.match(
-        /^(?:#+\s*)?(?:Post\s*[:\-]\s*)?(Female\s*Medical\s*Officer|Emergency\s*Medical\s*Officer|Senior\s*Resident|Junior\s*Resident|Professor|Associate\s*Professor|Assistant\s*Professor|Additional\s*Professor|Tutor|Demonstrator|Part[- ]?Time\s*Specialist|Resident\s*Specialist|Full[- ]?Time\s*Specialist|PT\/FT\s*(?:Contractual\s*)?Specialist|Specialist|PGMO|GDMO|Medical\s*Officer|Consultant)\s*[:\-]?\s*(?:\(\d+\s*posts?\))?$/i
-      );
-      if (roleHeaderMatch) {
-        currentRoleSection = standardizePositionName(roleHeaderMatch[1]);
-        positionsFound.add(currentRoleSection);
-        continue;
-      }
-      if (currentRoleSection) {
-        const deptLineMatch = line.match(/^[-*•\d.)\s]*([A-Za-z&/\s]{3,40}?)\s*[:\-–—]\s*(\d+)\s*(?:posts?|vacanc(?:y|ies))?$/i);
-        if (deptLineMatch) {
-          const dName = deptLineMatch[1].trim();
-          const dCount = parseInt(deptLineMatch[2], 10) || 0;
-          if (dName.length >= 2 && dCount > 0) {
-            const normKey = normalizeDeptKey(dName);
+    // If structured tables were present and already discovered department breakdowns,
+    // do not parse unstructured summary / cadre lines outside the table as departments!
+    if (tableBlocks.length === 0 || breakdownMap.size === 0) {
+      for (const line of lines) {
+        if (line.includes('|')) continue;
+        const deptMatch = line.match(/^[\d.*•\-\s]*([A-Za-z&/\s]{3,40}?)\s*[:\-–—(]\s*(?:(\d+)\s*(?:posts?|vacanc(?:y|ies))?\s*[,(])?\s*(.*)$/i);
+        if (deptMatch) {
+          const deptCandidate = deptMatch[1].trim();
+          if (isDisallowedDepartmentName(deptCandidate)) continue;
+          const rest = deptMatch[3] || '';
+          const posMatches = [
+            ...rest.matchAll(
+              /(female\s*medical\s*officer|fmo|emergency\s*medical\s*officer|emo|senior\s*resident|junior\s*resident|\bsr\b|\bjr\b|professor|assistant\s*professor|associate\s*professor|tutor|demonstrator|part[- ]?time\s*specialist|resident\s*specialist|full[- ]?time\s*specialist|pt\/ft\s*specialist|specialist|pgmo|gdmo|medical\s*officer|consultant)\s*[:\-–—\s]?\s*(\d+)/gi
+            ),
+          ];
+          if (posMatches.length > 0) {
+            const normKey = normalizeDeptKey(deptCandidate);
             const existing = breakdownMap.get(normKey) || {
-              department: dName,
+              department: deptCandidate,
               positions: {},
               total: 0,
             };
-            existing.positions[currentRoleSection] = (existing.positions[currentRoleSection] || 0) + dCount;
+            for (const pm of posMatches) {
+              const pName = standardizePositionName(pm[1]);
+              const pCount = parseInt(pm[2], 10) || 0;
+              existing.positions[pName] = (existing.positions[pName] || 0) + pCount;
+              positionsFound.add(pName);
+            }
             existing.total = Object.values(existing.positions).reduce((sum, v) => sum + v, 0);
             breakdownMap.set(normKey, existing);
+          }
+        }
+      }
+
+      // 3. Section-based parsing (e.g. "Senior Resident:\n1. Anesthesia - 4\n\nJunior Resident:\n1. Anesthesia - 3")
+      let currentRoleSection = '';
+      for (const line of lines) {
+        const roleHeaderMatch = line.match(
+          /^(?:#+\s*)?(?:Post\s*[:\-]\s*)?(Female\s*Medical\s*Officer|Emergency\s*Medical\s*Officer|Senior\s*resident|Junior\s*Resident|Professor|Associate\s*Professor|Assistant\s*Professor|Additional\s*Professor|Tutor|Demonstrator|Part[- ]?Time\s*Specialist|Resident\s*Specialist|Full[- ]?Time\s*Specialist|PT\/FT\s*(?:Contractual\s*)?Specialist|Specialist|PGMO|GDMO|Medical\s*Officer|Consultant)\s*[:\-]?\s*(?:\(\d+\s*posts?\))?$/i
+        );
+        if (roleHeaderMatch) {
+          currentRoleSection = standardizePositionName(roleHeaderMatch[1]);
+          positionsFound.add(currentRoleSection);
+          continue;
+        }
+        if (currentRoleSection) {
+          const deptLineMatch = line.match(/^[-*•\d.)\s]*([A-Za-z&/\s]{3,40}?)\s*[:\-–—]\s*(\d+)\s*(?:posts?|vacanc(?:y|ies))?$/i);
+          if (deptLineMatch) {
+            const dName = deptLineMatch[1].trim();
+            if (isDisallowedDepartmentName(dName)) continue;
+            const dCount = parseInt(deptLineMatch[2], 10) || 0;
+            if (dName.length >= 2 && dCount > 0) {
+              const normKey = normalizeDeptKey(dName);
+              const existing = breakdownMap.get(normKey) || {
+                department: dName,
+                positions: {},
+                total: 0,
+              };
+              existing.positions[currentRoleSection] = (existing.positions[currentRoleSection] || 0) + dCount;
+              existing.total = Object.values(existing.positions).reduce((sum, v) => sum + v, 0);
+              breakdownMap.set(normKey, existing);
+            }
           }
         }
       }
@@ -961,7 +1002,7 @@ export function parseRecruitmentBreakdown(
   if (vacancies && vacancies.length > 0) {
     for (const v of vacancies) {
       const dName = v.department || v.speciality;
-      if (!dName) continue;
+      if (!dName || isDisallowedDepartmentName(dName)) continue;
       const normKey = normalizeDeptKey(dName);
 
       // Prevent double-counting: If this department was already parsed from the structured table (Step 1, 2, or 3),
@@ -1270,7 +1311,7 @@ export function augmentRecruitmentWithBreakdown(
       }
     }
 
-    if (!alreadyCovered && bd.department && bd.total > 0) {
+    if (!alreadyCovered && bd.department && bd.total > 0 && !isDisallowedDepartmentName(bd.department)) {
       extraIndex++;
       added = true;
       const newVac: VacancyRecord = {

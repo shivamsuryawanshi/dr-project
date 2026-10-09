@@ -50,6 +50,7 @@ import {
   parseRecruitmentBreakdown,
   getVacancyPositionMatch,
   augmentRecruitmentWithBreakdown,
+  isDisallowedDepartmentName,
   type DepartmentBreakdown,
 } from '../utils/recruitmentBreakdown';
 import { formatInterviewOrDate } from '../utils/rawNoticeParser';
@@ -1080,6 +1081,7 @@ export function RecruitmentExplorerView({
         };
       })
       .filter((v) => {
+        if (isDisallowedDepartmentName(v.department || v.speciality || v.postName)) return false;
         if (!v.isPositionMatch || v.displayCount <= 0) return false;
         if ((!availablePositions || availablePositions.length === 0) && activePost && v.postName !== activePost) return false;
         if (!q) return true;
@@ -1092,6 +1094,7 @@ export function RecruitmentExplorerView({
     const groupedMap = new Map<string, any>();
     for (const v of rawFiltered) {
       const cleanName = cleanExtractedName(v.department || v.speciality || v.postName);
+      if (isDisallowedDepartmentName(cleanName)) continue;
       const groupKey = cleanName.toLowerCase().trim();
       if (!groupedMap.has(groupKey)) {
         groupedMap.set(groupKey, {
@@ -1141,20 +1144,31 @@ export function RecruitmentExplorerView({
   );
 
   const departmentCount = useMemo(
-    () => new Set(visibleVacancies.map((v) => v.department || v.speciality).filter(Boolean)).size,
+    () => new Set(
+      visibleVacancies
+        .map((v) => v.department || v.speciality)
+        .filter((d) => d && !isDisallowedDepartmentName(d))
+    ).size,
     [visibleVacancies],
   );
 
   const totalDepartmentCount = useMemo(
-    () => new Set((effectiveRecruitment?.vacancies || []).map((v) => v.department || v.speciality).filter(Boolean)).size,
+    () => new Set(
+      (effectiveRecruitment?.vacancies || [])
+        .map((v) => v.department || v.speciality)
+        .filter((d) => d && !isDisallowedDepartmentName(d))
+    ).size,
     [effectiveRecruitment],
   );
 
   const explorerTotalVacancies = useMemo(() => {
-    const baseTotal = Math.max(
-      Number(effectiveRecruitment.totalVacancies || 0),
-      (effectiveRecruitment.vacancies || []).reduce((sum, row) => sum + Number(row.numberOfVacancies || 0), 0)
+    const validRows = (effectiveRecruitment.vacancies || []).filter(
+      (v) => !isDisallowedDepartmentName(v.department || v.speciality || v.postName)
     );
+    const validRowsSum = validRows.reduce((sum, row) => sum + Number(row.numberOfVacancies || 0), 0);
+    const statedTotal = Number(effectiveRecruitment.totalVacancies || 0);
+    const baseTotal = statedTotal > 0 && validRowsSum <= statedTotal ? statedTotal : (validRowsSum > 0 ? validRowsSum : statedTotal);
+
     if (!selectedPosition || selectedPosition === 'All Positions') {
       return baseTotal;
     }
