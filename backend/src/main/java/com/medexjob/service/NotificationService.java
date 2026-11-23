@@ -3,6 +3,11 @@ package com.medexjob.service;
 
 import com.medexjob.entity.Notification;
 import com.medexjob.entity.NotificationPreferences;
+import com.medexjob.entity.CandidateProfile;
+import com.medexjob.entity.Job;
+import com.medexjob.entity.JobAlert;
+import com.medexjob.repository.CandidateProfileRepository;
+import com.medexjob.repository.JobAlertRepository;
 import com.medexjob.repository.NotificationRepository;
 import com.medexjob.repository.NotificationPreferencesRepository;
 import com.medexjob.repository.UserRepository;
@@ -13,9 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -31,6 +39,12 @@ public class NotificationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired(required = false)
+    private CandidateProfileRepository candidateProfileRepository;
+
+    @Autowired(required = false)
+    private JobAlertRepository jobAlertRepository;
 
     /**
      * Check if user has enabled this type of notification
@@ -449,5 +463,189 @@ public class NotificationService {
         } catch (Exception e) {
             logger.error("❌ Error creating notification: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * Triggered when a new job is created, published, or activated.
+     * Evaluates active JobAlerts and candidate profiles using flexible wildcard rules
+     * (e.g. location = "Anywhere in India", roles = "All Relevant", MBBS matching JR/MO posts).
+     * Populates notifications and updates job alert match counts.
+     */
+    public void processNewJobAlerts(Job job) {
+        if (job == null || job.getStatus() != Job.JobStatus.ACTIVE) {
+            return;
+        }
+
+        try {
+            logger.info("Processing job alerts and candidate matching for newly active job: {} (ID: {})",
+                    job.getTitle(), job.getId());
+
+            String jobTitle = (job.getTitle() != null ? job.getTitle() : "").toLowerCase();
+            String jobDesc = (job.getDescription() != null ? job.getDescription() : "").toLowerCase();
+            String jobLocation = (job.getLocation() != null ? job.getLocation() : "").toLowerCase();
+            String jobQual = (job.getQualification() != null ? job.getQualification() : "").toLowerCase();
+            String jobSpeciality = (job.getSpeciality() != null ? job.getSpeciality() : "").toLowerCase();
+            String jobSector = (job.getSector() != null ? job.getSector().name() : "").toLowerCase();
+            String jobCategory = (job.getCategory() != null ? job.getCategory().name() : "").toLowerCase();
+            String employerName = job.getEmployer() != null && job.getEmployer().getCompanyName() != null
+                    ? job.getEmployer().getCompanyName() : "MedExJob Platform";
+
+            // 1. Match against explicit JobAlert entities
+            if (jobAlertRepository != null) {
+                List<JobAlert> activeAlerts = jobAlertRepository.findAll().stream()
+                        .filter(a -> Boolean.TRUE.equals(a.getActive()))
+                        .collect(Collectors.toList());
+
+                for (JobAlert alert : activeAlerts) {
+                    if (isJobMatchingAlert(job, alert, jobTitle, jobDesc, jobLocation, jobSector, jobCategory)) {
+                        alert.setMatchCount((alert.getMatchCount() != null ? alert.getMatchCount() : 0) + 1);
+                        alert.setLastSent(LocalDateTime.now());
+                        jobAlertRepository.save(alert);
+
+                        // Create notification for the user
+                        createJobNotificationIfNotExists(alert.getUserId(), job.getId(), job.getTitle(), employerName);
+                    }
+                }
+            }
+
+            // 2. Match against candidate profiles (e.g., candidates who completed profiles like Manoj Kumar)
+            if (candidateProfileRepository != null) {
+                List<CandidateProfile> profiles = candidateProfileRepository.findAll();
+                for (CandidateProfile profile : profiles) {
+                    if (profile.getCandidate() == null) continue;
+                    UUID candidateUserId = profile.getCandidate().getId();
+
+                    if (isJobMatchingCandidateProfile(job, profile, jobTitle, jobDesc, jobLocation, jobQual, jobSpeciality)) {
+                        createJobNotificationIfNotExists(candidateUserId, job.getId(), job.getTitle(), employerName);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error processing job alerts pipeline: {}", e.getMessage(), e);
+        }
+    }
+
+    private boolean isJobMatchingAlert(Job job, JobAlert alert, String jobTitle, String jobDesc,
+                                      String jobLocation, String jobSector, String jobCategory) {
+        // Sectors check
+        if (alert.getSectors() != null && !alert.getSectors().isBlank()) {
+            List<String> sectors = Arrays.stream(alert.getSectors().split(","))
+                    .map(String::trim).map(String::toLowerCase).filter(s -> !s.isEmpty()).toList();
+            if (!sectors.isEmpty() && !sectors.contains(jobSector) && !sectors.contains("both") && !sectors.contains("all")) {
+                return false;
+            }
+        }
+
+        // Location check: WILDCARD SUPPORT!
+        if (alert.getLocations() != null && !alert.getLocations().isBlank()) {
+            List<String> locations = Arrays.stream(alert.getLocations().split(","))
+                    .map(String::trim).map(String::toLowerCase).filter(s -> !s.isEmpty()).toList();
+            
+            boolean isWildcard = locations.stream().anyMatch(l -> 
+                l.contains("anywhere") || l.contains("all india") || l.contains("pan india") || l.equals("india") || l.equals("any"));
+            
+            if (!isWildcard) {
+                boolean locMatch = locations.stream().anyMatch(l -> 
+                    jobLocation.contains(l) || l.contains(jobLocation));
+                if (!locMatch) return false;
+            }
+        }
+
+        // Keywords check: WILDCARD SUPPORT!
+        if (alert.getKeywords() != null && !alert.getKeywords().isBlank()) {
+            List<String> keywords = Arrays.stream(alert.getKeywords().split(","))
+                    .map(String::trim).map(String::toLowerCase).filter(s -> !s.isEmpty()).toList();
+            
+            boolean isWildcard = keywords.stream().anyMatch(k -> 
+                k.contains("all relevant") || k.contains("all") || k.equals("any"));
+            
+            if (!isWildcard) {
+                String fullText = (jobTitle + " " + jobDesc + " " + jobLocation).toLowerCase();
+                boolean kwMatch = keywords.stream().anyMatch(fullText::contains);
+                if (!kwMatch) return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isJobMatchingCandidateProfile(Job job, CandidateProfile profile, String jobTitle,
+                                                  String jobDesc, String jobLocation, String jobQual, String jobSpeciality) {
+        // 1. Location match (Wildcard check)
+        String prefLoc = (profile.getPreferredLocation() != null ? profile.getPreferredLocation() : "").toLowerCase();
+        String prefStates = (profile.getPreferredStates() != null ? profile.getPreferredStates() : "").toLowerCase();
+        String locType = (profile.getLocationPreferenceType() != null ? profile.getLocationPreferenceType() : "").toLowerCase();
+
+        boolean locationMatches = prefLoc.isEmpty() ||
+                prefLoc.contains("anywhere") || prefLoc.contains("india") || prefLoc.contains("all") ||
+                prefStates.contains("anywhere") || prefStates.contains("india") || prefStates.contains("all") ||
+                locType.contains("anywhere") ||
+                (!prefLoc.isEmpty() && (jobLocation.contains(prefLoc) || prefLoc.contains(jobLocation)));
+
+        if (!locationMatches) {
+            return false;
+        }
+
+        // 2. Candidate Speciality
+        String candSpec = (profile.getSpeciality() != null ? profile.getSpeciality() : "").toLowerCase();
+        boolean specialityMatches = false;
+        if (candSpec.isEmpty() || candSpec.equals("all") || candSpec.contains("general medicine") || candSpec.equals("none")) {
+            if (candSpec.contains("general medicine") || candSpec.contains("medicine")) {
+                specialityMatches = jobTitle.contains("medicine") || jobTitle.contains("resident") ||
+                        jobTitle.contains("medical officer") || jobTitle.contains("gdmo") ||
+                        jobDesc.contains("medicine") || jobSpeciality.contains("medicine") ||
+                        jobTitle.contains("physician") || jobTitle.contains("general");
+            } else {
+                specialityMatches = true;
+            }
+        } else {
+            specialityMatches = jobTitle.contains(candSpec) || jobDesc.contains(candSpec) || jobSpeciality.contains(candSpec);
+        }
+
+        // 3. Qualification match (MBBS)
+        String candQual = (profile.getHighestQualification() != null ? profile.getHighestQualification()
+                : (profile.getBasicQualification() != null ? profile.getBasicQualification()
+                : (profile.getQualification() != null ? profile.getQualification() : ""))).toLowerCase();
+
+        boolean qualMatches = false;
+        if (candQual.isEmpty() || candQual.contains("mbbs")) {
+            qualMatches = jobQual.contains("mbbs") || jobTitle.contains("mbbs") || jobDesc.contains("mbbs") ||
+                    jobTitle.contains("junior resident") || jobTitle.contains("medical officer") || jobTitle.contains("gdmo") ||
+                    jobTitle.contains("resident") || jobTitle.contains("faculty") || jobTitle.contains("senior resident");
+        } else {
+            qualMatches = jobQual.contains(candQual) || jobTitle.contains(candQual) || jobDesc.contains(candQual);
+        }
+
+        // 4. Target Roles check (All Relevant, Junior Resident, etc.)
+        String rolesStr = (profile.getPreferredJobRoles() != null ? profile.getPreferredJobRoles()
+                : (profile.getPreferredJobRole() != null ? profile.getPreferredJobRole() : "")).toLowerCase();
+        boolean roleMatches = rolesStr.isEmpty() || rolesStr.contains("all relevant") || rolesStr.contains("all") ||
+                (rolesStr.contains("junior resident") && (jobTitle.contains("junior resident") || jobTitle.contains("resident") || jobTitle.contains("jr"))) ||
+                (rolesStr.contains("medical officer") && (jobTitle.contains("medical officer") || jobTitle.contains("mo")));
+
+        return (specialityMatches || qualMatches) && (roleMatches || locationMatches);
+    }
+
+    private void createJobNotificationIfNotExists(UUID userId, UUID jobId, String jobTitle, String org) {
+        if (userId == null || jobId == null) return;
+        
+        // Prevent duplicate notification for same user and job
+        List<Notification> existing = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        boolean alreadyNotified = existing.stream()
+                .anyMatch(n -> jobId.equals(n.getRelatedJobId()));
+        if (alreadyNotified) {
+            return;
+        }
+
+        String title = "New Matching Job: " + (jobTitle.length() > 150 ? jobTitle.substring(0, 150) : jobTitle);
+        String msg = String.format("A new opening '%s' was posted at %s. View and apply now.",
+                jobTitle.length() > 60 ? jobTitle.substring(0, 60) + "…" : jobTitle, org);
+        if (msg.length() > 500) msg = msg.substring(0, 500);
+
+        Notification n = new Notification(userId, "job_alert", title, msg);
+        n.setRelatedJobId(jobId);
+        notificationRepository.save(n);
+        logger.info("Sent job_alert notification to user: {} for job: {}", userId, jobId);
     }
 }

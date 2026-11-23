@@ -17,6 +17,7 @@ import java.util.UUID;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
     // Find notifications by user
+    List<Notification> findByUserIdOrderByCreatedAtDesc(UUID userId);
     Page<Notification> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     // Find unread notifications by user

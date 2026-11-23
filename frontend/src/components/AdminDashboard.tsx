@@ -824,7 +824,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                     className="admin-ui-cluster-card"
                     onClick={() => {
                       sessionStorage.setItem('medex.adminInsightSpeciality', name);
-                      onNavigate('admin-candidate-insights');
+                      onNavigate(`admin-candidate-insights?speciality=${encodeURIComponent(name)}`);
                     }}
                   >
                     <span>{name}</span>

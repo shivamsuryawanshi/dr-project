@@ -37,10 +37,10 @@ const typeMeta: Record<CanonicalType, { icon: JSX.Element; accent: string; sub: 
 
 const cardThemes: Record<CanonicalType, { bg: string; border: string; hover: string; badge: string; ring: string; glow: string; hoverBg: string }> = {
   GOVT: { bg: 'bg-gradient-to-br from-blue-50 to-white', border: 'border-l-4 border-l-blue-500 border border-blue-100', hover: 'hover:shadow-blue-200', badge: 'bg-blue-600 text-white', ring: 'ring-blue-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(37,99,235,0.55)] group-hover:ring-2 group-hover:ring-blue-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-blue-100 group-hover:to-blue-50' },
-  PRIVATE: { bg: 'bg-gradient-to-br from-emerald-50 to-white', border: 'border-l-4 border-l-emerald-500 border border-emerald-100', hover: 'hover:shadow-emerald-200', badge: 'bg-blue-600 text-white', ring: 'ring-emerald-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(5,150,105,0.55)] group-hover:ring-2 group-hover:ring-emerald-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-emerald-100 group-hover:to-emerald-50' },
-  EXAM: { bg: 'bg-gradient-to-br from-purple-50 to-white', border: 'border-l-4 border-l-purple-500 border border-purple-100', hover: 'hover:shadow-purple-200', badge: 'bg-blue-600 text-white', ring: 'ring-purple-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(109,40,217,0.55)] group-hover:ring-2 group-hover:ring-purple-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-purple-100 group-hover:to-purple-50' },
-  DEADLINE: { bg: 'bg-gradient-to-br from-amber-50 to-white', border: 'border-l-4 border-l-amber-500 border border-amber-100', hover: 'hover:shadow-amber-200', badge: 'bg-blue-600 text-white', ring: 'ring-amber-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(245,158,11,0.55)] group-hover:ring-2 group-hover:ring-amber-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-amber-100 group-hover:to-amber-50' },
-  UPDATE: { bg: 'bg-gradient-to-br from-cyan-50 to-white', border: 'border-l-4 border-l-cyan-500 border border-cyan-100', hover: 'hover:shadow-cyan-200', badge: 'bg-blue-600 text-white', ring: 'ring-cyan-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(8,145,178,0.55)] group-hover:ring-2 group-hover:ring-cyan-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-cyan-100 group-hover:to-cyan-50' },
+  PRIVATE: { bg: 'bg-gradient-to-br from-emerald-50 to-white', border: 'border-l-4 border-l-emerald-500 border border-emerald-100', hover: 'hover:shadow-emerald-200', badge: 'bg-emerald-600 text-white', ring: 'ring-emerald-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(5,150,105,0.55)] group-hover:ring-2 group-hover:ring-emerald-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-emerald-100 group-hover:to-emerald-50' },
+  EXAM: { bg: 'bg-gradient-to-br from-purple-50 to-white', border: 'border-l-4 border-l-purple-500 border border-purple-100', hover: 'hover:shadow-purple-200', badge: 'bg-purple-600 text-white', ring: 'ring-purple-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(109,40,217,0.55)] group-hover:ring-2 group-hover:ring-purple-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-purple-100 group-hover:to-purple-50' },
+  DEADLINE: { bg: 'bg-gradient-to-br from-amber-50 to-white', border: 'border-l-4 border-l-amber-500 border border-amber-100', hover: 'hover:shadow-amber-200', badge: 'bg-amber-600 text-white', ring: 'ring-amber-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(245,158,11,0.55)] group-hover:ring-2 group-hover:ring-amber-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-amber-100 group-hover:to-amber-50' },
+  UPDATE: { bg: 'bg-gradient-to-br from-cyan-50 to-white', border: 'border-l-4 border-l-cyan-500 border border-cyan-100', hover: 'hover:shadow-cyan-200', badge: 'bg-cyan-600 text-white', ring: 'ring-cyan-100', glow: 'group-hover:shadow-[0_20px_48px_-24px_rgba(8,145,178,0.55)] group-hover:ring-2 group-hover:ring-cyan-200 group-hover:ring-offset-1', hoverBg: 'group-hover:from-cyan-100 group-hover:to-cyan-50' },
 };
 
 const normalizeType = (type?: string): CanonicalType => {
@@ -210,11 +210,27 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
           </div>
 
           {loading && (
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Card key={i} className="p-6 animate-pulse max-w-5xl mx-auto">
-                  <div className="flex items-center gap-3 mb-4"><div className="h-8 w-24 bg-gray-200 rounded-full"></div><div className="h-6 w-32 bg-gray-200 rounded-full"></div><div className="h-6 w-20 bg-gray-200 rounded-full ml-auto"></div></div>
-                  <div className="h-6 w-3/4 bg-gray-200 rounded mb-3"></div><div className="h-4 w-full bg-gray-200 rounded mb-2"></div><div className="h-4 w-2/3 bg-gray-200 rounded mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="p-5 md:p-6 animate-pulse flex flex-col justify-between h-72 border border-slate-200/70 rounded-2xl">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                        <div className="h-6 w-24 bg-gray-200 rounded-full"></div>
+                      </div>
+                      <div className="h-7 w-7 bg-gray-200 rounded-full"></div>
+                    </div>
+                    <div className="h-4 w-28 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-5 w-5/6 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-5 w-2/3 bg-gray-200 rounded mb-4"></div>
+                    <div className="h-4 w-full bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 w-4/5 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                    <div className="h-8 w-24 bg-gray-200 rounded-md"></div>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -230,7 +246,7 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
           )}
 
           {!loading && filteredUpdates.length > 0 && (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredUpdates.map((update, index) => {
                 const normalizedType = normalizeType(update.type);
                 const colors = cardThemes[normalizedType];
@@ -241,33 +257,92 @@ export function NewsPage({ onNavigate }: NewsPageProps) {
                 return (
                   <Card
                     key={update.id}
-                    className={`relative overflow-hidden p-5 md:p-6 ${colors.bg} ${colors.hoverBg} ${colors.border} hover:shadow-2xl ${colors.hover} ${colors.glow} hover:-translate-y-1 transition-all duration-300 cursor-pointer group rounded-2xl ring-1 ${colors.ring} max-w-5xl mx-auto`}
+                    className={`relative overflow-hidden p-5 md:p-6 ${colors.bg} ${colors.hoverBg} ${colors.border} hover:shadow-xl ${colors.hover} ${colors.glow} hover:-translate-y-1 transition-all duration-300 cursor-pointer group rounded-2xl ring-1 ${colors.ring} flex flex-col justify-between h-full`}
                     style={{ animationDelay: `${index * 0.05}s` }}
                     onClick={() => update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news')}
                   >
-                    <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className={`${colors.badge} px-3 py-1 text-xs font-semibold`}>{label}</Badge>
-                        <span className="inline-flex items-center gap-2 text-xs text-slate-600 bg-white/70 border border-white/60 rounded-full px-3 py-1 shadow-sm">{meta.icon}{meta.sub}</span>
-                        {update.breaking && <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">Breaking</span>}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-slate-600 bg-white/80 rounded-full px-3 py-1.5"><Calendar className="w-4 h-4" />Updated {formatDate(update.date)}</div>
-                        <Button variant="ghost" size="icon" title={copiedNewsId === update.id ? 'Link Copied!' : 'Share News'} className="h-8 w-8 rounded-full border bg-white/80" onClick={(e) => handleShareNews(e, update)}>
-                          {copiedNewsId === update.id ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
+                    <div>
+                      {/* Top Badges & Share Row */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex flex-wrap items-center gap-1.5 min-h-[28px]">
+                          <Badge className={`${colors.badge} px-2.5 py-0.5 text-xs font-semibold shrink-0`}>
+                            {label}
+                          </Badge>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 bg-white/80 border border-slate-200/70 rounded-full px-2.5 py-0.5 shadow-2xs shrink-0">
+                            {meta.icon}
+                            {meta.sub}
+                          </span>
+                          {update.breaking && (
+                            <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 shrink-0 animate-pulse">
+                              Breaking
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={copiedNewsId === update.id ? 'Link Copied!' : 'Share News'}
+                          className="h-8 w-8 rounded-full border border-slate-200 bg-white/90 hover:bg-white shrink-0 -mt-1 shadow-2xs"
+                          onClick={(e) => handleShareNews(e, update)}
+                        >
+                          {copiedNewsId === update.id ? (
+                            <Check className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <Share2 className="w-3.5 h-3.5 text-slate-600" />
+                          )}
                         </Button>
                       </div>
+
+                      {/* Optional Thumbnail if provided */}
+                      {update.imageUrl && (
+                        <div className="w-full h-36 mb-3 rounded-xl overflow-hidden bg-slate-100 border border-slate-200/60">
+                          <img
+                            src={update.imageUrl}
+                            alt={update.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+
+                      {/* Date Meta */}
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Updated {formatDate(update.date)}</span>
+                      </div>
+
+                      {/* Title strictly line-clamped to 2 lines */}
+                      <h3
+                        className="text-base md:text-lg font-bold text-slate-900 leading-snug line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors"
+                        title={update.title}
+                      >
+                        {update.title}
+                      </h3>
+
+                      {/* Summary strictly line-clamped to 3 lines */}
+                      {excerpt && (
+                        <p className="text-xs md:text-sm text-slate-600 leading-relaxed line-clamp-3 mb-4">
+                          {excerpt}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="relative mt-4 space-y-3">
-                      <h3 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">{update.title}</h3>
-                      {excerpt && <p className="text-sm md:text-base text-slate-600 leading-relaxed line-clamp-3">{excerpt}</p>}
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-200/50">
-                        <span className="text-xs text-gray-500 font-medium">{update.fullStory ? 'Tap to read full story' : 'View on news page'}</span>
-                        <Button variant="ghost" className={`h-9 px-4 font-semibold gap-2 ${meta.accent}`} onClick={(e) => { e.stopPropagation(); update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news'); }}>
-                          {update.fullStory ? 'View Full Story' : 'View Story'}<ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
+                    {/* Standardized Bottom Action Bar */}
+                    <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between mt-auto">
+                      <span className="text-xs text-slate-500 font-medium">
+                        {update.fullStory ? 'Full story available' : 'Brief circular'}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 px-3 font-semibold text-xs gap-1.5 ${meta.accent} hover:bg-white/80`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          update.fullStory ? onNavigate(`news/${update.id}`) : onNavigate('news');
+                        }}
+                      >
+                        {update.fullStory ? 'View Full Story' : 'View Story'}
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </Card>
                 );

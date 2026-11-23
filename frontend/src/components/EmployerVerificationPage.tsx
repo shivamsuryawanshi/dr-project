@@ -34,6 +34,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Textarea } from "./ui/textarea";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -53,6 +59,7 @@ interface EmployerItem {
   userName: string;
   userEmail: string;
   companyType: string;
+  origin?: "EMPLOYER_ORGANIC" | "ADMIN_POSTED";
   verificationStatus: "pending" | "approved" | "rejected";
   createdAt: string;
   verificationNotes?: string;
@@ -71,55 +78,59 @@ interface EmployerItem {
 const DEFAULT_SAMPLE_EMPLOYERS: EmployerItem[] = [
   {
     id: "emp-1",
-    companyName: "National Health Mission, Kannur",
-    userName: "NHM Kannur Admin",
-    userEmail: "si_health_mission_kannur@medexjob.com",
+    companyName: "Haindavi hospital",
+    userName: "Haindavi HR Operations",
+    userEmail: "hr@haindavihospital.in",
     companyType: "Hospital",
-    verificationStatus: "approved",
-    createdAt: "2026-09-26T10:00:00Z",
-    city: "Kannur",
-    state: "Kerala",
-    contactPerson: "Dr. Suresh Kumar",
-    designation: "District Medical Officer",
-    contactPhone: "+91 94471 23456",
-    website: "https://nhm.kerala.gov.in",
+    origin: "EMPLOYER_ORGANIC",
+    verificationStatus: "pending",
+    createdAt: "2026-10-22T08:30:00Z",
+    city: "Hyderabad",
+    state: "Telangana",
+    contactPerson: "Dr. K. Srinivas Rao",
+    designation: "Medical Director",
+    contactPhone: "+91 40 2345 6789",
+    website: "https://haindavihospital.in",
   },
   {
     id: "emp-2",
-    companyName: "Regional Institute of Mental Health (LGBRIMH), Tezpur",
-    userName: "LGBRIMH Tezpur HR",
-    userEmail: "rlonai_institute_of_mental_health....@medexjob.com",
-    companyType: "Hospital",
-    verificationStatus: "approved",
-    createdAt: "2026-09-26T10:15:00Z",
-    city: "Tezpur",
-    state: "Assam",
-    contactPerson: "Dr. N. Bordoloi",
-    designation: "Registrar / HOD",
-    contactPhone: "+91 3712 233340",
-    website: "https://lgbrimh.gov.in",
+    companyName: "Amar Shaheed Jodha Singh Atalye Medical College, Fatehpur",
+    userName: "ASJSA Recruitment Cell",
+    userEmail: "admin@asjsamedicalcollege.edu.in",
+    companyType: "College",
+    origin: "EMPLOYER_ORGANIC",
+    verificationStatus: "pending",
+    createdAt: "2026-10-21T11:15:00Z",
+    city: "Fatehpur",
+    state: "Uttar Pradesh",
+    contactPerson: "Prof. Dr. R. K. Maurya",
+    designation: "Principal & Dean",
+    contactPhone: "+91 5180 223400",
+    website: "https://asjsamedicalcollege.edu.in",
   },
   {
     id: "emp-3",
-    companyName: "Regional Institute of Mental Health (LGBRIMH)",
-    userName: "LGBRIMH Central Admin",
-    userEmail: "rlonai_institute_of_mental_health....@medexjob.com",
-    companyType: "Hospital",
+    companyName: "MedEx Update Platform Ingestion",
+    userName: "Platform Operations Team",
+    userEmail: "bulk-admin-updates@medexjob.com",
+    companyType: "Government",
+    origin: "ADMIN_POSTED",
     verificationStatus: "approved",
-    createdAt: "2026-09-26T10:20:00Z",
-    city: "Tezpur",
-    state: "Assam",
-    contactPerson: "Dr. P. Kalita",
-    designation: "Deputy Director",
-    contactPhone: "+91 3712 233341",
-    website: "https://lgbrimh.gov.in",
+    createdAt: "2026-10-20T09:00:00Z",
+    city: "New Delhi",
+    state: "Delhi",
+    contactPerson: "System Administrator",
+    designation: "Data Ingestion Specialist",
+    contactPhone: "+91 11 4000 8800",
+    website: "https://medexjob.com",
   },
   {
     id: "emp-4",
     companyName: "Apollo Multispeciality Hospital",
     userName: "Apollo HR Team",
-    userEmail: "multispeciality.hospital@medexjob.com",
+    userEmail: "multispeciality.hospital@apollohospitals.com",
     companyType: "Hospital",
+    origin: "EMPLOYER_ORGANIC",
     verificationStatus: "approved",
     createdAt: "2026-09-26T10:30:00Z",
     city: "Kolkata",
@@ -379,6 +390,7 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
+  const [originFilter, setOriginFilter] = useState<"all" | "EMPLOYER_ORGANIC" | "ADMIN_POSTED">("EMPLOYER_ORGANIC");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Pagination State (10 records per page as in design)
@@ -412,6 +424,7 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
           userName: emp.userName || "N/A",
           userEmail: emp.userEmail || "N/A",
           companyType: emp.companyType ? String(emp.companyType).charAt(0).toUpperCase() + String(emp.companyType).slice(1) : "Hospital",
+          origin: emp.origin || (String(emp.userEmail || "").toLowerCase().includes("bulk") || String(emp.userEmail || "").toLowerCase().includes("admin") || String(emp.userEmail || "").toLowerCase().includes("@medexjob.com") ? "ADMIN_POSTED" : "EMPLOYER_ORGANIC"),
           verificationStatus: (emp.verificationStatus || "pending") as "pending" | "approved" | "rejected",
           createdAt: emp.createdAt || new Date().toISOString(),
           verificationNotes: emp.verificationNotes || "",
@@ -447,10 +460,27 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
     () => employers.filter((e) => e.verificationStatus === "rejected").length,
     [employers]
   );
+  const organicCount = useMemo(
+    () => employers.filter((e) => e.origin !== "ADMIN_POSTED").length,
+    [employers]
+  );
+  const adminPostedCount = useMemo(
+    () => employers.filter((e) => e.origin === "ADMIN_POSTED").length,
+    [employers]
+  );
 
   // Filtering Logic
   const filteredEmployers = useMemo(() => {
     return employers.filter((emp) => {
+      // Origin filter (External vs Internal Admin)
+      if (originFilter !== "all") {
+        if (originFilter === "ADMIN_POSTED") {
+          if (emp.origin !== "ADMIN_POSTED") return false;
+        } else {
+          if (emp.origin === "ADMIN_POSTED") return false;
+        }
+      }
+
       // Status filter
       if (statusFilter !== "all" && emp.verificationStatus.toLowerCase() !== statusFilter.toLowerCase()) {
         return false;
@@ -495,7 +525,7 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
 
       return true;
     });
-  }, [employers, searchTerm, typeFilter, statusFilter, dateRangeFilter]);
+  }, [employers, searchTerm, typeFilter, statusFilter, dateRangeFilter, originFilter]);
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -503,6 +533,7 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
     setTypeFilter("all");
     setStatusFilter("all");
     setDateRangeFilter("all");
+    setOriginFilter("EMPLOYER_ORGANIC");
     setCurrentPage(1);
   };
 
@@ -936,6 +967,67 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
 
         </div>
 
+        {/* ORIGIN TABS: External Employer vs Admin Generated */}
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-1.5 bg-white rounded-xl w-fit border border-slate-200 shadow-xs">
+          <button
+            type="button"
+            onClick={() => {
+              setOriginFilter("EMPLOYER_ORGANIC");
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              originFilter === "EMPLOYER_ORGANIC"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <span>External Employer Submissions</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              originFilter === "EMPLOYER_ORGANIC" ? "bg-white/20 text-white" : "bg-blue-100 text-blue-800"
+            }`}>
+              {organicCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOriginFilter("ADMIN_POSTED");
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              originFilter === "ADMIN_POSTED"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <span>Internal / Admin-Generated Postings</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              originFilter === "ADMIN_POSTED" ? "bg-white/20 text-white" : "bg-purple-100 text-purple-800"
+            }`}>
+              {adminPostedCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOriginFilter("all");
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              originFilter === "all"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <span>All Records</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              originFilter === "all" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+            }`}>
+              {employers.length}
+            </span>
+          </button>
+        </div>
+
         {/* 3. SEARCH & FILTERS BAR */}
         <div className="ev-filters-bar">
           {/* Desktop Filter Row */}
@@ -1117,9 +1209,10 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
               <thead className="ev-table-header">
                 <tr>
                   <th className="text-center" style={{ width: "48px", minWidth: "48px", whiteSpace: "nowrap" }}>#</th>
-                  <th style={{ minWidth: "260px" }}>Name / Organization</th>
-                  <th className="text-center" style={{ width: "120px", minWidth: "120px", whiteSpace: "nowrap" }}>Type</th>
-                  <th className="text-center" style={{ width: "140px", minWidth: "140px", whiteSpace: "nowrap" }}>Status</th>
+                  <th style={{ width: "290px", minWidth: "240px" }}>Name / Organization</th>
+                  <th className="text-center" style={{ width: "110px", minWidth: "110px", whiteSpace: "nowrap" }}>Type</th>
+                  <th className="text-center" style={{ width: "125px", minWidth: "125px", whiteSpace: "nowrap" }}>Origin</th>
+                  <th className="text-center" style={{ width: "135px", minWidth: "135px", whiteSpace: "nowrap" }}>Status</th>
                   <th className="text-center" style={{ width: "125px", minWidth: "125px", whiteSpace: "nowrap" }}>Submitted On</th>
                   <th className="text-center" style={{ width: "145px", minWidth: "145px", whiteSpace: "nowrap" }}>Actions</th>
                 </tr>
@@ -1127,7 +1220,7 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
               <tbody className="ev-table-body">
                 {paginatedEmployers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: "48px 16px", textAlign: "center", color: "#94a3b8" }}>
+                    <td colSpan={7} style={{ padding: "48px 16px", textAlign: "center", color: "#94a3b8" }}>
                       <p style={{ fontSize: "15px", fontWeight: 700, color: "#475569" }}>No verification requests found</p>
                       <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>Try adjusting your filters or search keywords</p>
                     </td>
@@ -1142,33 +1235,64 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
                           {rowNumber}
                         </td>
 
-                        {/* Name / Organization */}
-                        <td style={{ maxWidth: 360, minWidth: 260 }}>
-                          <div>
+                        {/* Name / Organization with ellipsis and hover tooltip */}
+                        <td style={{ width: "290px", minWidth: "240px", maxWidth: "290px", overflow: "hidden" }}>
+                          <div style={{ maxWidth: "100%", overflow: "hidden" }}>
                             <h3
                               onClick={() => handleOpenDetail(emp)}
                               className="ev-org-name"
+                              title={emp.companyName}
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                display: "block",
+                                maxWidth: "100%",
+                              }}
                             >
                               {emp.companyName}
                             </h3>
-                            <p className="ev-org-email">
+                            <p
+                              className="ev-org-email"
+                              title={emp.userEmail}
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                display: "block",
+                                maxWidth: "100%",
+                              }}
+                            >
                               {emp.userEmail}
                             </p>
                           </div>
                         </td>
 
                         {/* Type */}
-                        <td className="text-center" style={{ width: "120px", minWidth: "120px", whiteSpace: "nowrap" }}>
+                        <td className="text-center" style={{ width: "110px", minWidth: "110px", whiteSpace: "nowrap" }}>
                           {renderTypeBadge(emp.companyType)}
                         </td>
 
+                        {/* Origin (External vs Internal Admin) */}
+                        <td className="text-center" style={{ width: "125px", minWidth: "125px", whiteSpace: "nowrap" }}>
+                          {emp.origin === "ADMIN_POSTED" ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                              Admin Internal
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              External Org
+                            </span>
+                          )}
+                        </td>
+
                         {/* Status */}
-                        <td className="text-center" style={{ width: "140px", minWidth: "140px", whiteSpace: "nowrap" }}>
+                        <td className="text-center" style={{ width: "135px", minWidth: "135px", whiteSpace: "nowrap" }}>
                           {renderStatusBadge(emp.verificationStatus)}
                         </td>
 
                         {/* Submitted On */}
-                        <td className="ev-date-cell" style={{ width: "125px", minWidth: "125px", whiteSpace: "nowrap" }}>
+                        <td className="ev-date-cell text-center" style={{ width: "125px", minWidth: "125px", whiteSpace: "nowrap" }}>
                           {formatDateDisplay(emp.createdAt)}
                         </td>
 
@@ -1215,129 +1339,72 @@ export function EmployerVerificationPage({ onNavigate }: EmployerVerificationPag
                               <span style={{ whiteSpace: "nowrap", display: "inline" }}>View</span>
                             </button>
 
-                            {/* 3-dots dropdown toggle */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActionMenuOpenId(actionMenuOpenId === emp.id ? null : emp.id);
-                              }}
-                              className="ev-more-btn"
-                              style={{ flexShrink: 0 }}
-                              aria-label="More options"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-
-                            {/* Dropdown Menu */}
-                            {actionMenuOpenId === emp.id && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  right: 0,
-                                  top: "34px",
-                                  zIndex: 40,
-                                  width: "180px",
-                                  backgroundColor: "#ffffff",
-                                  borderRadius: "8px",
-                                  boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
-                                  border: "1px solid #e2e8f0",
-                                  padding: "4px 0",
-                                  textAlign: "left",
-                                  fontSize: "12px",
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                            {/* Anchored Radix Dropdown Menu */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
                                 <button
                                   type="button"
+                                  className="ev-more-btn"
+                                  style={{ flexShrink: 0 }}
+                                  aria-label="More options"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                sideOffset={6}
+                                className="z-50 min-w-[190px] bg-white border border-slate-200 shadow-xl rounded-lg p-1.5 text-left text-xs"
+                              >
+                                <DropdownMenuItem
                                   onClick={() => handleOpenDetail(emp)}
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    color: "#334155",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 rounded-md cursor-pointer outline-none"
                                 >
                                   <Eye className="w-3.5 h-3.5 text-blue-600" />
                                   View Full Details
-                                </button>
+                                </DropdownMenuItem>
                                 {emp.verificationStatus !== "approved" && (
-                                  <button
-                                    type="button"
+                                  <DropdownMenuItem
                                     onClick={() => {
                                       setSelectedEmployer(emp);
                                       handleReviewAction("approved");
-                                      setActionMenuOpenId(null);
                                     }}
-                                    style={{
-                                      width: "100%",
-                                      padding: "8px 12px",
-                                      color: "#15803d",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "8px",
-                                      background: "none",
-                                      border: "none",
-                                      cursor: "pointer",
-                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-md cursor-pointer outline-none"
                                   >
                                     <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                                     Approve Request
-                                  </button>
+                                  </DropdownMenuItem>
                                 )}
                                 {emp.verificationStatus !== "rejected" && (
-                                  <button
-                                    type="button"
+                                  <DropdownMenuItem
                                     onClick={() => {
                                       setSelectedEmployer(emp);
                                       handleReviewAction("rejected");
-                                      setActionMenuOpenId(null);
                                     }}
-                                    style={{
-                                      width: "100%",
-                                      padding: "8px 12px",
-                                      color: "#b91c1c",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "8px",
-                                      background: "none",
-                                      border: "none",
-                                      cursor: "pointer",
-                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-md cursor-pointer outline-none"
                                   >
-                                    <XCircle className="w-3.5 h-3.5 text-red-600" />
+                                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
                                     Reject Request
-                                  </button>
+                                  </DropdownMenuItem>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActionMenuOpenId(null);
-                                    onNavigate(`employer-management/${emp.id}`);
-                                  }}
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    color: "#475569",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    borderTop: "1px solid #f1f5f9",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                  }}
+                                <DropdownMenuItem
+                                  onClick={() => onNavigate(`employer-management/${emp.id}`)}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-md cursor-pointer outline-none"
                                 >
                                   <Building2 className="w-3.5 h-3.5 text-slate-500" />
                                   Employer Profile
-                                </button>
-                              </div>
-                            )}
+                                </DropdownMenuItem>
+                                {emp.website && (
+                                  <DropdownMenuItem
+                                    onClick={() => window.open(emp.website, "_blank")}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-md cursor-pointer outline-none"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                                    Open Website
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>

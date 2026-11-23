@@ -68,6 +68,9 @@ public class AdminJobController {
     @Autowired(required = false)
     private RecruitmentRepository recruitmentRepository;
 
+    @Autowired
+    private com.medexjob.service.NotificationService notificationService;
+
     /**
      * Get all jobs for admin (including all statuses: DRAFT, PENDING, ACTIVE, CLOSED)
      */
@@ -76,12 +79,13 @@ public class AdminJobController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "sector", required = false) String sector,
+            @RequestParam(value = "origin", required = false) String origin,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             @RequestParam(value = "sort", defaultValue = "createdAt,desc") String sort) {
         
         try {
-            logger.info("Admin fetching all jobs - search: {}, status: {}, sector: {}", search, status, sector);
+            logger.info("Admin fetching all jobs - search: {}, status: {}, sector: {}, origin: {}", search, status, sector, origin);
 
             int safePage = Math.max(page, 0);
             int safeSize = Math.min(Math.max(size, 1), 2000);
@@ -124,11 +128,22 @@ public class AdminJobController {
                     pageable
             );
 
+            List<Map<String, Object>> contentList = result.getContent().stream()
+                    .map(this::toResponse)
+                    .filter(item -> {
+                        if (origin == null || origin.isBlank() || origin.equalsIgnoreCase("all")) {
+                            return true;
+                        }
+                        String itemOrigin = String.valueOf(item.get("origin"));
+                        return itemOrigin.equalsIgnoreCase(origin.trim());
+                    })
+                    .collect(Collectors.toList());
+
             Map<String, Object> response = new HashMap<>();
-            response.put("content", result.getContent().stream().map(this::toResponse).collect(Collectors.toList()));
+            response.put("content", contentList);
             response.put("page", result.getNumber());
             response.put("size", result.getSize());
-            response.put("totalElements", result.getTotalElements());
+            response.put("totalElements", origin != null && !origin.isBlank() && !origin.equalsIgnoreCase("all") ? contentList.size() : result.getTotalElements());
             response.put("totalPages", result.getTotalPages());
             return ResponseEntity.ok(response);
 
@@ -186,9 +201,18 @@ public class AdminJobController {
             job.setIsFeatured(req.featured() != null ? req.featured() : false);
             job.setViews(0);
             job.setApplicationsCount(0);
+            job.setOrigin(Job.OriginType.ADMIN_POSTED);
             
             Job saved = jobRepository.save(job);
             logger.info("Job created successfully with ID: {}", saved.getId());
+            
+            if (saved.getStatus() == Job.JobStatus.ACTIVE && notificationService != null) {
+                try {
+                    notificationService.processNewJobAlerts(saved);
+                } catch (Exception ex) {
+                    logger.warn("Could not process job alerts for created job: {}", ex.getMessage());
+                }
+            }
             
             return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
             
@@ -352,6 +376,14 @@ public class AdminJobController {
             Job saved = jobRepository.save(job);
             logger.info("Job status updated from {} to {} for job: {}", oldStatus, newStatus, id);
 
+            if (saved.getStatus() == Job.JobStatus.ACTIVE && notificationService != null) {
+                try {
+                    notificationService.processNewJobAlerts(saved);
+                } catch (Exception ex) {
+                    logger.warn("Could not process job alerts on status update: {}", ex.getMessage());
+                }
+            }
+
             if (saved.getSourceRecruitmentId() != null) {
                 try {
                     List<Job> siblings = jobRepository.findBySourceRecruitmentId(saved.getSourceRecruitmentId());
@@ -425,6 +457,14 @@ public class AdminJobController {
             Job saved = jobRepository.save(job);
             logger.info("Job published successfully: {} (status changed from {} to ACTIVE)", id, oldStatus);
             
+            if (notificationService != null) {
+                try {
+                    notificationService.processNewJobAlerts(saved);
+                } catch (Exception ex) {
+                    logger.warn("Could not process job alerts on publish: {}", ex.getMessage());
+                }
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Job published successfully and is now visible on the job board");
             response.put("job", toResponse(saved));
@@ -1040,6 +1080,19 @@ public class AdminJobController {
         m.put("sourceRecruitmentId", j.getSourceRecruitmentId() != null ? j.getSourceRecruitmentId().toString() : null);
         m.put("sourceVacancyId", j.getSourceVacancyId() != null ? j.getSourceVacancyId().toString() : null);
         m.put("deleted", j.isDeleted());
+        
+        String originStr = "EMPLOYER_ORGANIC";
+        if (j.getOrigin() != null) {
+            originStr = j.getOrigin().name();
+        } else if (j.getSourceRecruitmentId() != null || j.getSourceVacancyId() != null) {
+            originStr = "ADMIN_POSTED";
+        } else if (j.getEmployer() != null && j.getEmployer().getUser() != null && j.getEmployer().getUser().getEmail() != null) {
+            String empEmail = j.getEmployer().getUser().getEmail().toLowerCase();
+            if (empEmail.contains("bulk") || empEmail.contains("admin") || empEmail.endsWith("@medexjob.com")) {
+                originStr = "ADMIN_POSTED";
+            }
+        }
+        m.put("origin", originStr);
         
         return m;
     }

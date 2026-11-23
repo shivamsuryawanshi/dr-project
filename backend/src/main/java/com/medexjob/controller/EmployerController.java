@@ -55,6 +55,7 @@ public class EmployerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String verificationStatus,
+            @RequestParam(required = false) String origin,
             @RequestParam(required = false) String search) {
         try {
             List<Employer> allEmployers;
@@ -64,6 +65,25 @@ public class EmployerController {
                 allEmployers = employerRepository.findByVerificationStatusList(status);
             } else {
                 allEmployers = employerRepository.findAllEmployers();
+            }
+
+            // Filter by origin if requested
+            if (origin != null && !origin.isBlank() && !origin.equalsIgnoreCase("all")) {
+                allEmployers = allEmployers.stream().filter(emp -> {
+                    String empOrigin;
+                    if (emp.getOrigin() != null) {
+                        empOrigin = emp.getOrigin().name();
+                    } else {
+                        String email = (emp.getUser() != null && emp.getUser().getEmail() != null)
+                                ? emp.getUser().getEmail().toLowerCase() : "";
+                        if (email.contains("bulk") || email.contains("admin") || email.endsWith("@medexjob.com")) {
+                            empOrigin = "ADMIN_POSTED";
+                        } else {
+                            empOrigin = "EMPLOYER_ORGANIC";
+                        }
+                    }
+                    return empOrigin.equalsIgnoreCase(origin.trim());
+                }).collect(Collectors.toList());
             }
 
             // Sort by createdAt descending
@@ -1087,6 +1107,25 @@ public class EmployerController {
         } catch (Exception e) {
             System.err.println("Error getting employer status: " + e.getMessage());
             m.put("employerStatus", "active");
+        }
+
+        // Add origin
+        try {
+            String originStr;
+            if (employer.getOrigin() != null) {
+                originStr = employer.getOrigin().name();
+            } else {
+                String email = (employer.getUser() != null && employer.getUser().getEmail() != null)
+                        ? employer.getUser().getEmail().toLowerCase() : "";
+                if (email.contains("bulk") || email.contains("admin") || email.endsWith("@medexjob.com")) {
+                    originStr = "ADMIN_POSTED";
+                } else {
+                    originStr = "EMPLOYER_ORGANIC";
+                }
+            }
+            m.put("origin", originStr);
+        } catch (Exception e) {
+            m.put("origin", "EMPLOYER_ORGANIC");
         }
 
         return m;

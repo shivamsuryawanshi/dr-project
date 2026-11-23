@@ -1,5 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, Check, ChevronDown, GraduationCap, Mail, MapPin, RefreshCw, Search, Stethoscope, Users, Award, Briefcase } from 'lucide-react';
+import {
+  ArrowLeft,
+  BarChart3,
+  Check,
+  ChevronDown,
+  GraduationCap,
+  Mail,
+  MapPin,
+  RefreshCw,
+  Search,
+  Stethoscope,
+  Users,
+  Award,
+  Briefcase,
+  Phone,
+  FileText,
+  ExternalLink,
+  Eye,
+  ShieldCheck,
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { CandidateInsightsResponse, fetchCandidateInsights } from '../api/candidateProfiles';
 import '../styles/admin-insights.css';
@@ -26,11 +52,12 @@ function getCandidateInitials(name?: string): string {
 }
 
 export function AdminCandidateInsights({ onNavigate }: Props) {
-  const { token } = useAuth();
+  const { token, impersonateUser } = useAuth();
   const [data, setData] = useState<CandidateInsightsResponse>(EMPTY);
   const [filters, setFilters] = useState({ speciality: '', qualification: '', state: '', search: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
 
   const load = async () => {
     if (!token) return;
@@ -46,10 +73,13 @@ export function AdminCandidateInsights({ onNavigate }: Props) {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const querySpec = params.get('speciality') || params.get('specialty');
     const stored = sessionStorage.getItem('medex.adminInsightSpeciality');
-    if (stored) {
+    const targetSpec = querySpec || stored;
+    if (targetSpec) {
       sessionStorage.removeItem('medex.adminInsightSpeciality');
-      setFilters((current) => ({ ...current, speciality: stored }));
+      setFilters((current) => ({ ...current, speciality: targetSpec }));
     }
   }, []);
 
@@ -170,7 +200,12 @@ export function AdminCandidateInsights({ onNavigate }: Props) {
                         [profile.currentCity, profile.state].filter(Boolean).join(', ') || 'Location not specified';
                       const initials = getCandidateInitials(profile.name);
                       return (
-                        <article className="insights-profile" key={profile.candidateId || profile.id || index}>
+                        <article
+                          className="insights-profile cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+                          key={profile.candidateId || profile.id || index}
+                          onClick={() => setSelectedProfile(profile)}
+                          title="Click to view candidate medical credentials & detailed profile"
+                        >
                           <div className="insights-profile__col insights-profile__candidate">
                             <div className="insights-avatar" aria-hidden="true">{initials}</div>
                             <div className="insights-profile__identity">
@@ -274,6 +309,175 @@ export function AdminCandidateInsights({ onNavigate }: Props) {
           </aside>
         </div>
       </div>
+
+      {/* Candidate Profile Details Modal */}
+      <Dialog open={!!selectedProfile} onOpenChange={(open) => !open && setSelectedProfile(null)}>
+        <DialogContent className="sm:max-w-[620px] p-0 overflow-hidden rounded-2xl border border-slate-200 shadow-2xl bg-white">
+          <DialogHeader className="p-6 bg-slate-900 text-white flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
+                {selectedProfile ? getCandidateInitials(selectedProfile.name) : 'DR'}
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>{selectedProfile?.name || 'Doctor Candidate'}</span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Verified Doctor
+                  </span>
+                </DialogTitle>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  {selectedProfile?.email || 'No email provided'}
+                  {selectedProfile?.phone ? ` · ${selectedProfile.phone}` : ''}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedProfile && (
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* Clinical Speciality & Discipline Card */}
+              <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-blue-600 text-white shrink-0 mt-0.5">
+                  <Stethoscope className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">
+                      Clinical Speciality
+                    </span>
+                    {selectedProfile.yearsExperience != null && (
+                      <span className="text-xs font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded">
+                        {selectedProfile.yearsExperience} Years Experience
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-base font-bold text-slate-900 mt-0.5">
+                    {selectedProfile.speciality || 'General Medicine'}
+                  </h4>
+                  {selectedProfile.subSpeciality && (
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Sub-speciality: <span className="font-semibold text-slate-800">{selectedProfile.subSpeciality}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* 2-col Credentials Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5 mb-1">
+                    <GraduationCap className="w-3.5 h-3.5 text-slate-400" /> Qualification
+                  </span>
+                  <p className="text-sm font-bold text-slate-800">
+                    {selectedProfile.qualification || selectedProfile.basicQualification || 'MBBS'}
+                  </p>
+                  {selectedProfile.medicalCollege && (
+                    <p className="text-xs text-slate-500 mt-1 truncate" title={selectedProfile.medicalCollege}>
+                      {selectedProfile.medicalCollege}
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5 mb-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Council Registration
+                  </span>
+                  <p className="text-sm font-bold text-slate-800">
+                    {selectedProfile.registrationNumber || selectedProfile.medicalCouncilRegistrationNumber || 'NMC / State Registered'}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {selectedProfile.state ? `${selectedProfile.state} Medical Council` : 'Medical Council of India'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5 mb-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> Location
+                  </span>
+                  <p className="text-sm font-bold text-slate-800">
+                    {[selectedProfile.currentCity, selectedProfile.state].filter(Boolean).join(', ') || 'Anywhere in India'}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Preference: {selectedProfile.preferredLocation || 'Pan-India'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5 mb-1">
+                    <Briefcase className="w-3.5 h-3.5 text-slate-400" /> Target Roles
+                  </span>
+                  <p className="text-sm font-bold text-slate-800">
+                    {Array.isArray(selectedProfile.preferredJobRoles) && selectedProfile.preferredJobRoles.length > 0
+                      ? selectedProfile.preferredJobRoles.join(', ')
+                      : selectedProfile.preferredJobRole || 'All Relevant Medical Posts'}
+                  </p>
+                </div>
+              </div>
+
+              {selectedProfile.profileSummary && (
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                    Candidate Profile Summary
+                  </span>
+                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {selectedProfile.profileSummary}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                {selectedProfile.resumeUrl ? (
+                  <a
+                    href={selectedProfile.resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Download CV / Resume</span>
+                    <ExternalLink className="w-3 h-3 text-blue-500" />
+                  </a>
+                ) : (
+                  <span className="text-xs text-slate-400 font-medium italic">
+                    No resume uploaded
+                  </span>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelectedProfile(null)}
+                    className="text-xs h-9 cursor-pointer"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const targetId = selectedProfile.candidateId || selectedProfile.id || selectedProfile.userId;
+                      const targetUser = {
+                        id: targetId,
+                        name: selectedProfile.name || 'Candidate',
+                        email: selectedProfile.email || 'candidate@medexjob.com',
+                        role: 'candidate' as const,
+                      };
+                      impersonateUser(targetUser, token || '');
+                      setSelectedProfile(null);
+                      onNavigate('dashboard/candidate');
+                    }}
+                    className="text-xs h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold gap-1.5 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View as Doctor</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -94,6 +94,7 @@ interface Job {
   lastDate: string;
   postedDate: string;
   status: "active" | "closed" | "pending" | "draft";
+  origin?: "ADMIN_POSTED" | "EMPLOYER_ORGANIC";
   featured?: boolean;
   views: number;
   applications: number;
@@ -153,6 +154,7 @@ export function AdminJobManagementPage({
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSector, setFilterSector] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [originFilter, setOriginFilter] = useState<"all" | "EMPLOYER_ORGANIC" | "ADMIN_POSTED">("EMPLOYER_ORGANIC");
   const [sortBy, setSortBy] = useState<string>("latest");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -181,6 +183,7 @@ export function AdminJobManagementPage({
       });
       const allJobs: Job[] = (data?.content || []).map((job: any) => ({
         ...job,
+        origin: job.origin || (String(job.contactEmail || "").toLowerCase().includes("bulk") || String(job.contactEmail || "").toLowerCase().includes("admin") || String(job.contactEmail || "").toLowerCase().includes("@medexjob.com") ? "ADMIN_POSTED" : "EMPLOYER_ORGANIC"),
         employerId: job.employerId,
         lastDate: job.lastDate,
         postedDate: job.postedDate || job.createdAt,
@@ -222,7 +225,7 @@ export function AdminJobManagementPage({
   // Reset pagination when job filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterSector, filterCategory, sortBy]);
+  }, [searchTerm, filterStatus, filterSector, filterCategory, originFilter, sortBy]);
 
   // Reset pagination when application filters change
   useEffect(() => {
@@ -296,6 +299,15 @@ export function AdminJobManagementPage({
     };
   }, [jobs]);
 
+  const organicJobCount = useMemo(
+    () => jobs.filter((j) => j.origin !== "ADMIN_POSTED").length,
+    [jobs]
+  );
+  const adminJobCount = useMemo(
+    () => jobs.filter((j) => j.origin === "ADMIN_POSTED").length,
+    [jobs]
+  );
+
   // Metric counts for the 4 top summary cards (Applications View)
   const appSummaryMetrics = useMemo(() => {
     const total = applications.length;
@@ -319,6 +331,15 @@ export function AdminJobManagementPage({
   const filteredAndSortedJobs = useMemo(() => {
     return jobs
       .filter((job) => {
+        // Origin filter (External vs Internal Admin)
+        if (originFilter !== "all") {
+          if (originFilter === "ADMIN_POSTED") {
+            if (job.origin !== "ADMIN_POSTED") return false;
+          } else {
+            if (job.origin === "ADMIN_POSTED") return false;
+          }
+        }
+
         if (searchTerm.trim()) {
           const q = searchTerm.toLowerCase();
           const matchTitle = job.title?.toLowerCase().includes(q);
@@ -368,7 +389,7 @@ export function AdminJobManagementPage({
         }
         return 0;
       });
-  }, [jobs, searchTerm, filterStatus, filterSector, filterCategory, sortBy]);
+  }, [jobs, searchTerm, filterStatus, filterSector, filterCategory, originFilter, sortBy]);
 
   // Paginated jobs slice
   const totalPages = Math.ceil(filteredAndSortedJobs.length / pageSize) || 1;
@@ -838,6 +859,57 @@ export function AdminJobManagementPage({
               </div>
             )}
 
+            {/* Origin Switcher for Jobs (External vs Admin Posted vs All) */}
+            {activeView === "jobs" && (
+              <div className="inline-flex bg-slate-100 p-1 rounded-lg border border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOriginFilter("EMPLOYER_ORGANIC");
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                    originFilter === "EMPLOYER_ORGANIC"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  title="Show jobs submitted by healthcare organizations & employers"
+                >
+                  <span>External ({organicJobCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOriginFilter("ADMIN_POSTED");
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                    originFilter === "ADMIN_POSTED"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  title="Show platform-created / bulk admin ingested jobs"
+                >
+                  <span>Internal Admin ({adminJobCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOriginFilter("all");
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    originFilter === "all"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  title="Show all jobs without origin filtering"
+                >
+                  All ({jobs.length})
+                </button>
+              </div>
+            )}
+
             {/* Right Action Buttons */}
             <div className="admin-jm-header-actions">
               <button
@@ -1139,6 +1211,21 @@ export function AdminJobManagementPage({
                               {job.title}
                             </h3>
                             {renderStatusBadge(job)}
+                            {job.origin === "ADMIN_POSTED" ? (
+                              <span
+                                className="admin-jm-badge bg-purple-50 text-purple-700 border-purple-200 font-semibold"
+                                title="Platform / Admin Ingested Job"
+                              >
+                                Admin Internal
+                              </span>
+                            ) : (
+                              <span
+                                className="admin-jm-badge bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold"
+                                title="External Employer Posting"
+                              >
+                                External Org
+                              </span>
+                            )}
                             {job.recruitmentGrouped && job.groupedVacancyRows && job.groupedVacancyRows > 1 && (
                               <span
                                 className="admin-jm-badge bg-blue-50 text-blue-700 border-blue-200 font-semibold"

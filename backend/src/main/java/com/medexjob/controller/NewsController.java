@@ -115,15 +115,11 @@ public class NewsController {
             }
             
             NewsUpdate news = new NewsUpdate();
-            news.setTitle(req.title().trim());
+            news.setTitle(sanitizeTitle(req.title()));
             news.setType(parseNewsType(req.type()));
             news.setDate(parseDate(req.date()));
             news.setBreaking(Optional.ofNullable(req.breaking()).orElse(false));
-            if (req.fullStory() != null && !req.fullStory().trim().isEmpty()) {
-                news.setFullStory(req.fullStory().trim());
-            } else {
-                news.setFullStory(null);
-            }
+            news.setFullStory(sanitizeAndStructureText(req.fullStory()));
             // Ensure showOnHomepage is always set (not null)
             Boolean showOnHomepageValue = Optional.ofNullable(req.showOnHomepage()).orElse(false);
             news.setShowOnHomepage(showOnHomepageValue);
@@ -145,11 +141,11 @@ public class NewsController {
     public ResponseEntity<Map<String, Object>> update(@PathVariable("id") UUID id, @RequestBody NewsRequest req) {
         return newsUpdateRepository.findById(id)
                 .map(existing -> {
-                    if (req.title() != null) existing.setTitle(req.title());
+                    if (req.title() != null) existing.setTitle(sanitizeTitle(req.title()));
                     if (req.type() != null) existing.setType(parseNewsType(req.type()));
                     if (req.date() != null) existing.setDate(parseDate(req.date()));
                     if (req.breaking() != null) existing.setBreaking(req.breaking());
-                    if (req.fullStory() != null) existing.setFullStory(req.fullStory());
+                    if (req.fullStory() != null) existing.setFullStory(sanitizeAndStructureText(req.fullStory()));
                     if (req.showOnHomepage() != null) existing.setShowOnHomepage(req.showOnHomepage());
                     NewsUpdate saved = newsUpdateRepository.save(existing);
                     return ResponseEntity.ok(toResponse(saved));
@@ -225,6 +221,47 @@ public class NewsController {
         } catch (Exception e) {
             return LocalDate.now();
         }
+    }
+
+    private String sanitizeTitle(String title) {
+        if (title == null) return "";
+        return title.replaceAll("\\s+", " ").replaceAll("<[^>]*>", "").trim();
+    }
+
+    private String sanitizeAndStructureText(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+
+        String cleaned = raw.replace("\r\n", "\n").replace("\r", "\n");
+
+        // Remove script and iframe tags
+        cleaned = cleaned.replaceAll("(?i)<script[\\s\\S]*?>[\\s\\S]*?<\\/script>", "");
+        cleaned = cleaned.replaceAll("(?i)<iframe[\\s\\S]*?>[\\s\\S]*?<\\/iframe>", "");
+
+        // Fix PDF line wrap hyphenation (e.g. "organi-\nzation" -> "organization")
+        cleaned = cleaned.replaceAll("(\\b[a-zA-Z]+)-\\n\\s*([a-zA-Z]+\\b)", "$1$2");
+
+        // Normalize 3+ newlines to double newlines
+        cleaned = cleaned.replaceAll("\\n{3,}", "\n\n");
+
+        // If the text does not contain any HTML paragraph/block tags (<p>, <div>, <br>, <ul>, <table>, <h1>-<h6>),
+        // structure plain text into clean <p> paragraphs
+        boolean hasHtmlTags = cleaned.matches("(?i).*(<p[>\\s]|<div[>\\s]|<br[>\\s/]|<ul[>\\s]|<table[>\\s]|<h[1-6][>\\s]).*");
+        if (!hasHtmlTags) {
+            String[] paragraphs = cleaned.split("\\n\\n+");
+            StringBuilder structured = new StringBuilder();
+            for (String p : paragraphs) {
+                String trimmed = p.trim();
+                if (!trimmed.isEmpty()) {
+                    String pContent = trimmed.replaceAll("(?<!\\n)\\n(?!\\n)", " ");
+                    structured.append("<p>").append(pContent).append("</p>\n");
+                }
+            }
+            cleaned = structured.toString().trim();
+        }
+
+        return cleaned.trim();
     }
 
     private Map<String, Object> toResponse(NewsUpdate news) {

@@ -25,17 +25,20 @@ public class VacancyJobPublisher {
     private final EmployerRepository employerRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
     public VacancyJobPublisher(
             JobRepository jobRepository,
             EmployerRepository employerRepository,
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) NotificationService notificationService
     ) {
         this.jobRepository = jobRepository;
         this.employerRepository = employerRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -79,6 +82,7 @@ public class VacancyJobPublisher {
             e.setCompanyType(Employer.CompanyType.HOSPITAL);
             e.setIsVerified(true);
             e.setVerificationStatus(Employer.VerificationStatus.APPROVED);
+            e.setOrigin(Employer.OriginType.ADMIN_POSTED);
             return employerRepository.saveAndFlush(e);
         });
     }
@@ -99,6 +103,13 @@ public class VacancyJobPublisher {
             User approver = userRepository.findById(job.getApprovedBy().getId()).orElse(null);
             job.setApprovedBy(approver);
         }
-        return jobRepository.saveAndFlush(job);
+        job.setOrigin(Job.OriginType.ADMIN_POSTED);
+        Job saved = jobRepository.saveAndFlush(job);
+        if (notificationService != null && saved.getStatus() == Job.JobStatus.ACTIVE) {
+            try {
+                notificationService.processNewJobAlerts(saved);
+            } catch (Exception ignored) {}
+        }
+        return saved;
     }
 }

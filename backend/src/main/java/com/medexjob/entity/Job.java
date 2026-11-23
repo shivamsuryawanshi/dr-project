@@ -151,6 +151,10 @@ public class Job {
   @Column(name = "status", length = 50, nullable = false)
   private JobStatus status = JobStatus.PENDING;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "origin", length = 50)
+  private OriginType origin = OriginType.EMPLOYER_ORGANIC;
+
   @Column(name = "is_featured", nullable = false)
   private Boolean isFeatured = false;
 
@@ -311,6 +315,14 @@ public class Job {
   public LocalDateTime getDeletedAt() { return deletedAt; }
   public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
   public boolean isDeleted() { return deletedAt != null; }
+
+  public OriginType getOrigin() { return origin; }
+  public void setOrigin(OriginType origin) { this.origin = origin; }
+
+  public enum OriginType {
+    EMPLOYER_ORGANIC,
+    ADMIN_POSTED,
+  }
 
   public enum JobSector {
     GOVERNMENT,

@@ -195,21 +195,20 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
         return [] as any[];
       });
 
-    const featuredPromise = fetchJobs({
-      featured: true,
+    const activeJobsPromise = fetchJobs({
       status: 'active',
       openOnly: true,
       page: 0,
-      size: 8,
+      size: 50,
       sort: 'createdAt,desc',
     })
       .then((data) => (Array.isArray(data?.content) ? data.content : []))
       .catch((error) => {
-        console.error('Failed to fetch featured jobs:', error);
+        console.error('Failed to fetch active jobs for matching:', error);
         return [] as any[];
       });
 
-    const notificationPromise = fetchNotifications({ page: 0, size: 12 }, token)
+    const notificationPromise = fetchNotifications({ page: 0, size: 20 }, token)
       .then((data) => (Array.isArray(data?.content) ? data.content : []))
       .catch((error) => {
         console.error('Failed to fetch notifications:', error);
@@ -222,17 +221,43 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
         return null;
       });
 
-    const [fetchedApplications, fetchedSavedJobs, fetchedFeaturedJobs, fetchedNotifications, fetchedProfile] = await Promise.all([
+    const [fetchedApplications, fetchedSavedJobs, fetchedActiveJobs, fetchedNotifications, fetchedProfile] = await Promise.all([
       applicationPromise,
       savedPromise,
-      featuredPromise,
+      activeJobsPromise,
       notificationPromise,
       profilePromise,
     ]);
 
+    // Intelligent Matching Engine
+    let computedRecommendations = fetchedActiveJobs;
+    if (fetchedProfile && fetchedActiveJobs.length > 0) {
+      const scored = fetchedActiveJobs
+        .map((job: any) => {
+          const match = matchCandidateToJob(fetchedProfile, job);
+          return {
+            ...job,
+            matchScore: match.score,
+            matchReasons: match.matchReasons,
+            qualifies: match.qualifies,
+            isMatch: match.isMatch,
+          };
+        })
+        .filter((job: any) => job.isMatch || job.matchScore >= 20)
+        .sort((a: any, b: any) => (b.matchScore || 0) - (a.matchScore || 0));
+
+      if (scored.length > 0) {
+        computedRecommendations = scored.slice(0, 16);
+      } else {
+        computedRecommendations = fetchedActiveJobs.slice(0, 8);
+      }
+    } else {
+      computedRecommendations = fetchedActiveJobs.slice(0, 8);
+    }
+
     setApplications(fetchedApplications);
     setSavedJobs(fetchedSavedJobs);
-    setRecommendedJobs(fetchedFeaturedJobs);
+    setRecommendedJobs(computedRecommendations);
     setNotifications(fetchedNotifications);
     setProfile(fetchedProfile);
     setLoading(false);
@@ -380,12 +405,27 @@ export function CandidateDashboard({ onNavigate }: CandidateDashboardProps) {
             <span>{job.organization || 'Organisation not specified'}</span>
             {job.sector && <small>· {job.sector}</small>}
           </span>
-          {job.featured && <span className="mx-tag mx-tag--featured"><Star size={12} /> Featured</span>}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {job.matchScore != null && job.matchScore > 0 && (
+              <span className="mx-tag bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
+                <Sparkles size={11} className="text-emerald-600" />
+                {job.matchScore}% Match
+              </span>
+            )}
+            {job.featured && <span className="mx-tag mx-tag--featured"><Star size={12} /> Featured</span>}
+          </div>
         </div>
 
         <h3 className="mx-jobcard__title" onClick={() => onNavigate('job-detail', job.id)}>
           {job.title || 'Untitled Job'}
         </h3>
+
+        {job.matchReasons && job.matchReasons.length > 0 && (
+          <p className="text-[11px] font-medium text-emerald-800 bg-emerald-50/80 rounded px-2 py-0.5 mt-1 border border-emerald-100 flex items-center gap-1">
+            <Check size={11} className="text-emerald-600 shrink-0" />
+            <span>{job.matchReasons[0]}</span>
+          </p>
+        )}
 
         <div className="mx-jobcard__meta">
           {job.location && <span><MapPin size={13} />{job.location}</span>}

@@ -79,7 +79,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [impersonatorAdmin, setImpersonatorAdmin] = useState<User | null>(() => {
     try {
-      const stored = localStorage.getItem('admin_impersonator_user') || sessionStorage.getItem('admin_impersonator_user');
+      const stored =
+        localStorage.getItem('admin_impersonation_user') ||
+        sessionStorage.getItem('admin_impersonation_user') ||
+        localStorage.getItem('admin_impersonator_user') ||
+        sessionStorage.getItem('admin_impersonator_user');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -89,8 +93,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isImpersonating = !!impersonatorAdmin;
 
   const exitImpersonation = useCallback(() => {
-    const adminToken = localStorage.getItem('admin_impersonator_token') || sessionStorage.getItem('admin_impersonator_token');
-    const adminUserStr = localStorage.getItem('admin_impersonator_user') || sessionStorage.getItem('admin_impersonator_user');
+    const adminToken =
+      localStorage.getItem('admin_impersonation_token') ||
+      sessionStorage.getItem('admin_impersonation_token') ||
+      localStorage.getItem('admin_impersonator_token') ||
+      sessionStorage.getItem('admin_impersonator_token');
+
+    const adminUserStr =
+      localStorage.getItem('admin_impersonation_user') ||
+      sessionStorage.getItem('admin_impersonation_user') ||
+      localStorage.getItem('admin_impersonator_user') ||
+      sessionStorage.getItem('admin_impersonator_user');
+
     if (!adminToken || !adminUserStr) {
       toast.error('Original Admin session not found');
       return;
@@ -103,8 +117,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(adminUser));
       sessionStorage.setItem('token', adminToken);
       sessionStorage.setItem('user', JSON.stringify(adminUser));
+
+      // Clean up all impersonation storage keys
+      localStorage.removeItem('admin_impersonation_token');
+      localStorage.removeItem('admin_impersonation_user');
       localStorage.removeItem('admin_impersonator_token');
       localStorage.removeItem('admin_impersonator_user');
+      sessionStorage.removeItem('admin_impersonation_token');
+      sessionStorage.removeItem('admin_impersonation_user');
       sessionStorage.removeItem('admin_impersonator_token');
       sessionStorage.removeItem('admin_impersonator_user');
       setImpersonatorAdmin(null);
@@ -116,8 +136,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(() => {
     // If currently impersonating, exit impersonation to return to admin instead of destroying the admin session
-    const adminToken = localStorage.getItem('admin_impersonator_token') || sessionStorage.getItem('admin_impersonator_token');
-    const adminUserStr = localStorage.getItem('admin_impersonator_user') || sessionStorage.getItem('admin_impersonator_user');
+    const adminToken =
+      localStorage.getItem('admin_impersonation_token') ||
+      sessionStorage.getItem('admin_impersonation_token') ||
+      localStorage.getItem('admin_impersonator_token') ||
+      sessionStorage.getItem('admin_impersonator_token');
+
+    const adminUserStr =
+      localStorage.getItem('admin_impersonation_user') ||
+      sessionStorage.getItem('admin_impersonation_user') ||
+      localStorage.getItem('admin_impersonator_user') ||
+      sessionStorage.getItem('admin_impersonator_user');
+
     if (adminToken && adminUserStr) {
       exitImpersonation();
       return;
@@ -128,9 +158,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('admin_impersonation_token');
+    localStorage.removeItem('admin_impersonation_user');
     localStorage.removeItem('admin_impersonator_token');
     localStorage.removeItem('admin_impersonator_user');
     localStorage.removeItem('admin_return_page');
+    sessionStorage.removeItem('admin_impersonation_token');
+    sessionStorage.removeItem('admin_impersonation_user');
     sessionStorage.removeItem('admin_impersonator_token');
     sessionStorage.removeItem('admin_impersonator_user');
     setImpersonatorAdmin(null);
@@ -142,11 +176,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       toast.error('Only administrators can enter View As mode');
       return;
     }
-    // Save current admin context to both localStorage and sessionStorage
+    // Save current admin context to dedicated keys in both localStorage and sessionStorage
     const currentAdminToken = token || localStorage.getItem('token') || '';
+    localStorage.setItem('admin_impersonation_token', currentAdminToken);
+    localStorage.setItem('admin_impersonation_user', JSON.stringify(user));
     localStorage.setItem('admin_impersonator_token', currentAdminToken);
     localStorage.setItem('admin_impersonator_user', JSON.stringify(user));
-    localStorage.setItem('admin_return_page', 'admin-users');
+    localStorage.setItem('admin_return_page', '/admin/user-directory');
+    sessionStorage.setItem('admin_impersonation_token', currentAdminToken);
+    sessionStorage.setItem('admin_impersonation_user', JSON.stringify(user));
     sessionStorage.setItem('admin_impersonator_token', currentAdminToken);
     sessionStorage.setItem('admin_impersonator_user', JSON.stringify(user));
     setImpersonatorAdmin(user);

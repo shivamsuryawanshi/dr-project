@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MedExJob - Developer Handover & System Blueprint</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 14mm 14mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      color: #1e293b;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header-box {
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0369a1;
+      background-color: #e0f2fe;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: 19pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 2px 0 6px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-subtitle {
+      font-size: 10.5pt;
+      color: #475569;
+      margin: 0 0 10px 0;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 8.5pt;
+    }
+
+    .meta-item strong {
+      display: block;
+      color: #64748b;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+
+    .meta-item span {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    h2 {
+      font-size: 12.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 10pt;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin: 0 0 8px 0;
+      color: #334155;
+    }
+
+    ul, ol {
+      margin: 0 0 10px 0;
+      padding-left: 20px;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 3px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size: 8pt;
+      line-height: 1.4;
+      background-color: #0f172a;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 6px 0 10px 0;
+      page-break-inside: avoid;
+    }
+
+    pre code {
+      background-color: transparent;
+      color: inherit;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .callout {
+      border-left: 3.5px solid #0284c7;
+      background-color: #f0f9ff;
+      border-radius: 0 5px 5px 0;
+      padding: 8px 12px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+
+    .callout-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .callout-warning {
+      border-left-color: #ea580c;
+      background-color: #fff7ed;
+    }
+
+    .callout-warning .callout-title {
+      color: #c2410c;
+    }
+
+    .callout-danger {
+      border-left-color: #dc2626;
+      background-color: #fef2f2;
+    }
+
+    .callout-danger .callout-title {
+      color: #b91c1c;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    .diagram-box {
+      background-color: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 8px 10px;
+      margin: 6px 0 12px 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7.5pt;
+      line-height: 1.35;
+      color: #1e293b;
+      white-space: pre;
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+
+    .keep-together {
+      page-break-inside: avoid;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 8pt;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 6px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE 1: TITLE, DOMAIN, TECH STACK -->
+  <div class="header-box">
+    <div class="doc-badge">Engineering Documentation & Handover</div>
+    <h1>MedExJob.com — System Architecture & Developer Handover</h1>
+    <div class="doc-subtitle">Practical engineering notes, setup instructions, architectural flow, and domain edge cases</div>
+
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>Repository</strong>
+        <span>dr-project-main</span>
+      </div>
+      <div class="meta-item">
+        <strong>Target</strong>
+        <span>Full-Stack Engineer Onboarding</span>
+      </div>
+      <div class="meta-item">
+        <strong>Backend Stack</strong>
+        <span>Spring Boot 3.2 • Java 17 • MySQL 8</span>
+      </div>
+      <div class="meta-item">
+        <strong>Frontend Stack</strong>
+        <span>React 18 • TypeScript • Vite • Tailwind</span>
+      </div>
+    </div>
+  </div>
+
+  <h2>1. What This System Does (The Domain)</h2>
+  <p>
+    <strong>MedExJob</strong> is a specialized recruitment platform designed specifically for the healthcare sector in India (Doctors, Senior/Junior Residents, Faculty, Medical Officers, Specialists, and Paramedical Staff).
+  </p>
+  <p>
+    Unlike traditional job boards (Naukri, LinkedIn), Indian medical recruitment is split into two distinct models:
+  </p>
+  <ul>
+    <li>
+      <strong>Private Sector Jobs:</strong> Standard hospital, clinic, and consultancy postings. Recruiters create jobs, set salary/experience, manage applicants, and review candidate CVs.
+    </li>
+    <li>
+      <strong>Government Circulars & Public Hospital Notices:</strong> Public institutions (AIIMS, PGIMER, State Health Services, ESIC, Railway Hospitals) release large official PDF notifications (typically 5 to 35 pages). These contain dense department-wise vacancy matrices, reservation breakdowns (UR, OBC, SC, ST, EWS), recurring walk-in interview schedules, qualification checklists, and application guidelines.
+    </li>
+  </ul>
+  <p>
+    To eliminate hours of manual data entry, MedExJob includes an automated <strong>AI/OCR Circular Extraction Engine</strong> that ingests government PDFs, parses multi-department vacancy tables, normalizes designations, and generates browsable, filterable candidate jobs.
+  </p>
+
+  <h2>2. Technology Stack & Ports</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Component</th>
+        <th style="width: 35%;">Technology / Framework</th>
+        <th style="width: 14%;">Default Port</th>
+        <th style="width: 31%;">Configuration Key / Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Backend API</strong></td>
+        <td>Java 17, Spring Boot 3.2.0, Spring Security, JPA/Hibernate</td>
+        <td><code>8081</code></td>
+        <td><code>backend/src/main/resources/application.yml</code></td>
+      </tr>
+      <tr>
+        <td><strong>Database</strong></td>
+        <td>MySQL 8.0 (InnoDB, utf8mb4)</td>
+        <td><code>3306</code></td>
+        <td><code>medtech_db</code> (username: <code>root</code> / <code>medexjob</code>)</td>
+      </tr>
+      <tr>
+        <td><strong>Frontend SPA</strong></td>
+        <td>React 18, TypeScript, Vite 5, Tailwind CSS, Radix UI</td>
+        <td><code>5173</code></td>
+        <td><code>frontend/vite.config.ts</code> (proxies <code>/api</code> to 8081)</td>
+      </tr>
+      <tr>
+        <td><strong>Authentication</strong></td>
+        <td>JWT Bearer Tokens (HS512 algorithm, 7-day validity)</td>
+        <td>—</td>
+        <td><code>jwt.secret</code> in <code>application.yml</code></td>
+      </tr>
+      <tr>
+        <td><strong>AI Extraction</strong></td>
+        <td>Google Gemini (<code>gemini-2.0-flash</code> via OpenAI API spec)</td>
+        <td>External HTTPS</td>
+        <td><code>medex.ai.api-key</code></td>
+      </tr>
+      <tr>
+        <td><strong>OCR Engine</strong></td>
+        <td>Tesseract OCR (CLI integration via <code>tesseract</code> binary)</td>
+        <td>System Process</td>
+        <td><code>medex.ocr.command: tesseract</code></td>
+      </tr>
+      <tr>
+        <td><strong>Payment Gateway</strong></td>
+        <td>Razorpay SDK (Subscription plans & employer checkout)</td>
+        <td>Webhook</td>
+        <td><code>razorpay.key-id</code>, <code>razorpay.key-secret</code></td>
+      </tr>
+      <tr>
+        <td><strong>Mail Delivery</strong></td>
+        <td>Spring Mail via Gmail SMTP (STARTTLS)</td>
+        <td><code>587</code></td>
+        <td><code>spring.mail.username</code>, <code>spring.mail.password</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PAGE 2: LOCAL QUICKSTART -->
+  <div class="page-break"></div>
+
+  <h2>3. Local Development Quickstart</h2>
+
+  <h3>Step 1: MySQL Database Initialization</h3>
+  <pre><code>CREATE DATABASE medtech_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;</code></pre>
+  <p>Verify your database password in <code>backend/src/main/resources/application.yml</code>:</p>
+  <pre><code>spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/medtech_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:shivam123}</code></pre>
+
+  <h3>Step 2: Start Backend Service</h3>
+  <pre><code>cd backend
+mvn clean install -DskipTests
+mvn spring-boot:run</code></pre>
+  <p>Backend runs on <strong><code>http://localhost:8081</code></strong>. Actuator Health: <code>http://localhost:8081/api/actuator/health</code> -> <code>{"status":"UP"}</code>.</p>
+
+  <h3>Step 3: Start Frontend SPA</h3>
+  <pre><code>cd frontend
+npm install
+npm run dev</code></pre>
+  <p>Frontend runs on <strong><code>http://localhost:5173</code></strong>.</p>
+
+  <div class="callout">
+    <div class="callout-title">No Local CORS Setup Needed</div>
+    <p>
+      In <code>frontend/vite.config.ts</code>, a proxy is configured: any call from React to <code>/api/*</code> is transparently forwarded by the Vite dev server to <code>http://127.0.0.1:8081</code> without triggering browser CORS blocks.
+    </p>
+  </div>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">One-Click Windows Start</div>
+    <p>
+      On Windows PowerShell, run <code>.\start-local.ps1</code> from the root folder. It checks MySQL, verifies Java 17 and Node.js, and launches both services in separate terminal windows automatically.
+    </p>
+  </div>
+
+  <!-- PAGE 3: ARCHITECTURE & AI EXTRACTION -->
+  <div class="page-break"></div>
+
+  <h2>4. Core Architecture & Request Flow</h2>
+  <div class="diagram-box">
+[Candidate / Recruiter Browser]
+            │
+            ▼
+┌────────────────────────────────────────────────────────┐
+│  React 18 SPA (Vite / Tailwind / Radix UI)             │
+│  - Axios Client (`frontend/src/api/apiClient.ts`)      │
+│  - JWT Auth Interceptor (adds Bearer token to headers) │
+└───────────────────────────┬────────────────────────────┘
+                            │ /api/*
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│  Spring Boot 3.2 Backend (Port 8081)                   │
+│  - `JwtRequestFilter` (Validates HS512 JWT)            │
+│  - `SecurityConfig` (Role-based access: ADMIN, etc.)   │
+│  - Controllers (`JobController`, `RecruitmentController`)│
+└──────────────┬─────────────────────────┬───────────────┘
+               │                         │
+       JPA / Hibernate           Multipart File Uploads
+               │                         │
+               ▼                         ▼
+┌─────────────────────────┐    ┌─────────────────────────┐
+│ MySQL 8 (`medtech_db`)  │    │ File System (`uploads/`)│
+│ - users, employers,     │    │ Circular PDFs, Resumes  │
+│ - jobs, recruitments,   │    └─────────────────────────┘
+│ - vacancy_records       │                  │
+└─────────────────────────┘                  ▼
+                               ┌─────────────────────────┐
+                               │ Gemini 2.0 Flash / OCR  │
+                               │ Circular AI Extraction  │
+                               └─────────────────────────┘</div>
+
+  <h2>5. The AI & OCR Circular Extraction Pipeline</h2>
+  <p>
+    This is the core proprietary feature of the platform. Medical job advertisements are usually complex multi-page PDF documents. Here is how the extraction pipeline operates:
+  </p>
+
+  <ol>
+    <li>
+      <strong>Upload & SHA-256 Fingerprint:</strong> Admin drops a circular PDF into <code>AiBulkJobUploader.tsx</code>. Backend calculates a SHA-256 hash to prevent duplicate reprocessing.
+    </li>
+    <li>
+      <strong>Native Text Extraction:</strong> <code>BulkGeminiRecruitmentExtractionService.java</code> extracts native text using Apache PDFBox 3.x.
+    </li>
+    <li>
+      <strong>OCR Fallback for Scanned Circulars:</strong> If extracted text is fewer than 250 characters (common with scanned government orders or Hindi circulars), <code>RecruitmentOcrService</code> runs Tesseract OCR.
+    </li>
+    <li>
+      <strong>Multimodal Gemini Parsing:</strong> The PDF bytes and extracted text are dispatched to Gemini (<code>gemini-2.0-flash</code>) via <code>RecruitmentAiExtractionClient.java</code>. Gemini returns a structured JSON payload containing:
+      <ul>
+        <li>Organisation name, circular reference number, and location/state.</li>
+        <li>Full multi-department vacancy table with columns (Department, UR, OBC, SC, ST, EWS, Total).</li>
+        <li>Cadre breakdown (Senior Resident, Junior Resident, Faculty, GDMO, Medical Officer).</li>
+        <li>Walk-in interview dates, venue, application deadlines, and fee details.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Heuristic Table Parser Fallback:</strong> If Gemini is temporarily unavailable, <code>RecruitmentExtractionService.java</code> uses an internal regex/table parser and sanitizes the output via <code>RecruitmentFieldSanitizer.java</code>.
+    </li>
+    <li>
+      <strong>Publishing to Live Jobs:</strong> Admin reviews the extracted table in the preview workspace, makes edits if needed, and clicks "Publish". <code>VacancyJobPublisher.java</code> creates the parent <code>Recruitment</code> record, links individual <code>VacancyRecord</code> entries, and publishes clean <code>Job</code> listings visible to candidates.
+    </li>
+  </ol>
+
+  <!-- PAGE 4: DIRECTORY BLUEPRINT -->
+  <div class="page-break"></div>
+
+  <h2>6. Directory Structure & Key Files</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 38%;">File / Path</th>
+        <th style="width: 62%;">Purpose / What It Does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>backend/.../service/BulkGeminiRecruitmentExtractionService.java</code></td>
+        <td>Core PDF extraction coordinator: manages PDFBox, OCR triggering, Gemini API calls, and heuristic fallback.</td>
+      </tr>
+      <tr>
+        <td><code>backend/.../service/VacancyJobPublisher.java</code></td>
+        <td>Takes parsed vacancy tables and creates individual database <code>Job</code> records in isolated transactions.</td>
+      </tr>
+      <tr>
+        <td><code>backend/.../security/SecurityConfig.java</code></td>
+        <td>Spring Security configuration: endpoint authorization, CORS rules, and JWT filter registration.</td>
+      </tr>
+      <tr>
+        <td><code>backend/.../util/AdminUserCreator.java</code></td>
+        <td>Bootstrap utility to create an initial admin account if the database is reset. Controlled by configuration.</td>
+      </tr>
+      <tr>
+        <td><code>frontend/src/api/apiClient.ts</code></td>
+        <td>Axios instance configured with base URL, token interceptors, and 401 automatic redirect handling.</td>
+      </tr>
+      <tr>
+        <td><code>frontend/src/components/AiBulkJobUploader.tsx</code></td>
+        <td>Admin console for dragging-and-dropping PDF circulars, previewing extracted tables, and one-click publishing.</td>
+      </tr>
+      <tr>
+        <td><code>frontend/src/components/JobListingPage.tsx</code></td>
+        <td>Main search and filter page. Coordinates location, sector, cadre, and department query parameters.</td>
+      </tr>
+      <tr>
+        <td><code>frontend/src/components/SectorAwareJobDetailPage.tsx</code></td>
+        <td>Smart detail page renderer: adapts layout based on whether a job is a Government Circular or Private Posting.</td>
+      </tr>
+      <tr>
+        <td><code>frontend/src/utils/recruitmentBreakdown.ts</code></td>
+        <td>Frontend parser that cleans markdown tables, extracts category subtotals, and normalizes department names.</td>
+      </tr>
+      <tr>
+        <td><code>frontend/src/utils/scrollHelper.ts</code></td>
+        <td>Maintains browser scroll position when jumping back and forth between search listings and job detail pages.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PAGE 5: GOTCHAS & EDGE CASES -->
+  <div class="page-break"></div>
+
+  <h2>7. Engineering Gotchas & Edge Cases (Must Read)</h2>
+
+  <div class="callout callout-danger keep-together">
+    <div class="callout-title">1. Right-to-Left Scanning in Circular Tables</div>
+    <p>
+      In Indian medical vacancy tables, the column order is almost universally:<br>
+      <code>| Department | UR | OBC | SC | ST | EWS | Total Posts |</code><br>
+      <strong>Never scan left-to-right to find the vacancy count.</strong> Column 1 is almost always the Unreserved (UR) category count, NOT the total. Scanning left-to-right causes the parser to record the UR quota as the total vacancy. <code>recruitmentBreakdown.ts</code> and <code>rawNoticeParser.ts</code> first match explicit header names ("Total", "Grand Total"), and if absent, scan columns rightmost-to-left.
+    </p>
+  </div>
+
+  <div class="callout callout-warning keep-together">
+    <div class="callout-title">2. False "Medical Officer" Role Tagging</div>
+    <p>
+      Many official circulars mention the term "Medical Officer" in committee signatures, administrative notes, or footers even when the actual vacancies are strictly for "Senior Resident" or "Associate Professor". We recently added strict regex boundaries to prevent circulars from being incorrectly tagged as Medical Officer posts. Be careful when modifying cadre regexes.
+    </p>
+  </div>
+
+  <div class="callout keep-together">
+    <div class="callout-title">3. Hibernate ddl-auto: update Limitations</div>
+    <p>
+      The backend is configured with <code>hibernate.ddl-auto: update</code>. This will add new tables and new columns automatically, but it will <strong>never</strong> drop obsolete columns or rename columns. If you rename a Java field, Hibernate creates a new column and leaves the old one orphaned. For schema migrations on production, write explicit SQL migration scripts.
+    </p>
+  </div>
+
+  <div class="callout keep-together">
+    <div class="callout-title">4. File Storage: Local Development vs Production</div>
+    <p>
+      In <code>application.yml</code>, <code>file.use-ftp: false</code> by default for local development. Uploaded files (circulars, resumes) are saved locally into <code>dr-project-main/uploads/</code> and served by <code>FileServingController.java</code>. In production on the Hostinger VPS, files can either be uploaded via FTP to Hostinger storage or written directly to <code>/var/www/medexjob/uploads/</code>, which Nginx serves directly for optimal performance.
+    </p>
+  </div>
+
+  <!-- PAGE 6: DEPLOYMENT & PRIORITIES -->
+  <div class="page-break"></div>
+
+  <h2>8. Production Deployment Guide</h2>
+
+  <h3>Server Specs & Access</h3>
+  <ul>
+    <li><strong>Hosting Provider:</strong> Hostinger VPS (Ubuntu Linux)</li>
+    <li><strong>Domain:</strong> <code>https://medexjob.com</code> (Nginx reverse proxy with Let's Encrypt SSL)</li>
+    <li><strong>Backend Service:</strong> Systemd unit <code>medexjob-backend.service</code></li>
+    <li><strong>Frontend Root:</strong> Static build deployed to <code>/var/www/medexjob/</code></li>
+  </ul>
+
+  <h3>Deploying Backend Updates</h3>
+  <pre><code># 1. Build production JAR locally
+cd backend
+mvn clean package -DskipTests
+
+# 2. Copy the artifact to VPS
+scp target/medexjob-backend-1.0.0.jar root@82.180.143.101:/opt/medexjob/backend/
+
+# 3. On VPS, restart service and verify logs
+sudo systemctl restart medexjob-backend
+sudo systemctl status medexjob-backend
+journalctl -u medexjob-backend -n 50 -f</code></pre>
+
+  <h3>Deploying Frontend Updates</h3>
+  <pre><code># 1. Build production static bundle
+cd frontend
+npm run build
+
+# 2. Copy dist directory contents to web root
+scp -r dist/* root@82.180.143.101:/var/www/medexjob/
+
+# 3. Ensure correct permissions on server
+sudo chown -R www-data:www-data /var/www/medexjob
+sudo chmod -R 755 /var/www/medexjob</code></pre>
+
+  <h2>9. Current Priorities & Handover Backlog</h2>
+  <ol>
+    <li>
+      <strong>Production Gemini API Key:</strong> Make sure the production systemd environment file has <code>MEDEX_AI_API_KEY</code> set so that circular extractions use Gemini 2.0 Flash in production.
+    </li>
+    <li>
+      <strong>Razorpay Live Credentials:</strong> Payment gateway is currently configured with test API keys. Once business banking approval is completed, swap in production keys and verify the webhook handler at <code>/api/payment/webhook</code>.
+    </li>
+    <li>
+      <strong>Candidate Job Alerts Engine:</strong> The database tables (<code>JobAlert</code>, <code>NotificationPreferences</code>) and notification services are built. A scheduled daily digest service can be wired up to email matching candidates when new circulars are published.
+    </li>
+    <li>
+      <strong>Recruitment PDF Web Crawler (Roadmap):</strong> Currently admins upload circulars manually via the admin UI. An automated scraper targeting top medical institutes (AIIMS, PGIMER, JIPMER, state health portals) will automate the ingestion queue.
+    </li>
+  </ol>
+
+  <div class="footer-note">
+    Document created for internal engineering handover • MedExJob.com • Confidential
+  </div>
+
+</body>
+</html>

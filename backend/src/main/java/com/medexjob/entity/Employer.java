@@ -82,6 +82,10 @@ public class Employer {
     @Column(name = "employer_status")
     private EmployerStatus employerStatus = EmployerStatus.ACTIVE;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origin", length = 50)
+    private OriginType origin = OriginType.EMPLOYER_ORGANIC;
+    
     @Column(name = "verification_notes", columnDefinition = "TEXT")
     private String verificationNotes;
     
@@ -266,7 +270,19 @@ public class Employer {
         this.updatedAt = updatedAt;
     }
     
+    public OriginType getOrigin() {
+        return origin;
+    }
+
+    public void setOrigin(OriginType origin) {
+        this.origin = origin;
+    }
+
     // Enums
+    public enum OriginType {
+        EMPLOYER_ORGANIC, ADMIN_POSTED
+    }
+
     public enum CompanyType {
         HOSPITAL, CONSULTANCY, HR
     }

@@ -45,3 +45,7 @@ MedExJob-main*/
 .github/workflows/*.local.yml
 .github/workflows/*.local.yaml
 
+
+# Local feature backups
+.savedjob_backup/
+backend/.savedjob_backup/

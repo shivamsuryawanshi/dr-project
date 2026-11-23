@@ -22,15 +22,20 @@ export function ImpersonationBanner({ onNavigate }: ImpersonationBannerProps) {
 
   const handleExit = () => {
     exitImpersonation();
-    const returnPage = localStorage.getItem('admin_return_page') || 'admin-users';
+    const returnPage = localStorage.getItem('admin_return_page') || '/admin/user-directory';
     if (onNavigate) {
       onNavigate(returnPage);
+    } else {
+      window.location.href = returnPage;
     }
   };
 
   return (
     <div
       style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 9999,
         width: '100%',
         backgroundColor: '#fffbeb',
         borderBottom: '2px solid #f59e0b',

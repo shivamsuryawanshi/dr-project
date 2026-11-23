@@ -168,6 +168,16 @@ function AppContent() {
       return;
     }
 
+    if (page.startsWith("/")) {
+      navigate(page);
+      return;
+    }
+
+    if (page === "admin-users" || page === "admin/user-directory") {
+      navigate("/admin/user-directory");
+      return;
+    }
+
     if (page.includes("?")) {
       navigate(`/${page}`);
       return;
@@ -245,6 +255,9 @@ function AppContent() {
           <Route path="/contact" element={<ContactUsPage onNavigate={handleNavigate} />} />
           <Route path="/subscription" element={<SubscriptionPage onNavigate={handleNavigate} />} />
           <Route path="/employee-verification" element={<EmployerVerificationPage onNavigate={handleNavigate} />} />
+          <Route path="/employer-verification" element={<EmployerVerificationPage onNavigate={handleNavigate} />} />
+          <Route path="/medical-news" element={<NewsPage onNavigate={handleNavigate} />} />
+          <Route path="/medical-news/:newsId" element={<NewsDetailPage onNavigate={handleNavigate} />} />
 
           <Route
             path="/notifications"
@@ -264,6 +277,9 @@ function AppContent() {
             <>
               <Route path="/dashboard" element={getDashboard()} />
               <Route path="/dashboard/candidate" element={<CandidateDashboard onNavigate={handleNavigate} />} />
+              <Route path="/candidate/dashboard" element={<CandidateDashboard onNavigate={handleNavigate} />} />
+              <Route path="/candidate/profile" element={<ProfilePage onNavigate={handleNavigate} />} />
+              <Route path="/candidate/recommended" element={<CandidateDashboard onNavigate={handleNavigate} />} />
               <Route path="/dashboard/employer" element={<EmployerDashboard onNavigate={handleNavigate} />} />
               <Route path="/verification" element={<EmployerVerification onNavigate={handleNavigate} />} />
 
@@ -416,6 +432,12 @@ function AppContent() {
               />
               <Route path="/profile" element={<ProfilePage onNavigate={handleNavigate} />} />
               <Route path="/admin-users" element={<AdminUsersPage onNavigate={handleNavigate} />} />
+              <Route path="/admin/user-directory" element={<AdminUsersPage onNavigate={handleNavigate} />} />
+              <Route path="/admin/users" element={<AdminUsersPage onNavigate={handleNavigate} />} />
+              <Route path="/admin/news" element={<AdminNewsManagementPage onNavigate={handleNavigate} />} />
+              <Route path="/admin/jobs" element={<AdminJobManagementPage onNavigate={handleNavigate} />} />
+              <Route path="/admin/candidate-insights" element={<AdminCandidateInsights onNavigate={handleNavigate} />} />
+              <Route path="/admin/employer-verification" element={<EmployerVerificationPage onNavigate={handleNavigate} />} />
               <Route path="/admin-employer-verification" element={<EmployerVerificationPage onNavigate={handleNavigate} />} />
               <Route path="/employer-management/:employerId" element={<EmployerManagementPageWrapper onNavigate={handleNavigate} />} />
               <Route

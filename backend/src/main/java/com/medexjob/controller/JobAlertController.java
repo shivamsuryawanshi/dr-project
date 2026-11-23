@@ -457,28 +457,40 @@ public class JobAlertController {
                 }
             }
 
-            // Check locations
+            // Check locations (with wildcard support for "Anywhere in India", etc.)
             if (alert.getLocations() != null && !alert.getLocations().isEmpty()) {
                 List<String> locations = parseStringToList(alert.getLocations());
                 if (!locations.isEmpty()) {
-                    boolean locationMatch = locations.stream()
-                            .anyMatch(loc -> job.getLocation().toLowerCase().contains(loc.toLowerCase()) ||
-                                          loc.toLowerCase().contains(job.getLocation().toLowerCase()));
-                    if (!locationMatch) {
-                        matches = false;
+                    boolean isWildcard = locations.stream().anyMatch(loc -> {
+                        String l = loc.toLowerCase().trim();
+                        return l.contains("anywhere") || l.contains("all india") || l.contains("pan india") || l.equals("india") || l.equals("any");
+                    });
+                    if (!isWildcard) {
+                        boolean locationMatch = locations.stream()
+                                .anyMatch(loc -> job.getLocation().toLowerCase().contains(loc.toLowerCase()) ||
+                                              loc.toLowerCase().contains(job.getLocation().toLowerCase()));
+                        if (!locationMatch) {
+                            matches = false;
+                        }
                     }
                 }
             }
 
-            // Check keywords
+            // Check keywords (with wildcard support for "All Relevant", etc.)
             if (alert.getKeywords() != null && !alert.getKeywords().isEmpty()) {
                 List<String> keywords = parseStringToList(alert.getKeywords());
                 if (!keywords.isEmpty()) {
-                    String jobText = (job.getTitle() + " " + job.getDescription()).toLowerCase();
-                    boolean keywordMatch = keywords.stream()
-                            .anyMatch(keyword -> jobText.contains(keyword.toLowerCase()));
-                    if (!keywordMatch) {
-                        matches = false;
+                    boolean isWildcard = keywords.stream().anyMatch(kw -> {
+                        String k = kw.toLowerCase().trim();
+                        return k.contains("all relevant") || k.contains("all") || k.equals("any");
+                    });
+                    if (!isWildcard) {
+                        String jobText = (job.getTitle() + " " + job.getDescription() + " " + job.getLocation()).toLowerCase();
+                        boolean keywordMatch = keywords.stream()
+                                .anyMatch(keyword -> jobText.contains(keyword.toLowerCase()));
+                        if (!keywordMatch) {
+                            matches = false;
+                        }
                     }
                 }
             }
